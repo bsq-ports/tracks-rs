@@ -240,4 +240,8 @@ impl BaseProviderContext {
         };
         base_value
     }
+    
+    pub(crate) fn get_current_time(&self) -> f32 {
+        todo!()
+    }
 }

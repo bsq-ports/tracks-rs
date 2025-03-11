@@ -17,7 +17,7 @@ use glam::Vec4;
 #[derive(Clone, Debug, Copy)]
 pub struct TimeValue(f32);
 
-#[derive(Clone, Debug, Copy)]
+#[derive(Clone, Debug, Copy, PartialEq)]
 pub enum BaseValue {
     Float(f32),
     Vector3(Vec3),

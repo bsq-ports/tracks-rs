@@ -16,6 +16,25 @@ impl Property {
     fn set_null(&mut self) {
         *self = Property::None;
     }
+    
+    pub(crate) fn update_value(&mut self, value: BaseValue) -> _ {
+        *self = match value {
+            BaseValue::Float(value) => Property::Float(value),
+            BaseValue::Vector3(value) => Property::Vec3(value),
+            BaseValue::Vector4(value) => Property::Vec4(value),
+            BaseValue::Quaternion(value) => Property::Quat(value),
+        };
+    }
+    
+    pub(crate) fn get_value(&self) -> BaseValue {
+        match self {
+            Property::Float(value) => BaseValue::Float(*value),
+            Property::Vec3(value) => BaseValue::Vector3(*value),
+            Property::Vec4(value) => BaseValue::Vector4(*value),
+            Property::Quat(value) => BaseValue::Quaternion(*value),
+            Property::None => BaseValue::Float(0.0),
+        }
+    }
 }
 
 pub struct PathProperty {

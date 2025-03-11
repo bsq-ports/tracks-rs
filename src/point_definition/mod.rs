@@ -224,7 +224,7 @@ pub trait PointDefinition {
         let points = self.get_points();
 
         if points.is_empty() {
-            return (Self::Value::default(), false);
+            return (Self::Value::default(), true);
         }
 
         let last_point = points.last().unwrap();

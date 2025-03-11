@@ -26,7 +26,12 @@ pub struct EventData {
     pub time: f32,
 }
 
-pub fn start_event_coroutine(event_data: EventData, bpm: f32, current_time: f32) {
+pub fn start_event_coroutine(
+    event_data: EventData,
+    bpm: f32,
+    current_time: f32,
+    context: &BaseProviderContext,
+) {
     let duration = (60.0 * event_data.duration) / bpm;
     let easing = event_data.easing;
     let repeat = event_data.repeat;
@@ -43,11 +48,17 @@ pub fn start_event_coroutine(event_data: EventData, bpm: f32, current_time: f32)
 
         match info.property {
             BaseProperty::Property(property) => {
-                if no_duration
-                    || (info.point_definition.point_count() <= 1
-                        && !info.point_definition.has_base_provider())
+                if let Some(point_def) = &info.point_definition
+                    && (no_duration
+                        || (point_def.get_points().len() <= 1 && !point_def.has_base_provider()))
                 {
-                    set_property_value(&info.point_definition, &info.property, &info.track, 1.0);
+                    set_property_value(
+                        &point_def,
+                        &property,
+                        &info.track,
+                        1.0,
+                        context,
+                    );
                     continue;
                 }
 
@@ -60,17 +71,16 @@ pub fn start_event_coroutine(event_data: EventData, bpm: f32, current_time: f32)
                     easing,
                     repeat,
                     info.point_definition.has_base_provider(),
-                )
+                );
             }
             BaseProperty::PathProperty(path_property) => {
-                let interpolation = path_property.get_interpolation();
-                interpolation.init(&info.point_definition);
+                path_property.init(info.point_definition);
 
                 if no_duration {
-                    interpolation.finish();
+                    path_property.finish();
                     continue;
                 }
-                assign_path_animation(interpolation, duration, event_data.time, easing);
+                assign_path_animation(path_property, duration, event_data.time, easing, context);
             }
         }
     }
@@ -90,11 +100,11 @@ async fn animate_track(
     let mut skip = false;
 
     while repeat >= 0 {
-        let elapsed_time = get_current_time() - start_time;
+        let elapsed_time = context.get_current_time() - start_time;
 
         if !skip {
             let normalized_time = (elapsed_time / duration).min(1.0);
-            let time = interpolate(normalized_time, &easing);
+            let time = easing.interpolate(normalized_time);
             let on_last = set_property_value(&points, &property, &track, time);
             skip = !non_lazy && on_last;
         }
@@ -113,17 +123,35 @@ async fn animate_track(
     }
 }
 
+fn set_property_value(
+    points: &BasePointDefinition,
+    property: &Property,
+    track: &Track,
+    time: f32,
+    context: &BaseProviderContext,
+) -> bool {
+    let (value, on_last) = points.interpolate(time, context);
+
+    if value == property.get_value() {
+        return on_last;
+    }
+
+    property.update_value(value);
+    track.mark_updated();
+    return on_last;
+}
+
 async fn assign_path_animation(
-    interpolation: BasePointDefinition,
+    interpolation: &mut PathProperty,
     duration: f32,
     start_time: f32,
     easing: Functions,
     context: &BaseProviderContext,
 ) {
     loop {
-        let elapsed_time = get_current_time() - start_time;
+        let elapsed_time = context.get_current_time() - start_time;
         let normalized_time = (elapsed_time / duration).min(1.0);
-        interpolation.set_time(interpolate(normalized_time, &easing));
+        interpolation.time = easing.interpolate(normalized_time);
 
         if elapsed_time >= duration {
             break;
