@@ -8,8 +8,8 @@ use std::sync::Arc;
 use std::time::Duration;
 
 pub struct CoroutineInfo {
-    pub point_definition: BasePointDefinition,
-    pub coroutine_data: BaseProperty,
+    pub point_definition: Option<BasePointDefinition>,
+    pub property: BaseProperty,
     pub track: Track,
 }
 

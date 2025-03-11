@@ -39,6 +39,10 @@ impl Track {
     pub fn remove_game_object(&mut self, game_object: &GameObject) {
         self.game_objects.retain(|go| go != game_object);
     }
+    
+    pub fn mark_updated(&mut self) {
+        self.last_updated = Instant::now();
+    }
 
 }
 
