@@ -5,34 +5,34 @@ use crate::{
     values::{base_provider_context::BaseProviderContext, value::BaseValue},
 };
 
-pub enum Property {
+pub enum ValueProperty {
     Float(f32),
     Vec3(Vec3),
     Vec4(Vec4),
     Quat(Quat),
     None,
 }
-impl Property {
-    fn set_null(&mut self) {
-        *self = Property::None;
+impl ValueProperty {
+    pub fn set_null(&mut self) {
+        *self = ValueProperty::None;
     }
-    
-    pub(crate) fn update_value(&mut self, value: BaseValue) -> _ {
+
+    pub fn update_value(&mut self, value: BaseValue) {
         *self = match value {
-            BaseValue::Float(value) => Property::Float(value),
-            BaseValue::Vector3(value) => Property::Vec3(value),
-            BaseValue::Vector4(value) => Property::Vec4(value),
-            BaseValue::Quaternion(value) => Property::Quat(value),
+            BaseValue::Float(value) => ValueProperty::Float(value),
+            BaseValue::Vector3(value) => ValueProperty::Vec3(value),
+            BaseValue::Vector4(value) => ValueProperty::Vec4(value),
+            BaseValue::Quaternion(value) => ValueProperty::Quat(value),
         };
     }
-    
-    pub(crate) fn get_value(&self) -> BaseValue {
+
+    pub fn get_value(&self) -> BaseValue {
         match self {
-            Property::Float(value) => BaseValue::Float(*value),
-            Property::Vec3(value) => BaseValue::Vector3(*value),
-            Property::Vec4(value) => BaseValue::Vector4(*value),
-            Property::Quat(value) => BaseValue::Quaternion(*value),
-            Property::None => BaseValue::Float(0.0),
+            ValueProperty::Float(value) => BaseValue::Float(*value),
+            ValueProperty::Vec3(value) => BaseValue::Vector3(*value),
+            ValueProperty::Vec4(value) => BaseValue::Vector4(*value),
+            ValueProperty::Quat(value) => BaseValue::Quaternion(*value),
+            ValueProperty::None => BaseValue::Float(0.0),
         }
     }
 }
@@ -70,15 +70,3 @@ impl PathProperty {
     }
 }
 
-pub enum BaseProperty {
-    Property(Property),
-    PathProperty(PathProperty),
-}
-impl BaseProperty {
-    pub(crate) fn set_null(&mut self) {
-        match self {
-            BaseProperty::Property(property) => property.set_null(),
-            BaseProperty::PathProperty(path_property) => path_property.init(None),
-        }
-    }
-}
