@@ -29,7 +29,7 @@ harness = false
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }
 
-track_rs_old = { git = "https://github.com/Futuremappermydud/tracks-rs.git", branch = "old-benchmark", package = "tracks_rs" } # reference to the tracks-rs crate
+# track_rs_old = { git = "https://github.com/Futuremappermydud/tracks-rs.git", branch = "old-benchmark", package = "tracks_rs", optional = true} # reference to the tracks-rs crate
 
 [dependencies]
 glam = { version = "0.30", features = [
@@ -83,6 +83,7 @@ cbindgen = { version = "0.28", optional = true }
 [features]
 json = ["dep:serde_json"]
 ffi = ["dep:cbindgen"]
+compare_old = []
 default = ["json", "ffi"]
 
 [patch.crates-io]

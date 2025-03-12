@@ -22,6 +22,7 @@ fn point_step(n: u64) {
     });
 }
 
+#[cfg(feature = "compare_old")]
 fn point_step_slow(n: u64) {
     let context = track_rs_old::values::base_provider_context::BaseProviderContext::new();
     let definition =
@@ -51,6 +52,8 @@ fn benchmark_both(n: u64, c: &mut Criterion) {
     group.bench_with_input(BenchmarkId::new("quat", n), &n, |b, n| {
         b.iter(|| point_step(*n))
     });
+
+    #[cfg(feature = "compare_old")]
     group.bench_with_input(BenchmarkId::new("quat_slow", n), &n, |b, n| {
         b.iter(|| point_step_slow(*n))
     });

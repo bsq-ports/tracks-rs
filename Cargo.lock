@@ -1692,27 +1692,7 @@ dependencies = [
  "minifb",
  "plotters",
  "serde_json",
- "tracks_rs 0.2.0",
-]
-
-[[package]]
-name = "tracks_rs"
-version = "0.1.0"
-source = "git+https://github.com/Futuremappermydud/tracks-rs.git?branch=old-benchmark#94154cbc91ccf91ea48dd334d95469614c901a56"
-dependencies = [
- "android_logger",
- "cbindgen",
- "cfg-if",
- "ctor",
- "glam",
- "log",
- "palette",
- "paranoid-android",
- "serde_json",
- "thiserror 2.0.11",
- "tracing",
- "tracing-error",
- "tracing-subscriber",
+ "tracks_rs",
 ]
 
 [[package]]
@@ -1736,7 +1716,6 @@ dependencies = [
  "tracing",
  "tracing-error",
  "tracing-subscriber",
- "tracks_rs 0.1.0",
 ]
 
 [[package]]
