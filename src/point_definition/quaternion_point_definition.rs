@@ -13,6 +13,7 @@ use crate::{
 
 use super::PointDefinition;
 
+#[derive(Default)]
 pub struct QuaternionPointDefinition {
     points: Vec<PointData>,
 }

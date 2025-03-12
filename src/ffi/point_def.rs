@@ -8,12 +8,17 @@ use crate::point_definition::vector3_point_definition::Vector3PointDefinition;
 
 use crate::point_definition::float_point_definition::FloatPointDefinition;
 
+use crate::point_definition::BasePointDefinition;
+use crate::point_definition::BasePointDefinitionGlobal;
 use crate::point_definition::PointDefinition;
 use crate::values::value::BaseValue;
 
+use std::cell::Ref;
+use std::cell::RefCell;
+use std::ffi::CStr;
 use std::ffi::c_char;
 use std::ffi::c_void;
-use std::ffi::CStr;
+use std::rc::Rc;
 use std::slice;
 
 use crate::values::base_provider_context::BaseProviderContext;
@@ -23,7 +28,44 @@ use crate::values::base_ffi::BaseFFIProviderValues;
 use crate::values::base_ffi::BaseFFIProvider;
 
 use super::json;
+use super::json::FFIJsonValue;
 use super::types;
+use super::types::WrapQuat;
+use super::types::WrapVec3;
+use super::types::WrapVec4;
+
+#[repr(C)]
+pub enum PointDefinitionType {
+    Float = 0,
+    Vector3 = 1,
+    Vector4 = 2,
+    Quaternion = 3,
+}
+
+
+#[repr(C)]
+pub struct FloatInterpolationResult {
+    pub value: f32,
+    pub is_last: bool,
+}
+
+#[repr(C)]
+pub struct Vector3InterpolationResult {
+    pub value: WrapVec3,
+    pub is_last: bool,
+}
+
+#[repr(C)]
+pub struct Vector4InterpolationResult {
+    pub value: WrapVec4,
+    pub is_last: bool,
+}
+
+#[repr(C)]
+pub struct QuaternionInterpolationResult {
+    pub value: WrapQuat,
+    pub is_last: bool,
+}
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_make_base_ffi_provider(
@@ -75,7 +117,7 @@ pub unsafe extern "C" fn tracks_set_base_provider(
 ///FLOAT POINT DEFINITION
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_make_float_point_definition(
-    json: *const types::FFIJsonValue,
+    json: *const FFIJsonValue,
     context: *mut BaseProviderContext,
 ) -> *const FloatPointDefinition {
     let value = unsafe { json::convert_json_value_to_serde(json) };
@@ -89,10 +131,10 @@ pub unsafe extern "C" fn tracks_interpolate_float(
     point_definition: *const FloatPointDefinition,
     time: f32,
     context: *mut BaseProviderContext,
-) -> types::FloatInterpolationResult {
+) -> FloatInterpolationResult {
     let point_definition = unsafe { &*point_definition };
     let (value, is_last) = point_definition.interpolate(time, unsafe { &*context });
-    types::FloatInterpolationResult { value, is_last }
+    FloatInterpolationResult { value, is_last }
 }
 
 #[unsafe(no_mangle)]
@@ -114,7 +156,7 @@ pub unsafe extern "C" fn tracks_float_has_base_provider(
 ///VECTOR3 POINT DEFINITION
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_make_vector3_point_definition(
-    json: *const types::FFIJsonValue,
+    json: *const FFIJsonValue,
     context: *mut BaseProviderContext,
 ) -> *const Vector3PointDefinition {
     let value = unsafe { json::convert_json_value_to_serde(json) };
@@ -128,11 +170,11 @@ pub unsafe extern "C" fn tracks_interpolate_vector3(
     point_definition: *const Vector3PointDefinition,
     time: f32,
     context: *mut BaseProviderContext,
-) -> types::Vector3InterpolationResult {
+) -> Vector3InterpolationResult {
     let point_definition = unsafe { &*point_definition };
     let (value, is_last) = point_definition.interpolate(time, unsafe { &*context });
-    types::Vector3InterpolationResult {
-        value: types::WrapVec3 {
+    Vector3InterpolationResult {
+        value: WrapVec3 {
             x: value.x,
             y: value.y,
             z: value.z,
@@ -160,7 +202,7 @@ pub unsafe extern "C" fn tracks_vector3_has_base_provider(
 ///VECTOR4 POINT DEFINITION
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_make_vector4_point_definition(
-    json: *const types::FFIJsonValue,
+    json: *const FFIJsonValue,
     context: *mut BaseProviderContext,
 ) -> *const Vector4PointDefinition {
     let value = unsafe { json::convert_json_value_to_serde(json) };
@@ -174,11 +216,11 @@ pub unsafe extern "C" fn tracks_interpolate_vector4(
     point_definition: *const Vector4PointDefinition,
     time: f32,
     context: *mut BaseProviderContext,
-) -> types::Vector4InterpolationResult {
+) -> Vector4InterpolationResult {
     let point_definition = unsafe { &*point_definition };
     let (value, is_last) = point_definition.interpolate(time, unsafe { &*context });
-    types::Vector4InterpolationResult {
-        value: types::WrapVec4 {
+    Vector4InterpolationResult {
+        value: WrapVec4 {
             x: value.x,
             y: value.y,
             z: value.z,
@@ -207,7 +249,7 @@ pub unsafe extern "C" fn tracks_vector4_has_base_provider(
 ///QUATERNION POINT DEFINITION
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_make_quat_point_definition(
-    json: *const types::FFIJsonValue,
+    json: *const FFIJsonValue,
     context: *mut BaseProviderContext,
 ) -> *const QuaternionPointDefinition {
     let value = unsafe { json::convert_json_value_to_serde(json) };
@@ -221,11 +263,11 @@ pub unsafe extern "C" fn tracks_interpolate_quat(
     point_definition: *const QuaternionPointDefinition,
     time: f32,
     context: *mut BaseProviderContext,
-) -> types::QuaternionInterpolationResult {
+) -> QuaternionInterpolationResult {
     let point_definition = unsafe { &*point_definition };
     let (value, is_last) = point_definition.interpolate(time, unsafe { &*context });
-    types::QuaternionInterpolationResult {
-        value: types::WrapQuat {
+    QuaternionInterpolationResult {
+        value: WrapQuat {
             x: value.x,
             y: value.y,
             z: value.z,
@@ -249,4 +291,69 @@ pub unsafe extern "C" fn tracks_quat_has_base_provider(
 ) -> bool {
     let point_definition = unsafe { &*point_definition };
     point_definition.has_base_provider()
+}
+
+// FFI functions for working with BasePointDefinitionGlobal
+
+
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn base_point_definition_global_create(
+    definition_type: PointDefinitionType,
+) -> *mut BasePointDefinitionGlobal {
+    let point_def = match definition_type {
+        PointDefinitionType::Float => BasePointDefinition::Float(FloatPointDefinition::default()),
+        PointDefinitionType::Vector3 => {
+            BasePointDefinition::Vector3(Vector3PointDefinition::default())
+        }
+        PointDefinitionType::Vector4 => {
+            BasePointDefinition::Vector4(Vector4PointDefinition::default())
+        }
+        PointDefinitionType::Quaternion => {
+            BasePointDefinition::Quaternion(QuaternionPointDefinition::default())
+        }
+    };
+    let definition = Rc::new(RefCell::new(point_def));
+    Box::into_raw(Box::new(definition))
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn base_point_definition_global_get_type(
+    ptr: *const BasePointDefinitionGlobal,
+) -> PointDefinitionType {
+    if ptr.is_null() {
+        return PointDefinitionType::Float; // Default fallback
+    }
+
+    let rc_ref = unsafe { &*ptr };
+    let borrowed = rc_ref.borrow();
+    match *borrowed {
+        BasePointDefinition::Float(_) => PointDefinitionType::Float,
+        BasePointDefinition::Vector3(_) => PointDefinitionType::Vector3,
+        BasePointDefinition::Vector4(_) => PointDefinitionType::Vector4,
+        BasePointDefinition::Quaternion(_) => PointDefinitionType::Quaternion,
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn base_point_definition_global_dispose(ptr: *mut BasePointDefinitionGlobal) {
+    if ptr.is_null() {
+        return;
+    }
+    unsafe {
+        let _ = Box::from_raw(ptr);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn base_point_definition_global_borrow(
+    ptr: *const BasePointDefinitionGlobal,
+) -> *const BasePointDefinition {
+    if ptr.is_null() {
+        return std::ptr::null();
+    }
+
+    let rc_ref = unsafe { &*ptr };
+    let borrowed = rc_ref.borrow();
+    &borrowed as &BasePointDefinition as *const BasePointDefinition
 }

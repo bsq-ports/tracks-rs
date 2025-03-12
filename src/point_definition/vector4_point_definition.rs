@@ -14,6 +14,7 @@ use crate::{
 
 use super::PointDefinition;
 
+#[derive(Default)]
 pub struct Vector4PointDefinition {
     points: Vec<PointData>,
 }

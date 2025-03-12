@@ -4,6 +4,9 @@ pub mod vector3_point_definition;
 pub mod vector4_point_definition;
 pub mod point_definition_interpolation;
 
+use std::cell::Ref;
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::str::FromStr;
 
 use serde_json::Value as JsonValue;
@@ -254,6 +257,8 @@ pub trait PointDefinition {
         )
     }
 }
+
+pub type BasePointDefinitionGlobal = Rc<RefCell<BasePointDefinition>>;
 
 pub enum BasePointDefinition {
     Float(float_point_definition::FloatPointDefinition),
