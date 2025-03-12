@@ -4,10 +4,7 @@ use std::{
     slice,
 };
 
-use crate::{
-    ffi::{WrapBaseValue, WrappedValues},
-    values::base_provider_context::BaseProviderContext,
-};
+use crate::{ffi::types::WrappedValues, values::base_provider_context::BaseProviderContext};
 
 use super::AbstractValueProvider;
 
