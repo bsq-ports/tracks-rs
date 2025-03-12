@@ -4,6 +4,7 @@ extern crate cbindgen;
 fn main() {
     #[cfg(feature = "ffi")]
     {
+        return;
         use std::env;
         let crate_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
 

@@ -2,7 +2,7 @@ use std::{fmt, str::FromStr};
 
 use super::implementations::*;
 
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug)]
 #[allow(dead_code, clippy::enum_variant_names)]
 pub enum Functions {
     EaseLinear,
