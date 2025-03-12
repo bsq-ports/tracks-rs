@@ -16,10 +16,11 @@ pub struct CoroutineManager {
 }
 
 pub struct EventGroupData {
-    pub duration: f32,
+    pub raw_duration: f32,
     pub easing: Functions,
     pub repeat: u32,
     pub coroutine_infos: Vec<EventData>,
+    // song time or beatmap time?
     pub start_time: f32,
 }
 
@@ -74,7 +75,7 @@ impl CoroutineManager {
         context: &BaseProviderContext,
         event_group_data: EventGroupData,
     ) {
-        let duration = (60.0 * event_group_data.duration) / bpm;
+        let duration = (60.0 * event_group_data.raw_duration) / bpm;
 
         let start_time = event_group_data.start_time;
         let easing = event_group_data.easing;
@@ -179,18 +180,29 @@ impl CoroutineManager {
             .get_point_definition()
             .is_some_and(|t| t.has_base_provider());
 
-        let coro_result = match &mut event_data.property {
-            CoroutineData::AnimateTrack(value_property, base_point_definition) => animate_track(
-                base_point_definition,
-                value_property,
-                &mut event_data.track,
-                duration,
-                event_data.start_time,
-                song_time,
-                event_data.easing,
-                has_base,
-                context,
-            ),
+        match &mut event_data.property {
+            CoroutineData::AnimateTrack(value_property, base_point_definition) => {
+                let mut result = animate_track(
+                    base_point_definition,
+                    value_property,
+                    &mut event_data.track,
+                    duration,
+                    event_data.start_time,
+                    song_time,
+                    event_data.easing,
+                    has_base,
+                    context,
+                );
+
+                // when we repeat, we restart state
+                if result == CoroutineResult::Break && event_data.repeat > 0 {
+                    event_data.repeat = event_data.repeat.saturating_sub(1);
+                    event_data.start_time += duration;
+                    result = CoroutineResult::Yield;
+                }
+
+                result
+            }
             CoroutineData::AssignPathAnimation(path_property, base_point_definition) => {
                 assign_path_animation(
                     path_property,
@@ -200,9 +212,7 @@ impl CoroutineManager {
                     song_time,
                 )
             }
-        };
-
-        coro_result
+        }
     }
 }
 
