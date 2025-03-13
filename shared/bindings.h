@@ -40,11 +40,9 @@ typedef struct PathProperty PathProperty;
 
 typedef struct QuaternionPointDefinition QuaternionPointDefinition;
 
-typedef struct RefCell_BasePointDefinition RefCell_BasePointDefinition;
-
-typedef struct RefCell_Track RefCell_Track;
-
 typedef struct Track Track;
+
+typedef struct TracksContext TracksContext;
 
 typedef struct Vector3PointDefinition Vector3PointDefinition;
 
@@ -112,24 +110,6 @@ typedef struct QuaternionInterpolationResult {
   struct WrapQuat value;
   bool is_last;
 } QuaternionInterpolationResult;
-
-/**
- * Type that handles converting a Rc type to/from C
- */
-typedef struct RcC_RefCell_BasePointDefinition {
-  const struct RefCell_BasePointDefinition *rc;
-} RcC_RefCell_BasePointDefinition;
-
-typedef struct RcC_RefCell_BasePointDefinition RcCRefCell_BasePointDefinition;
-
-/**
- * Type that handles converting a Rc type to/from C
- */
-typedef struct RcC_RefCell_Track {
-  const struct RefCell_Track *rc;
-} RcC_RefCell_Track;
-
-typedef struct RcC_RefCell_Track RcCRefCell_Track;
 
 typedef struct Option_BaseValue ValueProperty;
 
@@ -219,92 +199,78 @@ uintptr_t tracks_quat_count(const struct QuaternionPointDefinition *point_defini
 
 bool tracks_quat_has_base_provider(const struct QuaternionPointDefinition *point_definition);
 
-RcCRefCell_BasePointDefinition base_point_definition_into_global(struct BasePointDefinition *ptr);
-
-void base_point_definition_global_dispose(struct RcC_RefCell_BasePointDefinition ptr);
+/**
+ * Creates a new CoroutineManager instance and returns a raw pointer to it.
+ * The caller is responsible for freeing the memory using destroy_coroutine_manager.
+ */
+struct CoroutineManager *create_coroutine_manager(void);
 
 /**
- * Create a new coroutine manager.
+ * Destroys a CoroutineManager instance, freeing its memory.
  */
-struct CoroutineManager *coroutine_manager_new(void);
+void destroy_coroutine_manager(struct CoroutineManager *manager);
 
 /**
- * Start an event coroutine.
+ * Starts an event coroutine in the manager. Consumes event_data
  */
-void coroutine_manager_start_event(struct CoroutineManager *manager,
-                                   float bpm,
-                                   float song_time,
-                                   const struct BaseProviderContext *context,
-                                   struct EventData *event_data);
+void start_event_coroutine(struct CoroutineManager *manager,
+                           float bpm,
+                           float song_time,
+                           const struct BaseProviderContext *context,
+                           struct EventData *event_data);
 
 /**
- * Poll events in a coroutine manager.
+ * Polls all events in the manager, updating their state based on the current song time.
+ * This consumes the CoroutineManager.
  */
-void coroutine_manager_poll_events(struct CoroutineManager *manager,
-                                   float song_time,
-                                   const struct BaseProviderContext *context);
+void poll_events(struct CoroutineManager *manager,
+                 float song_time,
+                 const struct BaseProviderContext *context);
 
-/**
- * Free a coroutine manager.
- */
-void coroutine_manager_free(struct CoroutineManager *manager);
+struct Track *track_create(void);
 
-/**
- * Create a new empty track
- */
-const struct Track *track_create(void);
+void track_destroy(struct Track *track);
 
-/**
- * Free a track
- */
-void track_global_dispose(RcCRefCell_Track track);
+void track_set_name(struct Track *track, const char *name);
 
-/**
- * Register a value property
- */
-void track_register_property(struct Track *track, const char *id, ValueProperty *property);
+const char *track_get_name(const struct Track *track);
 
-/**
- * Register a path property
- */
-void track_register_path_property(struct Track *track,
-                                  const char *id,
-                                  struct PathProperty *property);
-
-/**
- * Register a game object
- */
 void track_register_game_object(struct Track *track, struct GameObject *game_object);
 
-/**
- * Remove a game object
- */
-void track_remove_game_object(struct Track *track, const struct GameObject *game_object);
+void track_register_property(struct Track *track, const char *id, ValueProperty *property);
 
-/**
- * Mark the track as updated
- */
 void track_mark_updated(struct Track *track);
 
-/**
- * Check if a property exists
- */
-int track_has_property(const struct Track *track, const char *id);
+struct PathProperty *path_property_create(void);
 
-/**
- * Check if a path property exists
- */
-int track_has_path_property(const struct Track *track, const char *id);
+void path_property_finish(struct PathProperty *ptr);
 
-/**
- * Get a property
- */
-const ValueProperty *track_get_property(const struct Track *track, const char *id);
+void path_property_free(struct PathProperty *ptr);
 
-/**
- * Get a path property
- */
-const struct PathProperty *track_get_path_property(const struct Track *track, const char *id);
+float path_property_get_time(const struct PathProperty *ptr);
+
+void path_property_set_time(struct PathProperty *ptr, float time);
+
+void path_property_interpolate(struct PathProperty *ptr,
+                               float time,
+                               struct BaseProviderContext *context);
+
+struct TracksContext *tracks_context_create(void);
+
+void tracks_context_destroy(struct TracksContext *context);
+
+void tracks_context_add_track(struct TracksContext *context, struct Track *track);
+
+void tracks_context_add_point_definition(struct TracksContext *context,
+                                         struct BasePointDefinition *point_def);
+
+struct Track *tracks_context_get_track_by_name(struct TracksContext *context, const char *name);
+
+struct Track *tracks_context_get_track(struct TracksContext *context, uintptr_t index);
+
+const struct CoroutineManager *tracks_context_get_coroutine_manager(const struct TracksContext *context);
+
+const struct BaseProviderContext *tracks_context_get_base_provider_context(const struct TracksContext *context);
 
 #ifdef __cplusplus
 }  // extern "C"
