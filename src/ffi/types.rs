@@ -1,4 +1,91 @@
-use std::ffi::c_char;
+use std::{
+    cell::RefCell,
+    ffi::c_char,
+    ops::{Deref, DerefMut},
+    rc::Rc,
+};
+
+use glam::{Quat, Vec3, Vec4};
+
+use crate::values::value::BaseValue;
+
+/// Type that handles converting a Rc type to/from C
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct RcC<T> {
+    pub(crate) rc: *const T,
+}
+
+pub type RcCRefCell<T> = RcC<std::cell::RefCell<T>>;
+
+impl<T> RcC<T> {
+    pub fn null() -> Self {
+        Self {
+            rc: std::ptr::null(),
+        }
+    }
+
+    pub fn leak(rc: Rc<T>) -> Self {
+        Self {
+            rc: Rc::into_raw(rc),
+        }
+    }
+
+    // Safety: This function is safe as long as the Rc is not used after this function is called.
+    pub fn unleak(self) -> Rc<T> {
+        if self.rc.is_null() {
+            panic!("Attempted to un-leak a null RcC");
+        }
+        unsafe { Rc::from_raw(self.rc) }
+    }
+
+    pub fn is_null(&self) -> bool {
+        self.rc.is_null()
+    }
+}
+
+impl<T> From<Box<T>> for RcC<T> {
+    fn from(boxed: Box<T>) -> Self {
+        Self::leak(Rc::from(boxed))
+    }
+}
+impl<T> From<Box<T>> for RcCRefCell<T> {
+    fn from(boxed: Box<T>) -> Self {
+        let value = Box::into_inner(boxed);
+        Self::leak(Rc::new(RefCell::new(value)))
+    }
+}
+
+impl<T> From<Rc<T>> for RcC<T> {
+    fn from(rc: Rc<T>) -> Self {
+        Self::leak(rc)
+    }
+}
+
+impl<T> From<RcC<T>> for Rc<T> {
+    fn from(rc: RcC<T>) -> Self {
+        rc.unleak()
+    }
+}
+
+impl<T> Deref for RcCRefCell<T> {
+    type Target = std::cell::RefCell<T>;
+
+    fn deref(&self) -> &Self::Target {
+        unsafe { &*self.rc }
+    }
+}
+impl<T> DerefMut for RcCRefCell<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        unsafe { &mut *(self.rc as *mut _) }
+    }
+}
+
+impl<T> AsRef<T> for RcC<T> {
+    fn as_ref(&self) -> &T {
+        unsafe { &*self.rc }
+    }
+}
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -41,7 +128,7 @@ pub union WrapBaseValueUnion {
     pub(crate) vec3: WrapVec3,
     pub(crate) quat: WrapQuat,
     pub(crate) vec4: WrapVec4,
-    pub(crate) float: f32,
+    pub(crate) float_v: f32,
 }
 
 #[repr(C)]
@@ -49,6 +136,76 @@ pub union WrapBaseValueUnion {
 pub struct WrapBaseValue {
     pub(crate) ty: WrapBaseValueType,
     pub(crate) value: WrapBaseValueUnion,
+}
+
+impl From<BaseValue> for WrapBaseValue {
+    fn from(value: BaseValue) -> Self {
+        match value {
+            BaseValue::Vector3(v) => Self {
+                ty: WrapBaseValueType::Vec3,
+                value: WrapBaseValueUnion {
+                    vec3: WrapVec3 {
+                        x: v.x,
+                        y: v.y,
+                        z: v.z,
+                    },
+                },
+            },
+            BaseValue::Quaternion(v) => Self {
+                ty: WrapBaseValueType::Quat,
+                value: WrapBaseValueUnion {
+                    quat: WrapQuat {
+                        x: v.x,
+                        y: v.y,
+                        z: v.z,
+                        w: v.w,
+                    },
+                },
+            },
+            BaseValue::Vector4(v) => Self {
+                ty: WrapBaseValueType::Vec4,
+                value: WrapBaseValueUnion {
+                    vec4: WrapVec4 {
+                        x: v.x,
+                        y: v.y,
+                        z: v.z,
+                        w: v.w,
+                    },
+                },
+            },
+            BaseValue::Float(v) => Self {
+                ty: WrapBaseValueType::Float,
+                value: WrapBaseValueUnion { float_v: v },
+            },
+        }
+    }
+}
+
+impl From<WrapBaseValue> for BaseValue {
+    fn from(value: WrapBaseValue) -> Self {
+        unsafe {
+            match value.ty {
+                WrapBaseValueType::Vec3 => BaseValue::Vector3(Vec3::new(
+                    value.value.vec3.x,
+                    value.value.vec3.y,
+                    value.value.vec3.z,
+                )),
+                WrapBaseValueType::Quat => BaseValue::Quaternion(Quat::from_xyzw(
+                    value.value.quat.x,
+                    value.value.quat.y,
+                    value.value.quat.z,
+                    value.value.quat.w,
+                )),
+                WrapBaseValueType::Vec4 => BaseValue::Vector4(Vec4::new(
+                    value.value.vec4.x,
+                    value.value.vec4.y,
+                    value.value.vec4.z,
+                    value.value.vec4.w,
+                )),
+                WrapBaseValueType::Float => BaseValue::Float(value.value.float_v),
+            }
+        }
+    }
 }
 
 #[derive(Copy, Clone)]

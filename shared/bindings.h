@@ -22,11 +22,29 @@ typedef enum JsonValueType {
 
 typedef struct BaseFFIProviderValues BaseFFIProviderValues;
 
+typedef struct BasePointDefinition BasePointDefinition;
+
 typedef struct BaseProviderContext BaseProviderContext;
+
+typedef struct CoroutineManager CoroutineManager;
+
+typedef struct EventData EventData;
 
 typedef struct FloatPointDefinition FloatPointDefinition;
 
+typedef struct GameObject GameObject;
+
+typedef struct Option_BaseValue Option_BaseValue;
+
+typedef struct PathProperty PathProperty;
+
 typedef struct QuaternionPointDefinition QuaternionPointDefinition;
+
+typedef struct RefCell_BasePointDefinition RefCell_BasePointDefinition;
+
+typedef struct RefCell_Track RefCell_Track;
+
+typedef struct Track Track;
 
 typedef struct Vector3PointDefinition Vector3PointDefinition;
 
@@ -94,6 +112,26 @@ typedef struct QuaternionInterpolationResult {
   struct WrapQuat value;
   bool is_last;
 } QuaternionInterpolationResult;
+
+/**
+ * Type that handles converting a Rc type to/from C
+ */
+typedef struct RcC_RefCell_BasePointDefinition {
+  const struct RefCell_BasePointDefinition *rc;
+} RcC_RefCell_BasePointDefinition;
+
+typedef struct RcC_RefCell_BasePointDefinition RcCRefCell_BasePointDefinition;
+
+/**
+ * Type that handles converting a Rc type to/from C
+ */
+typedef struct RcC_RefCell_Track {
+  const struct RefCell_Track *rc;
+} RcC_RefCell_Track;
+
+typedef struct RcC_RefCell_Track RcCRefCell_Track;
+
+typedef struct Option_BaseValue ValueProperty;
 
 
 
@@ -180,6 +218,93 @@ struct QuaternionInterpolationResult tracks_interpolate_quat(const struct Quater
 uintptr_t tracks_quat_count(const struct QuaternionPointDefinition *point_definition);
 
 bool tracks_quat_has_base_provider(const struct QuaternionPointDefinition *point_definition);
+
+RcCRefCell_BasePointDefinition base_point_definition_into_global(struct BasePointDefinition *ptr);
+
+void base_point_definition_global_dispose(struct RcC_RefCell_BasePointDefinition ptr);
+
+/**
+ * Create a new coroutine manager.
+ */
+struct CoroutineManager *coroutine_manager_new(void);
+
+/**
+ * Start an event coroutine.
+ */
+void coroutine_manager_start_event(struct CoroutineManager *manager,
+                                   float bpm,
+                                   float song_time,
+                                   const struct BaseProviderContext *context,
+                                   struct EventData *event_data);
+
+/**
+ * Poll events in a coroutine manager.
+ */
+void coroutine_manager_poll_events(struct CoroutineManager *manager,
+                                   float song_time,
+                                   const struct BaseProviderContext *context);
+
+/**
+ * Free a coroutine manager.
+ */
+void coroutine_manager_free(struct CoroutineManager *manager);
+
+/**
+ * Create a new empty track
+ */
+const struct Track *track_create(void);
+
+/**
+ * Free a track
+ */
+void track_global_dispose(RcCRefCell_Track track);
+
+/**
+ * Register a value property
+ */
+void track_register_property(struct Track *track, const char *id, ValueProperty *property);
+
+/**
+ * Register a path property
+ */
+void track_register_path_property(struct Track *track,
+                                  const char *id,
+                                  struct PathProperty *property);
+
+/**
+ * Register a game object
+ */
+void track_register_game_object(struct Track *track, struct GameObject *game_object);
+
+/**
+ * Remove a game object
+ */
+void track_remove_game_object(struct Track *track, const struct GameObject *game_object);
+
+/**
+ * Mark the track as updated
+ */
+void track_mark_updated(struct Track *track);
+
+/**
+ * Check if a property exists
+ */
+int track_has_property(const struct Track *track, const char *id);
+
+/**
+ * Check if a path property exists
+ */
+int track_has_path_property(const struct Track *track, const char *id);
+
+/**
+ * Get a property
+ */
+const ValueProperty *track_get_property(const struct Track *track, const char *id);
+
+/**
+ * Get a path property
+ */
+const struct PathProperty *track_get_path_property(const struct Track *track, const char *id);
 
 #ifdef __cplusplus
 }  // extern "C"

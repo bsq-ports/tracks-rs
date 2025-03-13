@@ -4,6 +4,7 @@
 #![feature(new_range_api)]
 #![feature(type_alias_impl_trait)]
 #![feature(trait_alias)]
+#![feature(box_into_inner)]
 
 use std::{backtrace::Backtrace, panic::PanicHookInfo};
 

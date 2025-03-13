@@ -1,118 +1,197 @@
-use std::{
-    cell::RefCell,
-    ffi::{CStr, c_char},
-    ptr,
-    rc::Rc,
+use std::os::raw::c_int;
+use std::ptr::null;
+use std::{cell::RefCell, ffi::c_char, rc::Rc, time::Instant};
+
+use crate::{
+    animation::{
+        game_object::GameObject,
+        property::{PathProperty, ValueProperty},
+        tracks::{Track, TrackGlobal},
+    },
+    ffi::types::{RcCRefCell, WrapBaseValue},
+    values::value::BaseValue,
 };
 
-use crate::animation::{
-    property::{PathProperty, PathPropertyGlobal, ValueProperty, ValuePropertyGlobal},
-    tracks::TrackGlobal,
-};
-
-/// Creates a new empty track global and returns a pointer to it
+/// Create a new empty track
 #[unsafe(no_mangle)]
-pub extern "C" fn track_global_create() -> *mut TrackGlobal {
-    let track_global = TrackGlobal::new(RefCell::new(Default::default()));
-
-    Box::into_raw(Box::new(track_global))
+pub extern "C" fn track_create() -> *const Track {
+    let track = Track::default();
+    Box::leak(Box::new(track))
+    // let rc = Rc::new(RefCell::new(track));
+    // rc.into()
 }
 
-/// Frees a track global that was created with track_global_create
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn track_global_destroy(track_global: *mut TrackGlobal) {
-    if track_global.is_null() {
+pub unsafe extern "C" fn track_free(track: *mut Track) {
+    if track.is_null() {
         return;
     }
+
     unsafe {
-        drop(Box::from_raw(track_global));
+        let _ = Box::from_raw(track);
     }
 }
 
-/// Registers a property with the track global
+pub unsafe extern "C" fn track_into_global(track: *mut Track) -> RcCRefCell<Track> {
+    if track.is_null() {
+        return RcCRefCell::null();
+    }
+
+    let track = unsafe { Box::from_raw(track) };
+    Rc::new(RefCell::new(Box::into_inner(track))).into()
+}
+
+/// Free a track
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn track_global_register_property(
-    track_global: *mut TrackGlobal,
+pub extern "C" fn track_global_dispose(track: RcCRefCell<Track>) {
+    let _ = track.unleak();
+    // Track will be dropped here
+}
+
+/// Register a value property
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn track_register_property(
+    track: *mut Track,
     id: *const c_char,
-    property: *mut ValuePropertyGlobal,
-) -> bool {
-    if track_global.is_null() || id.is_null() || property.is_null() {
-        return false;
+    property: *mut ValueProperty,
+) {
+    if id.is_null() || property.is_null() || track.is_null() {
+        return;
     }
 
-    unsafe {
-        let track_global = &mut *track_global;
-        let id_str = CStr::from_ptr(id).to_string_lossy().into_owned();
-        let property_global = Box::from_raw(property);
+    let id_str = unsafe { std::ffi::CStr::from_ptr(id) }
+        .to_string_lossy()
+        .to_string();
+    let property = unsafe { Box::from_raw(property) };
 
-        track_global
-            .borrow_mut()
-            .register_property(id_str, *property_global);
-        true
-    }
+    let track = unsafe { &mut *track };
+    track.register_property(id_str, *property);
 }
 
-/// Registers a path property with the track global
+/// Register a path property
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn track_global_register_path_property(
-    track_global: *mut TrackGlobal,
+pub unsafe extern "C" fn track_register_path_property(
+    track: *mut Track,
     id: *const c_char,
-    property: *mut PathPropertyGlobal,
-) -> bool {
-    if track_global.is_null() || id.is_null() || property.is_null() {
-        return false;
+    property: *mut PathProperty,
+) {
+    if id.is_null() || property.is_null() || track.is_null() {
+        return;
     }
 
-    unsafe {
-        let track_global = &mut *track_global;
-        let id_str = CStr::from_ptr(id).to_string_lossy().into_owned();
-        let property_global = Box::from_raw(property);
+    let id_str = unsafe { std::ffi::CStr::from_ptr(id) }
+        .to_string_lossy()
+        .to_string();
+    let property = unsafe { Box::from_raw(property) };
 
-        track_global
-            .borrow_mut()
-            .register_path_property(id_str, *property_global);
-        true
-    }
+    let track = unsafe { &mut *track };
+    track.register_path_property(id_str, *property);
 }
 
-/// Gets a property from track global by ID. Returns null if not found.
+/// Register a game object
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn track_global_get_property(
-    track_global: *const TrackGlobal,
+pub unsafe extern "C" fn track_register_game_object(
+    track: *mut Track,
+    game_object: *mut GameObject,
+) {
+    if game_object.is_null() || track.is_null() {
+        return;
+    }
+
+    let game_object = unsafe { Box::from_raw(game_object) };
+
+    let track = unsafe { &mut *track };
+    track.register_game_object(*game_object);
+}
+
+/// Remove a game object
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn track_remove_game_object(
+    track: *mut Track,
+    game_object: *const GameObject,
+) {
+    if game_object.is_null() || track.is_null() {
+        return;
+    }
+
+    let game_object_ref = unsafe { &*game_object };
+
+    let track = unsafe { &mut *track };
+    track.remove_game_object(game_object_ref);
+}
+
+/// Mark the track as updated
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn track_mark_updated(track: *mut Track) {
+    let track = unsafe { &mut *track };
+    track.mark_updated();
+}
+
+/// Check if a property exists
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn track_has_property(track: *const Track, id: *const c_char) -> c_int {
+    if id.is_null() || track.is_null() {
+        return 0;
+    }
+
+    let id_str = unsafe { std::ffi::CStr::from_ptr(id) }.to_string_lossy();
+
+    let track = unsafe { &*track };
+    let result = { track.get_property(&id_str).is_some() as c_int };
+
+    result
+}
+
+/// Check if a path property exists
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn track_has_path_property(track: *const Track, id: *const c_char) -> c_int {
+    if id.is_null() {
+        return 0;
+    }
+
+    let id_str = unsafe { std::ffi::CStr::from_ptr(id) }.to_string_lossy();
+
+    let result = {
+        let track = unsafe { &*track };
+        track.get_path_property(&id_str).is_some() as c_int
+    };
+
+    result
+}
+
+/// Get a property
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn track_get_property(
+    track: *const Track,
     id: *const c_char,
 ) -> *const ValueProperty {
-    if track_global.is_null() || id.is_null() {
-        return ptr::null();
+    if id.is_null() || track.is_null() {
+        return std::ptr::null();
     }
 
-    unsafe {
-        let track_global = &*track_global;
-        let id_str = CStr::from_ptr(id).to_string_lossy();
+    let id_str = unsafe { std::ffi::CStr::from_ptr(id).to_string_lossy() };
+    let track = unsafe { &*track };
 
-        match track_global.borrow().get_property(&id_str) {
-            Some(property) => Rc::as_ptr(property) as *const ValueProperty,
-            None => ptr::null(),
-        }
+    match track.get_property(&id_str) {
+        Some(property) => property,
+        None => std::ptr::null(),
     }
 }
 
-/// Gets a path property from track global by ID. Returns null if not found.
+/// Get a path property
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn track_global_get_path_property(
-    track_global: *const TrackGlobal,
+pub unsafe extern "C" fn track_get_path_property(
+    track: *const Track,
     id: *const c_char,
 ) -> *const PathProperty {
-    if track_global.is_null() || id.is_null() {
-        return ptr::null();
+    if id.is_null() || track.is_null() {
+        return std::ptr::null();
     }
 
-    unsafe {
-        let track_global = &*track_global;
-        let id_str = CStr::from_ptr(id).to_string_lossy();
+    let id_str = unsafe { std::ffi::CStr::from_ptr(id).to_string_lossy() };
+    let track = unsafe { &*track };
 
-        match track_global.borrow().get_path_property(&id_str) {
-            Some(property) => Rc::as_ptr(property) as *const PathProperty,
-            None => ptr::null(),
-        }
+    match track.get_path_property(&id_str) {
+        Some(property) => property,
+        None => std::ptr::null(),
     }
 }

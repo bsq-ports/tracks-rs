@@ -1,17 +1,8 @@
-use itertools::Itertools;
-
 use crate::easings::functions::Functions;
-use crate::point_definition::{BasePointDefinition, BasePointDefinitionGlobal, PointDefinition};
-use crate::values::base_provider_context::BaseProviderContext;
+use crate::point_definition::BasePointDefinitionGlobal;
 
-use super::property::{PathProperty, PathPropertyGlobal, ValuePropertyGlobal};
-use super::tracks::{Track, TrackGlobal};
-
-use std::collections::LinkedList;
-use std::rc::Rc;
-use std::sync::Arc;
-use std::time::Duration;
-use std::vec;
+use super::property::{PathPropertyGlobal, ValuePropertyGlobal};
+use super::tracks::TrackGlobal;
 
 pub struct EventData {
     pub raw_duration: f32,
@@ -25,6 +16,6 @@ pub struct EventData {
 }
 
 pub enum EventType {
-    AnimateTrack(ValuePropertyGlobal, Rc<BasePointDefinitionGlobal>),
+    AnimateTrack(ValuePropertyGlobal, BasePointDefinitionGlobal),
     AssignPathAnimation(PathPropertyGlobal, Option<BasePointDefinitionGlobal>),
 }

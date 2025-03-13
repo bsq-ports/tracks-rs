@@ -1,17 +1,15 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc, time::Instant};
 
-use crate::values::value::BaseValue;
-
 use super::{
     game_object::GameObject,
-    property::{PathProperty, PathPropertyGlobal, ValuePropertyGlobal},
+    property::{PathProperty, ValueProperty},
 };
 
 pub type TrackGlobal = Rc<RefCell<Track>>;
 
 pub struct Track {
-    pub properties: HashMap<String, ValuePropertyGlobal>,
-    pub path_properties: HashMap<String, PathPropertyGlobal>,
+    pub properties: HashMap<String, ValueProperty>,
+    pub path_properties: HashMap<String, PathProperty>,
 
     // hashset but must be insertion ordered
     pub game_objects: Vec<GameObject>,
@@ -20,11 +18,11 @@ pub struct Track {
 }
 
 impl Track {
-    pub fn register_property(&mut self, id: String, property: ValuePropertyGlobal) {
+    pub fn register_property(&mut self, id: String, property: ValueProperty) {
         self.properties.insert(id, property);
     }
 
-    pub fn register_path_property(&mut self, id: String, property: PathPropertyGlobal) {
+    pub fn register_path_property(&mut self, id: String, property: PathProperty) {
         self.path_properties.insert(id, property);
     }
 
@@ -36,10 +34,10 @@ impl Track {
         self.game_objects.push(game_object);
     }
 
-    pub fn get_property(&self, id: &str) -> Option<&ValuePropertyGlobal> {
+    pub fn get_property(&self, id: &str) -> Option<&ValueProperty> {
         self.properties.get(id)
     }
-    pub fn get_path_property(&self, id: &str) -> Option<&PathPropertyGlobal> {
+    pub fn get_path_property(&self, id: &str) -> Option<&PathProperty> {
         self.path_properties.get(id)
     }
 

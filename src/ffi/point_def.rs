@@ -30,6 +30,8 @@ use crate::values::base_ffi::BaseFFIProvider;
 use super::json;
 use super::json::FFIJsonValue;
 use super::types;
+use super::types::RcC;
+use super::types::RcCRefCell;
 use super::types::WrapQuat;
 use super::types::WrapVec3;
 use super::types::WrapVec4;
@@ -41,7 +43,6 @@ pub enum PointDefinitionType {
     Vector4 = 2,
     Quaternion = 3,
 }
-
 
 #[repr(C)]
 pub struct FloatInterpolationResult {
@@ -294,66 +295,18 @@ pub unsafe extern "C" fn tracks_quat_has_base_provider(
 }
 
 // FFI functions for working with BasePointDefinitionGlobal
-
-
-
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn base_point_definition_global_create(
-    definition_type: PointDefinitionType,
-) -> *mut BasePointDefinitionGlobal {
-    let point_def = match definition_type {
-        PointDefinitionType::Float => BasePointDefinition::Float(FloatPointDefinition::default()),
-        PointDefinitionType::Vector3 => {
-            BasePointDefinition::Vector3(Vector3PointDefinition::default())
-        }
-        PointDefinitionType::Vector4 => {
-            BasePointDefinition::Vector4(Vector4PointDefinition::default())
-        }
-        PointDefinitionType::Quaternion => {
-            BasePointDefinition::Quaternion(QuaternionPointDefinition::default())
-        }
-    };
-    let definition = Rc::new(RefCell::new(point_def));
-    Box::into_raw(Box::new(definition))
+pub unsafe extern "C" fn base_point_definition_into_global(
+    ptr: *mut BasePointDefinition,
+) -> RcCRefCell<BasePointDefinition> {
+    let boxed = unsafe { Box::from_raw(ptr) };
+    let rc = BasePointDefinitionGlobal::new(Box::into_inner(boxed).into());
+    RcCRefCell::leak(rc)
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn base_point_definition_global_get_type(
-    ptr: *const BasePointDefinitionGlobal,
-) -> PointDefinitionType {
-    if ptr.is_null() {
-        return PointDefinitionType::Float; // Default fallback
-    }
-
-    let rc_ref = unsafe { &*ptr };
-    let borrowed = rc_ref.borrow();
-    match *borrowed {
-        BasePointDefinition::Float(_) => PointDefinitionType::Float,
-        BasePointDefinition::Vector3(_) => PointDefinitionType::Vector3,
-        BasePointDefinition::Vector4(_) => PointDefinitionType::Vector4,
-        BasePointDefinition::Quaternion(_) => PointDefinitionType::Quaternion,
-    }
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn base_point_definition_global_dispose(ptr: *mut BasePointDefinitionGlobal) {
-    if ptr.is_null() {
-        return;
-    }
-    unsafe {
-        let _ = Box::from_raw(ptr);
-    }
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn base_point_definition_global_borrow(
-    ptr: *const BasePointDefinitionGlobal,
-) -> *const BasePointDefinition {
-    if ptr.is_null() {
-        return std::ptr::null();
-    }
-
-    let rc_ref = unsafe { &*ptr };
-    let borrowed = rc_ref.borrow();
-    &borrowed as &BasePointDefinition as *const BasePointDefinition
+pub unsafe extern "C" fn base_point_definition_global_dispose(
+    ptr: RcC<RefCell<BasePointDefinition>>,
+) {
+    ptr.unleak();
 }

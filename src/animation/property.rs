@@ -1,9 +1,8 @@
 use std::{cell::RefCell, rc::Rc};
 
-use glam::{Quat, Vec3, Vec4};
 
 use crate::{
-    point_definition::{BasePointDefinition, BasePointDefinitionGlobal, PointDefinition},
+    point_definition::{BasePointDefinitionGlobal, PointDefinition},
     values::{base_provider_context::BaseProviderContext, value::BaseValue},
 };
 
@@ -12,6 +11,7 @@ pub type ValuePropertyGlobal = Rc<RefCell<ValueProperty>>;
 
 pub type PathPropertyGlobal = Rc<RefCell<PathProperty>>;
 
+#[derive(Default)]
 pub struct PathProperty {
     pub time: f32,
     pub prev_point: Option<BasePointDefinitionGlobal>,

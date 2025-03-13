@@ -1,238 +1,180 @@
-//! FFI bindings for Track properties.
+use crate::{
+    animation::property::{PathProperty, ValueProperty},
+    ffi::types::WrapBaseValue,
+    values::value::BaseValue,
+};
 
-use std::ffi::{CStr, CString, c_char};
-use std::os::raw::{c_float, c_int};
-use std::ptr;
+use super::types::RcCRefCell;
 
-use crate::animation::property::{PathProperty, PathPropertyGlobal};
-use crate::animation::property::{ValueProperty, ValuePropertyGlobal};
-use crate::values::value::BaseValue;
-use std::{cell::RefCell, rc::Rc};
-
-/// Creates a new ValuePropertyGlobal with None value.
 #[unsafe(no_mangle)]
-pub extern "C" fn value_property_global_create() -> *mut ValuePropertyGlobal {
-    Box::into_raw(Box::new(Rc::new(RefCell::new(None))))
+pub unsafe extern "C" fn value_property_create() -> *mut ValueProperty {
+    let property: ValueProperty = None;
+    Box::into_raw(Box::new(property))
 }
 
-/// Creates a new PathPropertyGlobal with default values.
 #[unsafe(no_mangle)]
-pub extern "C" fn path_property_global_create() -> *mut PathPropertyGlobal {
-    Box::into_raw(Box::new(Rc::new(RefCell::new(PathProperty {
-        time: 0.0,
-        prev_point: None,
-        point: None,
-    }))))
+pub unsafe extern "C" fn value_property_destroy(property: *mut ValueProperty) {
+    if !property.is_null() {
+        let _ = Box::from_raw(property); // Convert back to Box and drop it
+    }
 }
 
-/// Destroys a ValuePropertyGlobal.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn value_property_global_destroy(property: *mut ValuePropertyGlobal) {
+pub unsafe extern "C" fn value_property_to_global(
+    property: *mut ValueProperty,
+) -> RcCRefCell<ValueProperty> {
     if property.is_null() {
-        return;
+        return RcCRefCell::null();
     }
-    unsafe {
-        drop(Box::from_raw(property));
-    }
+
+    // Take ownership of the box and create a new owned copy
+    let owned_property = Box::from_raw(property);
+    owned_property.into()
 }
 
-/// Destroys a PathPropertyGlobal.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn path_property_global_destroy(property: *mut PathPropertyGlobal) {
-    if property.is_null() {
-        return;
-    }
-    unsafe {
-        drop(Box::from_raw(property));
-    }
+pub unsafe extern "C" fn value_property_global_dispose(property: RcCRefCell<ValueProperty>) {
+    property.unleak();
 }
 
-/// Gets a value from a ValuePropertyGlobal into a WrapBaseValue.
-/// Returns 1 if a value was retrieved, 0 if property was None.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn value_property_global_get_value(
-    property: *const ValuePropertyGlobal,
-    out_value: *mut crate::ffi::types::WrapBaseValue,
-) -> c_int {
+pub unsafe extern "C" fn value_property_get(
+    property: *const ValueProperty,
+    out_value: *mut WrapBaseValue,
+) -> bool {
     if property.is_null() || out_value.is_null() {
-        return 0;
+        return false;
     }
-    
-    let property_ref = unsafe { &*property };
-    let value_opt = property_ref.borrow();
-    
-    if let Some(base_value) = &*value_opt {
-        let out = unsafe { &mut *out_value };
-        match base_value {
-            BaseValue::Float(v) => {
-                out.ty = crate::ffi::types::WrapBaseValueType::Float;
-                out.value.float = *v;
-            },
-            BaseValue::Vector3(v) => {
-                out.ty = crate::ffi::types::WrapBaseValueType::Vec3;
-                out.value.vec3.x = v.x;
-                out.value.vec3.y = v.y;
-                out.value.vec3.z = v.z;
-            },
-            BaseValue::Quaternion(q) => {
-                out.ty = crate::ffi::types::WrapBaseValueType::Quat;
-                out.value.quat.x = q.x;
-                out.value.quat.y = q.y;
-                out.value.quat.z = q.z;
-                out.value.quat.w = q.w;
-            },
-            BaseValue::Vector4(v) => {
-                out.ty = crate::ffi::types::WrapBaseValueType::Vec4;
-                out.value.vec4.x = v.x;
-                out.value.vec4.y = v.y;
-                out.value.vec4.z = v.z;
-                out.value.vec4.w = v.w;
-            },
+
+    unsafe {
+        match &*property {
+            Some(value) => {
+                *out_value = (*value).into();
+                true
+            }
+            _ => false,
         }
-        1
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn value_property_set(
+    property: *mut ValueProperty,
+    value: *const WrapBaseValue,
+) -> bool {
+    if property.is_null() || value.is_null() {
+        return false;
+    }
+
+    unsafe {
+        let base_value = BaseValue::from(*value);
+        *property = Some(base_value);
+    }
+    true
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn path_property_create() -> *mut PathProperty {
+    let property: PathProperty = PathProperty::default();
+    Box::into_raw(Box::new(property))
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn path_property_destroy(property: *mut PathProperty) {
+    if !property.is_null() {
+        let _ = unsafe { Box::from_raw(property) }; // Convert back to Box and drop it
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn path_property_to_global(
+    property: *mut PathProperty,
+) -> RcCRefCell<PathProperty> {
+    if property.is_null() {
+        return RcCRefCell::null();
+    }
+
+    // Take ownership of the box and create a new owned copy
+    let owned_property = unsafe { Box::from_raw(property) };
+    owned_property.into()
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn path_property_global_dispose(property: RcCRefCell<PathProperty>) {
+    property.unleak();
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn path_property_finish(property: *mut PathProperty) -> bool {
+    if property.is_null() {
+        return false;
+    }
+    unsafe {
+        (*property).finish();
+    }
+    true
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn path_property_init(
+    property: *mut PathProperty,
+    new_point_data: RcCRefCell<crate::point_definition::BasePointDefinition>,
+) -> bool {
+    if property.is_null() {
+        return false;
+    }
+
+    let point_data = if new_point_data.is_null() {
+        None
     } else {
-        0
+        Some(new_point_data.unleak())
+    };
+
+    unsafe {
+        (*property).init(point_data);
     }
+    true
 }
 
-/// Sets a value in a ValuePropertyGlobal using WrapBaseValue.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn value_property_global_set_value(
-    property: *mut ValuePropertyGlobal,
-    value: crate::ffi::types::WrapBaseValue,
-) {
-    if property.is_null() {
-        return;
+pub unsafe extern "C" fn path_property_interpolate(
+    property: *const PathProperty,
+    time: f32,
+    context: *const crate::values::base_provider_context::BaseProviderContext,
+    out_value: *mut WrapBaseValue,
+) -> bool {
+    if property.is_null() || context.is_null() || out_value.is_null() {
+        return false;
     }
+
     unsafe {
-        let property_ref = &mut *property;
-        *property_ref.borrow_mut() = match value.ty {
-            crate::ffi::types::WrapBaseValueType::Float => {
-                Some(BaseValue::Float(value.value.float))
+        match (*property).interpolate(time, &*context) {
+            Some(value) => {
+                *out_value = value.into();
+                true
             }
-            crate::ffi::types::WrapBaseValueType::Vec3 => {
-                let v = value.value.vec3;
-                Some(BaseValue::Vector3(glam::Vec3::new(v.x, v.y, v.z)))
-            }
-            crate::ffi::types::WrapBaseValueType::Quat => {
-                let q = value.value.quat;
-                Some(BaseValue::Quaternion(glam::Quat::from_xyzw(
-                    q.x, q.y, q.z, q.w,
-                )))
-            }
-            crate::ffi::types::WrapBaseValueType::Vec4 => {
-                let v = value.value.vec4;
-                Some(BaseValue::Vector4(glam::Vec4::new(v.x, v.y, v.z, v.w)))
-            }
-        };
+            None => false,
+        }
     }
 }
 
-/// Sets a float value in a ValuePropertyGlobal.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn value_property_global_set_float(
-    property: *mut ValuePropertyGlobal,
-    value: c_float,
-) {
+pub unsafe extern "C" fn path_property_set_time(property: *mut PathProperty, time: f32) -> bool {
     if property.is_null() {
-        return;
+        return false;
     }
+
     unsafe {
-        let property_ref = &mut *property;
-        *property_ref.borrow_mut() = Some(BaseValue::Float(value));
+        (*property).time = time;
     }
+    true
 }
 
-/// Sets a Vec3 value in a ValuePropertyGlobal.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn value_property_global_set_vec3(
-    property: *mut ValuePropertyGlobal,
-    x: c_float,
-    y: c_float,
-    z: c_float,
-) {
+pub unsafe extern "C" fn path_property_get_time(property: *const PathProperty) -> f32 {
     if property.is_null() {
-        return;
+        return 0.0;
     }
-    unsafe {
-        let property_ref = &mut *property;
-        *property_ref.borrow_mut() = Some(BaseValue::Vector3(glam::Vec3::new(x, y, z)));
-    }
-}
 
-/// Sets a Quat value in a ValuePropertyGlobal.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn value_property_global_set_quat(
-    property: *mut ValuePropertyGlobal,
-    x: c_float,
-    y: c_float,
-    z: c_float,
-    w: c_float,
-) {
-    if property.is_null() {
-        return;
-    }
-    unsafe {
-        let property_ref = &mut *property;
-        *property_ref.borrow_mut() = Some(BaseValue::Quaternion(glam::Quat::from_xyzw(x, y, z, w)));
-    }
-}
-
-/// Clears the value in a ValuePropertyGlobal.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn value_property_global_clear(property: *mut ValuePropertyGlobal) {
-    if property.is_null() {
-        return;
-    }
-    unsafe {
-        let property_ref = &mut *property;
-        *property_ref.borrow_mut() = None;
-    }
-}
-
-/// Initializes a PathProperty with a new point.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn path_property_global_init(
-    property: *mut PathPropertyGlobal,
-    point_data: *mut crate::point_definition::BasePointDefinitionGlobal,
-) {
-    if property.is_null() {
-        return;
-    }
-    unsafe {
-        let property_ref = &mut *property;
-        let point = if point_data.is_null() {
-            None
-        } else {
-            Some(Rc::clone(&*point_data))
-        };
-        property_ref.borrow_mut().init(point);
-    }
-}
-
-/// Finishes a PathProperty.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn path_property_global_finish(property: *mut PathPropertyGlobal) {
-    if property.is_null() {
-        return;
-    }
-    unsafe {
-        let property_ref = &mut *property;
-        property_ref.borrow_mut().finish();
-    }
-}
-
-/// Sets the time of a PathProperty.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn path_property_global_set_time(
-    property: *mut PathPropertyGlobal,
-    time: c_float,
-) {
-    if property.is_null() {
-        return;
-    }
-    unsafe {
-        let property_ref = &mut *property;
-        property_ref.borrow_mut().time = time;
-    }
+    unsafe { (*property).time }
 }
