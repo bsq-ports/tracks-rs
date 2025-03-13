@@ -11,6 +11,7 @@ use std::{backtrace::Backtrace, panic::PanicHookInfo};
 use tracing::error;
 use tracing_error::SpanTrace;
 
+pub mod context;
 pub mod easings;
 
 #[cfg(feature = "ffi")]

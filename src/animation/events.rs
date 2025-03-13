@@ -1,21 +1,20 @@
-use crate::easings::functions::Functions;
-use crate::point_definition::BasePointDefinitionGlobal;
+use crate::{easings::functions::Functions, point_definition::BasePointDefinition};
 
-use super::property::{PathPropertyGlobal, ValuePropertyGlobal};
-use super::tracks::TrackGlobal;
+use super::{property::{PathProperty, ValueProperty}, tracks::Track};
 
-pub struct EventData {
+pub struct EventData<'a> {
     pub raw_duration: f32,
     pub easing: Functions,
     pub repeat: u32,
     // song time or beatmap time?
     pub start_time: f32,
 
-    pub property: EventType,
-    pub track: TrackGlobal,
+    pub property: EventType<'a>,
+    pub track: &'a mut Track<'a>,
+    pub point_data: Option<&'a BasePointDefinition>,
 }
 
-pub enum EventType {
-    AnimateTrack(ValuePropertyGlobal, BasePointDefinitionGlobal),
-    AssignPathAnimation(PathPropertyGlobal, Option<BasePointDefinitionGlobal>),
+pub enum EventType<'a> {
+    AnimateTrack(ValueProperty),
+    AssignPathAnimation(PathProperty<'a>),
 }

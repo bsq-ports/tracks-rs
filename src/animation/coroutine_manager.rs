@@ -4,28 +4,30 @@ use itertools::Itertools;
 
 use crate::{
     easings::functions::Functions,
-    point_definition::{BasePointDefinition, BasePointDefinitionGlobal, PointDefinition},
+    point_definition::{BasePointDefinition, PointDefinition},
     values::base_provider_context::BaseProviderContext,
 };
 
 use super::{
     events::{EventData, EventType},
     property::{PathProperty, ValueProperty},
-    tracks::{Track, TrackGlobal},
+    tracks::Track,
 };
 
 #[derive(Default)]
-pub struct CoroutineManager {
-    coroutines: Vec<CoroutineTask>,
+pub struct CoroutineManager<'a> {
+    coroutines: Vec<CoroutineTask<'a>>,
+    _marker: std::marker::PhantomData<&'a ()>,
 }
 
-struct CoroutineTask {
-    event_type: EventType,
+struct CoroutineTask<'a> {
+    event_type: EventType<'a>,
     repeat: u32,
     duration_song_time: f32,
     easing: Functions,
     start_time: f32,
-    track: TrackGlobal,
+    track: &'a mut Track<'a>,
+    point_defintion: &'a BasePointDefinition,
 }
 
 #[derive(PartialEq, PartialOrd, Clone, Copy)]
@@ -34,33 +36,22 @@ pub enum CoroutineResult {
     Break,
 }
 
-impl EventType {
+impl EventType<'_> {
     pub(crate) fn set_null(&mut self) {
         match self {
-            EventType::AnimateTrack(property, _) => *property = RefCell::new(None).into(),
-            EventType::AssignPathAnimation(path_property, _) => {
-                path_property.borrow_mut().init(None)
-            }
-        }
-    }
-
-    pub fn get_point_definition(&self) -> Option<&BasePointDefinitionGlobal> {
-        match self {
-            EventType::AnimateTrack(_, base_point_definition) => Some(base_point_definition),
-            EventType::AssignPathAnimation(_, base_point_definition) => {
-                base_point_definition.as_ref()
-            }
+            EventType::AnimateTrack(property) => *property = None,
+            EventType::AssignPathAnimation(path_property) => path_property.init(None),
         }
     }
 }
 
-impl CoroutineManager {
+impl<'a> CoroutineManager<'a> {
     pub fn start_event_coroutine(
         &mut self,
         bpm: f32,
         song_time: f32,
-        context: &BaseProviderContext,
-        event_group_data: EventData,
+        context: &'a BaseProviderContext,
+        event_group_data: EventData<'a>,
     ) {
         let duration = (60.0 * event_group_data.raw_duration) / bpm;
 
@@ -102,31 +93,31 @@ impl CoroutineManager {
 
         easing: Functions,
         repeat: u32,
-        data: EventData,
-        context: &BaseProviderContext,
-    ) -> Option<CoroutineTask> {
+        data: EventData<'a>,
+        context: &'a BaseProviderContext,
+    ) -> Option<CoroutineTask<'a>> {
         let mut repeat = repeat;
         let no_duration =
             duration == 0.0 || start_time + (duration * (repeat as f32 + 1.0)) < song_time;
         let mut property = data.property;
         let mut track = data.track;
-        if property.get_point_definition().is_none() {
-            track.borrow_mut().mark_updated();
+
+        let Some(point_data) = data.point_data else {
+            track.mark_updated();
             property.set_null();
             return None;
-        }
-        let has_base = property
-            .get_point_definition()
-            .is_some_and(|t| t.borrow().has_base_provider());
+        };
+
+        let has_base = point_data.has_base_provider();
         match &mut property {
-            EventType::AnimateTrack(property, point_data) => {
-                if no_duration || (point_data.borrow().get_points().len() <= 1 && !has_base) {
-                    set_property_value(&mut point_data.borrow_mut(), &mut property.borrow_mut(), &mut track.borrow_mut(), 1.0, context);
+            EventType::AnimateTrack(property) => {
+                if no_duration || (point_data.get_points().len() <= 1 && !has_base) {
+                    set_property_value(&point_data, property, &mut track, 1.0, context);
                     return None;
                 }
 
                 let result = animate_track(
-                    &mut point_data.borrow_mut(), &mut property.borrow_mut(), &mut track.borrow_mut(), duration, start_time, song_time, easing,
+                    point_data, property, &mut track, duration, start_time, song_time, easing,
                     has_base, context,
                 );
                 if result == CoroutineResult::Break {
@@ -137,15 +128,15 @@ impl CoroutineManager {
                     return None;
                 }
             }
-            EventType::AssignPathAnimation(path_property, point_data) => {
-                path_property.borrow_mut().init(point_data.take());
+            EventType::AssignPathAnimation(path_property) => {
+                path_property.init(Some(point_data));
 
                 if no_duration {
-                    path_property.borrow_mut().finish();
+                    path_property.finish();
                     return None;
                 }
                 let res =
-                    assign_path_animation(&mut path_property.borrow_mut(), duration, start_time, easing, song_time);
+                    assign_path_animation(path_property, duration, start_time, easing, song_time);
                 if res == CoroutineResult::Break {
                     return None;
                 }
@@ -159,10 +150,11 @@ impl CoroutineManager {
             repeat,
             duration_song_time: duration,
             start_time,
+            point_defintion: point_data,
         })
     }
 
-    pub fn poll_events(mut self, song_time: f32, context: &BaseProviderContext) {
+    pub fn poll_events(&mut self, song_time: f32, context: &BaseProviderContext) {
         // Yield and remove coroutines that are finished
         self.coroutines.retain_mut(|event| {
             Self::poll_event(song_time, context, event) == CoroutineResult::Yield
@@ -175,18 +167,16 @@ impl CoroutineManager {
         event_data: &mut CoroutineTask,
     ) -> CoroutineResult {
         let duration = event_data.duration_song_time;
+        let point_def = event_data.point_defintion;
 
-        let has_base = event_data
-            .event_type
-            .get_point_definition()
-            .is_some_and(|t| t.borrow().has_base_provider());
+        let has_base = point_def.has_base_provider();
 
         match &mut event_data.event_type {
-            EventType::AnimateTrack(value_property, base_point_definition) => {
+            EventType::AnimateTrack(value_property) => {
                 let mut result = animate_track(
-                    &mut base_point_definition.borrow_mut(),
-                    &mut value_property.borrow_mut(),
-                    &mut event_data.track.borrow_mut(),
+                    point_def,
+                    value_property,
+                    event_data.track,
                     duration,
                     event_data.start_time,
                     song_time,
@@ -204,21 +194,19 @@ impl CoroutineManager {
 
                 result
             }
-            EventType::AssignPathAnimation(path_property, _) => {
-                assign_path_animation(
-                    &mut path_property.borrow_mut(),
-                    duration,
-                    event_data.start_time,
-                    event_data.easing,
-                    song_time,
-                )
-            }
+            EventType::AssignPathAnimation(path_property) => assign_path_animation(
+                path_property,
+                duration,
+                event_data.start_time,
+                event_data.easing,
+                song_time,
+            ),
         }
     }
 }
 
 fn animate_track(
-    points: &mut BasePointDefinition,
+    points: &BasePointDefinition,
     property: &mut ValueProperty,
     track: &mut Track,
     duration: f32,
@@ -262,7 +250,7 @@ fn assign_path_animation(
 }
 
 fn set_property_value(
-    points: &mut BasePointDefinition,
+    points: &BasePointDefinition,
     property: &mut ValueProperty,
     track: &mut Track,
     time: f32,

@@ -4,6 +4,7 @@ use super::implementations::*;
 
 #[derive(Copy, Clone, Debug)]
 #[allow(dead_code, clippy::enum_variant_names)]
+#[repr(C)]
 pub enum Functions {
     EaseLinear,
     EaseStep,

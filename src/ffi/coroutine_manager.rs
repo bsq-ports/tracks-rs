@@ -1,37 +1,57 @@
-use std::ptr;
 use crate::animation::coroutine_manager::CoroutineManager;
-use crate::animation::events::EventData;
+use crate::animation::events::{EventData, EventType};
+use crate::animation::property::{PathProperty, ValueProperty};
+use crate::animation::tracks::Track;
+use crate::easings::functions::Functions;
+use crate::point_definition::{BasePointDefinition, PointDefinition};
 use crate::values::base_provider_context::BaseProviderContext;
+use std::ptr;
 
-/// Create a new coroutine manager.
+// filepath: /Users/fern/Developer/tracks-rs/src/ffi/coroutine_manager.rs
+
+/// Creates a new CoroutineManager instance and returns a raw pointer to it.
+/// The caller is responsible for freeing the memory using destroy_coroutine_manager.
 #[unsafe(no_mangle)]
-pub extern "C" fn coroutine_manager_new() -> *mut CoroutineManager {
-    Box::into_raw(Box::new(CoroutineManager::default()))
+pub extern "C" fn create_coroutine_manager<'a>() -> *mut CoroutineManager<'static> {
+    let manager = Box::new(CoroutineManager::default());
+    Box::into_raw(manager)
 }
 
-/// Start an event coroutine.
+/// Destroys a CoroutineManager instance, freeing its memory.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn coroutine_manager_start_event(
-    manager: *mut CoroutineManager,
+pub unsafe extern "C" fn destroy_coroutine_manager(manager: *mut CoroutineManager) {
+    if manager.is_null() {
+        return;
+    }
+    let _ = Box::from_raw(manager);
+}
+
+/// Starts an event coroutine in the manager. Consumes event_data
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn start_event_coroutine<'a>(
+    manager: *mut CoroutineManager<'a>,
     bpm: f32,
     song_time: f32,
     context: *const BaseProviderContext,
-    event_data: *mut EventData,
+    event_data: *mut EventData<'a>,
 ) {
     if manager.is_null() || context.is_null() || event_data.is_null() {
         return;
     }
 
-    let manager = unsafe { &mut *manager };
-    let context = unsafe { &*context };
-    let event_data = unsafe { Box::from_raw(event_data) };
+    unsafe {
+        let manager = &mut *manager;
+        let context = &*context;
+        let event_data = Box::from_raw(event_data);
 
-    manager.start_event_coroutine(bpm, song_time, context, *event_data);
+        manager.start_event_coroutine(bpm, song_time, context, *event_data);
+    }
 }
 
-/// Poll events in a coroutine manager.
+/// Polls all events in the manager, updating their state based on the current song time.
+/// This consumes the CoroutineManager.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn coroutine_manager_poll_events(
+pub unsafe extern "C" fn poll_events(
     manager: *mut CoroutineManager,
     song_time: f32,
     context: *const BaseProviderContext,
@@ -40,23 +60,10 @@ pub unsafe extern "C" fn coroutine_manager_poll_events(
         return;
     }
 
-    // Take ownership of the CoroutineManager to call poll_events
-    let manager = unsafe { Box::from_raw(manager) };
-    let context = unsafe { &*context };
-
-    // poll_events consumes self, so we don't need to put it back
-    manager.poll_events(song_time, context);
-}
-
-/// Free a coroutine manager.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn coroutine_manager_free(manager: *mut CoroutineManager) {
-    if manager.is_null() {
-        return;
-    }
-    
     unsafe {
-        // Convert the raw pointer back to a Box and drop it
-        let _ = Box::from_raw(manager);
+        let manager = &mut *manager;
+        let context = &*context;
+
+        manager.poll_events(song_time, context);
     }
 }

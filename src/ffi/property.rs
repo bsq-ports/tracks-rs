@@ -1,180 +1,85 @@
-use crate::{
-    animation::property::{PathProperty, ValueProperty},
-    ffi::types::WrapBaseValue,
-    values::value::BaseValue,
-};
+use crate::animation::property::PathProperty;
+use crate::ffi::types::{WrapBaseValue, WrapBaseValueType};
+use crate::values::base_provider_context::BaseProviderContext;
+use crate::values::value::BaseValue;
 
-use super::types::RcCRefCell;
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn value_property_create() -> *mut ValueProperty {
-    let property: ValueProperty = None;
-    Box::into_raw(Box::new(property))
+#[repr(C)]
+pub struct CValueProperty {
+    has_value: bool,
+    value: WrapBaseValue,
 }
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn value_property_destroy(property: *mut ValueProperty) {
-    if !property.is_null() {
-        let _ = Box::from_raw(property); // Convert back to Box and drop it
+impl From<Option<BaseValue>> for CValueProperty {
+    fn from(prop: Option<BaseValue>) -> Self {
+        match prop {
+            Some(base_value) => CValueProperty {
+                has_value: true,
+                value: WrapBaseValue::from(base_value),
+            },
+            None => CValueProperty {
+                has_value: false,
+                value: WrapBaseValue {
+                    ty: WrapBaseValueType::Float,
+                    value: unsafe { std::mem::zeroed() },
+                },
+            },
+        }
     }
 }
-
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn value_property_to_global(
-    property: *mut ValueProperty,
-) -> RcCRefCell<ValueProperty> {
-    if property.is_null() {
-        return RcCRefCell::null();
-    }
-
-    // Take ownership of the box and create a new owned copy
-    let owned_property = Box::from_raw(property);
-    owned_property.into()
+pub extern "C" fn path_property_create() -> *mut PathProperty<'static> {
+    Box::into_raw(Box::new(PathProperty::default()))
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn value_property_global_dispose(property: RcCRefCell<ValueProperty>) {
-    property.unleak();
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn value_property_get(
-    property: *const ValueProperty,
-    out_value: *mut WrapBaseValue,
-) -> bool {
-    if property.is_null() || out_value.is_null() {
-        return false;
-    }
-
-    unsafe {
-        match &*property {
-            Some(value) => {
-                *out_value = (*value).into();
-                true
-            }
-            _ => false,
+pub unsafe extern "C" fn path_property_finish(ptr: *mut PathProperty) {
+    if !ptr.is_null() {
+        unsafe {
+            let inner = &mut *ptr;
+            inner.finish();
         }
     }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn value_property_set(
-    property: *mut ValueProperty,
-    value: *const WrapBaseValue,
-) -> bool {
-    if property.is_null() || value.is_null() {
-        return false;
-    }
-
-    unsafe {
-        let base_value = BaseValue::from(*value);
-        *property = Some(base_value);
-    }
-    true
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn path_property_create() -> *mut PathProperty {
-    let property: PathProperty = PathProperty::default();
-    Box::into_raw(Box::new(property))
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn path_property_destroy(property: *mut PathProperty) {
-    if !property.is_null() {
-        let _ = unsafe { Box::from_raw(property) }; // Convert back to Box and drop it
-    }
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn path_property_to_global(
-    property: *mut PathProperty,
-) -> RcCRefCell<PathProperty> {
-    if property.is_null() {
-        return RcCRefCell::null();
-    }
-
-    // Take ownership of the box and create a new owned copy
-    let owned_property = unsafe { Box::from_raw(property) };
-    owned_property.into()
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn path_property_global_dispose(property: RcCRefCell<PathProperty>) {
-    property.unleak();
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn path_property_finish(property: *mut PathProperty) -> bool {
-    if property.is_null() {
-        return false;
-    }
-    unsafe {
-        (*property).finish();
-    }
-    true
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn path_property_init(
-    property: *mut PathProperty,
-    new_point_data: RcCRefCell<crate::point_definition::BasePointDefinition>,
-) -> bool {
-    if property.is_null() {
-        return false;
-    }
-
-    let point_data = if new_point_data.is_null() {
-        None
-    } else {
-        Some(new_point_data.unleak())
-    };
-
-    unsafe {
-        (*property).init(point_data);
-    }
-    true
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn path_property_interpolate(
-    property: *const PathProperty,
-    time: f32,
-    context: *const crate::values::base_provider_context::BaseProviderContext,
-    out_value: *mut WrapBaseValue,
-) -> bool {
-    if property.is_null() || context.is_null() || out_value.is_null() {
-        return false;
-    }
-
-    unsafe {
-        match (*property).interpolate(time, &*context) {
-            Some(value) => {
-                *out_value = value.into();
-                true
-            }
-            None => false,
+pub unsafe extern "C" fn path_property_free(ptr: *mut PathProperty) {
+    if !ptr.is_null() {
+        unsafe {
+            let _ = Box::from_raw(ptr);
         }
     }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn path_property_set_time(property: *mut PathProperty, time: f32) -> bool {
-    if property.is_null() {
-        return false;
-    }
-
-    unsafe {
-        (*property).time = time;
-    }
-    true
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn path_property_get_time(property: *const PathProperty) -> f32 {
-    if property.is_null() {
+pub unsafe extern "C" fn path_property_get_time(ptr: *const PathProperty) -> f32 {
+    if ptr.is_null() {
         return 0.0;
     }
+    unsafe {
+        let inner = &*ptr;
+        inner.time
+    }
+}
 
-    unsafe { (*property).time }
+#[unsafe(no_mangle)]
+pub unsafe  extern "C" fn path_property_set_time(ptr: *mut PathProperty, time: f32) {
+    if !ptr.is_null() {
+        unsafe {
+            let inner = &mut *ptr;
+            inner.time = time;
+        }
+    }
+}
+
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn path_property_interpolate(ptr: *mut PathProperty, time: f32, context: *mut BaseProviderContext) {
+    if ptr.is_null() || context.is_null() {
+        return;
+    }
+    unsafe {
+        let context = &mut *context;
+        let inner = &mut *ptr;
+        inner.interpolate(time, context);
+    }
 }

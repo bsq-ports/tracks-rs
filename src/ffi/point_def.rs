@@ -8,8 +8,6 @@ use crate::point_definition::vector3_point_definition::Vector3PointDefinition;
 
 use crate::point_definition::float_point_definition::FloatPointDefinition;
 
-use crate::point_definition::BasePointDefinition;
-use crate::point_definition::BasePointDefinitionGlobal;
 use crate::point_definition::PointDefinition;
 use crate::values::value::BaseValue;
 
@@ -29,9 +27,6 @@ use crate::values::base_ffi::BaseFFIProvider;
 
 use super::json;
 use super::json::FFIJsonValue;
-use super::types;
-use super::types::RcC;
-use super::types::RcCRefCell;
 use super::types::WrapQuat;
 use super::types::WrapVec3;
 use super::types::WrapVec4;
@@ -292,21 +287,4 @@ pub unsafe extern "C" fn tracks_quat_has_base_provider(
 ) -> bool {
     let point_definition = unsafe { &*point_definition };
     point_definition.has_base_provider()
-}
-
-// FFI functions for working with BasePointDefinitionGlobal
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn base_point_definition_into_global(
-    ptr: *mut BasePointDefinition,
-) -> RcCRefCell<BasePointDefinition> {
-    let boxed = unsafe { Box::from_raw(ptr) };
-    let rc = BasePointDefinitionGlobal::new(Box::into_inner(boxed).into());
-    RcCRefCell::leak(rc)
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn base_point_definition_global_dispose(
-    ptr: RcC<RefCell<BasePointDefinition>>,
-) {
-    ptr.unleak();
 }

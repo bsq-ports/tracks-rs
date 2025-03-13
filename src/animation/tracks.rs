@@ -5,11 +5,11 @@ use super::{
     property::{PathProperty, ValueProperty},
 };
 
-pub type TrackGlobal = Rc<RefCell<Track>>;
-
-pub struct Track {
+pub struct Track<'a> {
     pub properties: HashMap<String, ValueProperty>,
-    pub path_properties: HashMap<String, PathProperty>,
+    pub path_properties: HashMap<String, PathProperty<'a>>,
+
+    pub name: String,
 
     // hashset but must be insertion ordered
     pub game_objects: Vec<GameObject>,
@@ -17,12 +17,12 @@ pub struct Track {
     pub last_updated: Instant,
 }
 
-impl Track {
+impl<'a> Track<'a> {
     pub fn register_property(&mut self, id: String, property: ValueProperty) {
         self.properties.insert(id, property);
     }
 
-    pub fn register_path_property(&mut self, id: String, property: PathProperty) {
+    pub fn register_path_property(&mut self, id: String, property: PathProperty<'a>) {
         self.path_properties.insert(id, property);
     }
 
@@ -50,13 +50,14 @@ impl Track {
     }
 }
 
-impl Default for Track {
+impl Default for Track<'_> {
     fn default() -> Self {
         Self {
             properties: Default::default(),
             path_properties: Default::default(),
             game_objects: Default::default(),
             last_updated: Instant::now(),
+            name: "".to_string(),
         }
     }
 }
