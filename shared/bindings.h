@@ -10,6 +10,41 @@ namespace Tracks {
 namespace ffi {
 #endif  // __cplusplus
 
+typedef enum Functions {
+  EaseLinear,
+  EaseStep,
+  EaseInQuad,
+  EaseOutQuad,
+  EaseInOutQuad,
+  EaseInCubic,
+  EaseOutCubic,
+  EaseInOutCubic,
+  EaseInQuart,
+  EaseOutQuart,
+  EaseInOutQuart,
+  EaseInQuint,
+  EaseOutQuint,
+  EaseInOutQuint,
+  EaseInSine,
+  EaseOutSine,
+  EaseInOutSine,
+  EaseInCirc,
+  EaseOutCirc,
+  EaseInOutCirc,
+  EaseInExpo,
+  EaseOutExpo,
+  EaseInOutExpo,
+  EaseInElastic,
+  EaseOutElastic,
+  EaseInOutElastic,
+  EaseInBack,
+  EaseOutBack,
+  EaseInOutBack,
+  EaseInBounce,
+  EaseOutBounce,
+  EaseInOutBounce,
+} Functions;
+
 /**
  * JSON FFI
  */
@@ -306,6 +341,22 @@ struct Track *tracks_context_get_track(struct TracksContext *context, uintptr_t 
 const struct CoroutineManager *tracks_context_get_coroutine_manager(const struct TracksContext *context);
 
 const struct BaseProviderContext *tracks_context_get_base_provider_context(const struct TracksContext *context);
+
+/**
+ * C-compatible wrapper for easing functions
+ */
+float interpolate_easing(enum Functions easing_function, float t);
+
+/**
+ * Gets an easing function by index (useful for FFI where enums might be troublesome)
+ * Returns Functions::EaseLinear if the index is out of bounds
+ */
+enum Functions get_easing_function_by_index(int32_t index);
+
+/**
+ * Gets the total number of available easing functions
+ */
+int32_t get_easing_function_count(void);
 
 #ifdef __cplusplus
 }  // extern "C"
