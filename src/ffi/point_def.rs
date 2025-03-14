@@ -8,6 +8,7 @@ use crate::point_definition::vector3_point_definition::Vector3PointDefinition;
 
 use crate::point_definition::float_point_definition::FloatPointDefinition;
 
+use crate::point_definition::BasePointDefinition;
 use crate::point_definition::PointDefinition;
 use crate::values::value::BaseValue;
 
@@ -27,9 +28,12 @@ use crate::values::base_ffi::BaseFFIProvider;
 
 use super::json;
 use super::json::FFIJsonValue;
+use super::types::WrapBaseValue;
+use super::types::WrapBaseValueType;
 use super::types::WrapQuat;
 use super::types::WrapVec3;
 use super::types::WrapVec4;
+use super::types::WrappedValues;
 
 #[repr(C)]
 pub enum PointDefinitionType {
@@ -144,6 +148,58 @@ pub unsafe extern "C" fn tracks_float_count(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_float_has_base_provider(
     point_definition: *const FloatPointDefinition,
+) -> bool {
+    let point_definition = unsafe { &*point_definition };
+    point_definition.has_base_provider()
+}
+
+///BASE POINT DEFINITION
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn tracks_make_base_point_definition(
+    json: *const FFIJsonValue,
+    ty: WrapBaseValueType,
+    context: *mut BaseProviderContext,
+) -> *const BasePointDefinition {
+    let value = unsafe { json::convert_json_value_to_serde(json) };
+    let context = unsafe { &*context };
+
+    let point_definition: BasePointDefinition = match ty {
+        WrapBaseValueType::Vec3 => Vector3PointDefinition::new(value, context).into(),
+        WrapBaseValueType::Quat => QuaternionPointDefinition::new(value, context).into(),
+        WrapBaseValueType::Vec4 => Vector4PointDefinition::new(value, context).into(),
+        WrapBaseValueType::Float => FloatPointDefinition::new(value, context).into(),
+    };
+
+    let point_definition = Box::new(point_definition);
+    let point_definition_ptr = Box::leak(point_definition);
+    point_definition_ptr
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn tracks_interpolate_base_point_definition(
+    point_definition: *const BasePointDefinition,
+    time: f32,
+    is_last_out: *mut bool,
+    context: *mut BaseProviderContext,
+) -> WrapBaseValue {
+    let point_definition = unsafe { &*point_definition };
+    let (value, is_last) = point_definition.interpolate(time, unsafe { &*context });
+    unsafe { *is_last_out = is_last };
+
+    WrapBaseValue::from(value)
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn tracks_base_point_definition_count(
+    point_definition: *const BasePointDefinition,
+) -> usize {
+    let point_definition = unsafe { &*point_definition };
+    point_definition.get_count()
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn tracks_base_point_definition_has_base_provider(
+    point_definition: *const BasePointDefinition,
 ) -> bool {
     let point_definition = unsafe { &*point_definition };
     point_definition.has_base_provider()

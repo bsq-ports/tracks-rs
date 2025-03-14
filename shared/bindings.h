@@ -20,6 +20,13 @@ typedef enum JsonValueType {
   Array,
 } JsonValueType;
 
+typedef enum WrapBaseValueType {
+  Vec3 = 0,
+  Quat = 1,
+  Vec4 = 2,
+  Float = 3,
+} WrapBaseValueType;
+
 typedef struct BaseFFIProviderValues BaseFFIProviderValues;
 
 typedef struct BasePointDefinition BasePointDefinition;
@@ -82,10 +89,12 @@ typedef struct WrapVec3 {
   float z;
 } WrapVec3;
 
-typedef struct Vector3InterpolationResult {
-  struct WrapVec3 value;
-  bool is_last;
-} Vector3InterpolationResult;
+typedef struct WrapQuat {
+  float x;
+  float y;
+  float z;
+  float w;
+} WrapQuat;
 
 typedef struct WrapVec4 {
   float x;
@@ -94,17 +103,27 @@ typedef struct WrapVec4 {
   float w;
 } WrapVec4;
 
+typedef union WrapBaseValueUnion {
+  struct WrapVec3 vec3;
+  struct WrapQuat quat;
+  struct WrapVec4 vec4;
+  float float_v;
+} WrapBaseValueUnion;
+
+typedef struct WrapBaseValue {
+  enum WrapBaseValueType ty;
+  union WrapBaseValueUnion value;
+} WrapBaseValue;
+
+typedef struct Vector3InterpolationResult {
+  struct WrapVec3 value;
+  bool is_last;
+} Vector3InterpolationResult;
+
 typedef struct Vector4InterpolationResult {
   struct WrapVec4 value;
   bool is_last;
 } Vector4InterpolationResult;
-
-typedef struct WrapQuat {
-  float x;
-  float y;
-  float z;
-  float w;
-} WrapQuat;
 
 typedef struct QuaternionInterpolationResult {
   struct WrapQuat value;
@@ -156,6 +175,22 @@ struct FloatInterpolationResult tracks_interpolate_float(const struct FloatPoint
 uintptr_t tracks_float_count(const struct FloatPointDefinition *point_definition);
 
 bool tracks_float_has_base_provider(const struct FloatPointDefinition *point_definition);
+
+/**
+ *BASE POINT DEFINITION
+ */
+const struct BasePointDefinition *tracks_make_base_point_definition(const struct FFIJsonValue *json,
+                                                                    enum WrapBaseValueType ty,
+                                                                    struct BaseProviderContext *context);
+
+struct WrapBaseValue tracks_interpolate_base_point_definition(const struct BasePointDefinition *point_definition,
+                                                              float time,
+                                                              bool *is_last_out,
+                                                              struct BaseProviderContext *context);
+
+uintptr_t tracks_base_point_definition_count(const struct BasePointDefinition *point_definition);
+
+bool tracks_base_point_definition_has_base_provider(const struct BasePointDefinition *point_definition);
 
 /**
  *VECTOR3 POINT DEFINITION

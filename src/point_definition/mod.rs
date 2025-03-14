@@ -428,3 +428,24 @@ impl PointDefinition for BasePointDefinition {
         }
     }
 }
+
+impl From<float_point_definition::FloatPointDefinition> for BasePointDefinition {
+    fn from(point_definition: float_point_definition::FloatPointDefinition) -> Self {
+        BasePointDefinition::Float(point_definition)
+    }
+}
+impl From<vector3_point_definition::Vector3PointDefinition> for BasePointDefinition {
+    fn from(point_definition: vector3_point_definition::Vector3PointDefinition) -> Self {
+        BasePointDefinition::Vector3(point_definition)
+    }
+}
+impl From<vector4_point_definition::Vector4PointDefinition> for BasePointDefinition {
+    fn from(point_definition: vector4_point_definition::Vector4PointDefinition) -> Self {
+        BasePointDefinition::Vector4(point_definition)
+    }
+}   
+impl From<quaternion_point_definition::QuaternionPointDefinition> for BasePointDefinition {
+    fn from(point_definition: quaternion_point_definition::QuaternionPointDefinition) -> Self {
+        BasePointDefinition::Quaternion(point_definition)
+    }
+}
