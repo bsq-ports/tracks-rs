@@ -17,7 +17,8 @@
     "scripts": {
       "build": ["cargo ndk --bindgen -t arm64-v8a -o build build --release --features ffi"],
       "copy": ["pwsh ./scripts/copy.ps1"],
-      "qmod": ["pwsh ./scripts/createqmod.ps1 $0"]
+      "qmod": ["pwsh ./scripts/createqmod.ps1 $0"],
+      "install": ["qpm install ./build/arm64-v8a/ ./build/arm64-v8a/"]
     },
     "qmodIncludeDirs": ["./build/arm64-v8a"],
     "qmodIncludeFiles": [],
