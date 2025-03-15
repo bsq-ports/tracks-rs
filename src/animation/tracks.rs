@@ -37,8 +37,15 @@ impl<'a> Track<'a> {
     pub fn get_property(&self, id: &str) -> Option<&ValueProperty> {
         self.properties.get(id)
     }
+    pub fn get_mut_property(&mut self, id: &str) -> Option<&mut ValueProperty> {
+        self.properties.get_mut(id)
+    }
     pub fn get_path_property(&self, id: &str) -> Option<&PathProperty> {
         self.path_properties.get(id)
+    }
+
+    pub fn get_mut_path_property(&mut self, id: &str) -> Option<&mut PathProperty<'a>> {
+        self.path_properties.get_mut(id)
     }
 
     pub fn remove_game_object(&mut self, game_object: &GameObject) {

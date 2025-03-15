@@ -79,6 +79,7 @@ pub unsafe extern "C" fn tracks_make_base_ffi_provider(
     context_ptr
 }
 
+/// Dispose the base provider. Consumes
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_dipose_base_ffi_provider(func: *mut BaseFFIProviderValues) {
     assert!(!func.is_null());
@@ -159,7 +160,7 @@ pub unsafe extern "C" fn tracks_make_base_point_definition(
     json: *const FFIJsonValue,
     ty: WrapBaseValueType,
     context: *mut BaseProviderContext,
-) -> *const BasePointDefinition {
+) -> *mut BasePointDefinition {
     let value = unsafe { json::convert_json_value_to_serde(json) };
     let context = unsafe { &*context };
 

@@ -3,9 +3,12 @@ use crate::animation::tracks::Track;
 use crate::context::TracksContext;
 use crate::point_definition::BasePointDefinition;
 use crate::values::base_provider_context::BaseProviderContext;
+use std::cell::{Ref, RefCell};
 use std::ffi::{CStr, CString};
+use std::ops::{Deref, DerefMut};
 use std::os::raw::c_char;
 use std::ptr;
+use std::rc::Rc;
 
 #[unsafe(no_mangle)]
 pub extern "C" fn tracks_context_create<'a>() -> *mut TracksContext<'a> {
@@ -19,6 +22,7 @@ pub extern "C" fn tracks_context_create<'a>() -> *mut TracksContext<'a> {
     Box::into_raw(Box::new(context))
 }
 
+/// Consumes the context and frees its memory.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_context_destroy(context: *mut TracksContext) {
     if !context.is_null() {
@@ -28,34 +32,44 @@ pub unsafe extern "C" fn tracks_context_destroy(context: *mut TracksContext) {
     }
 }
 
+/// Consumes the track and moves
+/// it into the context. Returns a const pointer to the track.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_context_add_track<'a>(
     context: *mut TracksContext<'a>,
     track: *mut Track<'a>,
-) {
+) -> *const Track<'a> {
     if context.is_null() || track.is_null() {
-        return;
+        return ptr::null();
     }
 
     unsafe {
         let track_obj = Box::from_raw(track);
-        (*context).add_track(*track_obj);
+        let rc = Rc::new(RefCell::new(*track_obj));
+        (*context).add_track(rc.clone());
         // Don't drop the Box here, ownership is transferred to the context
+
+        rc.borrow().deref()
     }
 }
 
+/// Consumes the point definition and moves it into the context.
+/// Returns a const pointer to the point definition.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_context_add_point_definition(
     context: *mut TracksContext,
     point_def: *mut BasePointDefinition,
-) {
+) -> *const BasePointDefinition {
     if context.is_null() || point_def.is_null() {
-        return;
+        return ptr::null();
     }
 
     unsafe {
         let point_def_obj = Box::from_raw(point_def);
-        (*context).add_point_definition(*point_def_obj);
+        let rc = Rc::new(*point_def_obj);
+        (*context).add_point_definition(rc.clone());
+
+        rc.as_ref()
         // Don't drop the Box here, ownership is transferred to the context
     }
 }
@@ -72,7 +86,7 @@ pub unsafe extern "C" fn tracks_context_get_track_by_name<'a>(
     unsafe {
         let name_str = CStr::from_ptr(name).to_str().unwrap_or_default();
         match (*context).get_track_by_name(name_str) {
-            Some(track) => track as *mut _,
+            Some(track) => track.borrow_mut().deref_mut() as *mut _,
             None => ptr::null_mut(),
         }
     }
@@ -89,34 +103,34 @@ pub unsafe extern "C" fn tracks_context_get_track<'a>(
 
     unsafe {
         match (*context).get_track(index) {
-            Some(track) => track as *mut _,
+            Some(track) => track.borrow_mut().deref_mut() as *mut _,
             None => ptr::null_mut(),
         }
     }
 }
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_context_get_coroutine_manager<'a>(
-    context: *const TracksContext<'a>,
-) -> *const CoroutineManager<'a> {
+    context: *mut TracksContext<'a>,
+) -> *mut CoroutineManager<'a> {
     if context.is_null() {
         return ptr::null_mut();
     }
 
     unsafe {
         // Return a mutable pointer to the coroutine manager
-        &(*context).coroutine_manager as *const _
+        &mut(*context).coroutine_manager as *mut _
     }
 }
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_context_get_base_provider_context<'a>(
-    context: *const TracksContext<'a>,
-) -> *const BaseProviderContext {
+    context: *mut TracksContext<'a>,
+) -> *mut BaseProviderContext {
     if context.is_null() {
-        return ptr::null();
+        return ptr::null_mut();
     }
 
     unsafe {
         // Return a const pointer to the base provider context
-        (*context).get_base_provider_context() as *const _
+        (*context).get_mut_base_provider_context() as *mut _
     }
 }

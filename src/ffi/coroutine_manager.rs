@@ -49,7 +49,6 @@ pub unsafe extern "C" fn start_event_coroutine<'a>(
 }
 
 /// Polls all events in the manager, updating their state based on the current song time.
-/// This consumes the CoroutineManager.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn poll_events(
     manager: *mut CoroutineManager,

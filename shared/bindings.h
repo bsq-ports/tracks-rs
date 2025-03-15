@@ -167,6 +167,11 @@ typedef struct QuaternionInterpolationResult {
 
 typedef struct Option_BaseValue ValueProperty;
 
+typedef struct CValueProperty {
+  bool has_value;
+  struct WrapBaseValue value;
+} CValueProperty;
+
 
 
 #ifdef __cplusplus
@@ -184,6 +189,9 @@ void tracks_free_json_value(struct FFIJsonValue *json_value);
 struct BaseFFIProviderValues *tracks_make_base_ffi_provider(const BaseFFIProvider *func,
                                                             void *user_value);
 
+/**
+ * Dispose the base provider. Consumes
+ */
 void tracks_dipose_base_ffi_provider(struct BaseFFIProviderValues *func);
 
 /**
@@ -214,9 +222,9 @@ bool tracks_float_has_base_provider(const struct FloatPointDefinition *point_def
 /**
  *BASE POINT DEFINITION
  */
-const struct BasePointDefinition *tracks_make_base_point_definition(const struct FFIJsonValue *json,
-                                                                    enum WrapBaseValueType ty,
-                                                                    struct BaseProviderContext *context);
+struct BasePointDefinition *tracks_make_base_point_definition(const struct FFIJsonValue *json,
+                                                              enum WrapBaseValueType ty,
+                                                              struct BaseProviderContext *context);
 
 struct WrapBaseValue tracks_interpolate_base_point_definition(const struct BasePointDefinition *point_definition,
                                                               float time,
@@ -291,7 +299,6 @@ void start_event_coroutine(struct CoroutineManager *manager,
 
 /**
  * Polls all events in the manager, updating their state based on the current song time.
- * This consumes the CoroutineManager.
  */
 void poll_events(struct CoroutineManager *manager,
                  float song_time,
@@ -299,6 +306,9 @@ void poll_events(struct CoroutineManager *manager,
 
 struct Track *track_create(void);
 
+/**
+ * Consumes the track and frees its memory.
+ */
 void track_destroy(struct Track *track);
 
 void track_set_name(struct Track *track, const char *name);
@@ -309,38 +319,60 @@ void track_register_game_object(struct Track *track, struct GameObject *game_obj
 
 void track_register_property(struct Track *track, const char *id, ValueProperty *property);
 
+const ValueProperty *track_get_property(const struct Track *track, const char *id);
+
+struct PathProperty *track_get_path_property(struct Track *track, const char *id);
+
 void track_mark_updated(struct Track *track);
 
 struct PathProperty *path_property_create(void);
 
 void path_property_finish(struct PathProperty *ptr);
 
+/**
+ * Consumes the path property and frees its memory.
+ */
 void path_property_free(struct PathProperty *ptr);
 
 float path_property_get_time(const struct PathProperty *ptr);
 
 void path_property_set_time(struct PathProperty *ptr, float time);
 
-void path_property_interpolate(struct PathProperty *ptr,
-                               float time,
-                               struct BaseProviderContext *context);
+struct CValueProperty path_property_interpolate(struct PathProperty *ptr,
+                                                float time,
+                                                struct BaseProviderContext *context);
+
+enum WrapBaseValueType property_get_type(const ValueProperty *ptr);
+
+enum WrapBaseValueType path_property_get_type(const struct PathProperty *ptr);
 
 struct TracksContext *tracks_context_create(void);
 
+/**
+ * Consumes the context and frees its memory.
+ */
 void tracks_context_destroy(struct TracksContext *context);
 
-void tracks_context_add_track(struct TracksContext *context, struct Track *track);
+/**
+ * Consumes the track and moves
+ * it into the context. Returns a const pointer to the track.
+ */
+const struct Track *tracks_context_add_track(struct TracksContext *context, struct Track *track);
 
-void tracks_context_add_point_definition(struct TracksContext *context,
-                                         struct BasePointDefinition *point_def);
+/**
+ * Consumes the point definition and moves it into the context.
+ * Returns a const pointer to the point definition.
+ */
+const struct BasePointDefinition *tracks_context_add_point_definition(struct TracksContext *context,
+                                                                      struct BasePointDefinition *point_def);
 
 struct Track *tracks_context_get_track_by_name(struct TracksContext *context, const char *name);
 
 struct Track *tracks_context_get_track(struct TracksContext *context, uintptr_t index);
 
-const struct CoroutineManager *tracks_context_get_coroutine_manager(const struct TracksContext *context);
+struct CoroutineManager *tracks_context_get_coroutine_manager(struct TracksContext *context);
 
-const struct BaseProviderContext *tracks_context_get_base_provider_context(const struct TracksContext *context);
+struct BaseProviderContext *tracks_context_get_base_provider_context(struct TracksContext *context);
 
 /**
  * C-compatible wrapper for easing functions
