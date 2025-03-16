@@ -261,22 +261,14 @@ pub unsafe extern "C" fn track_get_path_property(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn track_mark_updated(track: *mut Track) {
-    if track.is_null() {
-        return;
-    }
-    unsafe {
-        (*track).mark_updated();
-    }
-}
-
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn track_get_properties_map(track: *const Track) -> CPropertiesMap {
     if track.is_null() {
         return Default::default();
     }
     let track = unsafe { &*track };
-    let map = CPropertiesMap {
+    
+
+    CPropertiesMap {
         position: &track.properties.position as *const ValueProperty,
         rotation: &track.properties.rotation as *const ValueProperty,
         scale: &track.properties.scale as *const ValueProperty,
@@ -291,18 +283,18 @@ pub unsafe extern "C" fn track_get_properties_map(track: *const Track) -> CPrope
         fog_offset: &track.properties.fog_offset as *const ValueProperty,
         height_fog_start_y: &track.properties.height_fog_start_y as *const ValueProperty,
         height_fog_height: &track.properties.height_fog_height as *const ValueProperty,
-    };
-
-    map
+    }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn track_get_path_properties_map<'a>(track: *mut Track<'a>) -> CPathPropertiesMap<'a> {
+pub unsafe extern "C" fn track_get_path_properties_map(track: *mut Track<'_>) -> CPathPropertiesMap<'_> {
     if track.is_null() {
         return Default::default();
     }
     let track = unsafe { &mut *track };
-    let map = CPathPropertiesMap {
+    
+
+    CPathPropertiesMap {
         position: &mut track.path_properties.position as *mut PathProperty,
         rotation: &mut track.path_properties.rotation as *mut PathProperty,
         scale: &mut track.path_properties.scale as *mut PathProperty,
@@ -313,7 +305,5 @@ pub unsafe extern "C" fn track_get_path_properties_map<'a>(track: *mut Track<'a>
         dissolve_arrow: &mut track.path_properties.dissolve_arrow as *mut PathProperty,
         cuttable: &mut track.path_properties.cuttable as *mut PathProperty,
         color: &mut track.path_properties.color as *mut PathProperty,
-    };
-
-    map
+    }
 }

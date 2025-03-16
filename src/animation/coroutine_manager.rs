@@ -38,7 +38,9 @@ pub enum CoroutineResult {
 impl EventType<'_> {
     pub(crate) fn set_null(&mut self) {
         match self {
-            EventType::AnimateTrack(property) => *property = None,
+            EventType::AnimateTrack(property) => {
+                property.set_value(None);
+            },
             EventType::AssignPathAnimation(path_property) => path_property.init(None),
         }
     }
@@ -102,7 +104,6 @@ impl<'a> CoroutineManager<'a> {
         let track = data.track;
 
         let Some(point_data) = data.point_data else {
-            track.mark_updated();
             property.set_null();
             return None;
         };
@@ -258,11 +259,10 @@ fn set_property_value(
 ) -> bool {
     let (value, on_last) = points.interpolate(time, context);
 
-    if Some(value) == *property {
+    if Some(value) == property.get_value() {
         return on_last;
     }
 
-    *property = Some(value);
-    track.mark_updated();
+    property.set_value(Some(value));
     on_last
 }

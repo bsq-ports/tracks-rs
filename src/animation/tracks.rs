@@ -1,4 +1,4 @@
-use std::{fmt::Display, str::FromStr, time::Instant};
+use std::{fmt::Display, str::FromStr};
 
 use super::{
     game_object::GameObject,
@@ -91,8 +91,6 @@ pub struct Track<'a> {
 
     // hashset but must be insertion ordered
     pub game_objects: Vec<GameObject>,
-
-    pub last_updated: Instant,
 }
 
 impl<'a> Track<'a> {
@@ -129,10 +127,6 @@ impl<'a> Track<'a> {
     pub fn remove_game_object(&mut self, game_object: &GameObject) {
         self.game_objects.retain(|go| go != game_object);
     }
-
-    pub fn mark_updated(&mut self) {
-        self.last_updated = Instant::now();
-    }
 }
 
 impl Default for Track<'_> {
@@ -141,7 +135,6 @@ impl Default for Track<'_> {
             properties: Default::default(),
             path_properties: Default::default(),
             game_objects: Default::default(),
-            last_updated: Instant::now(),
             name: "".to_string(),
         }
     }

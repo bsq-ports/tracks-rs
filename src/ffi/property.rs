@@ -1,41 +1,58 @@
+
 use crate::animation::property::{PathProperty, ValueProperty};
 use crate::base_provider_context::BaseProviderContext;
 use crate::ffi::types::{WrapBaseValue, WrapBaseValueType};
 use crate::point_definition::base_point_definition::{self};
 use crate::values::value::BaseValue;
 
+use super::time::CTimeUnit;
+
 #[repr(C)]
-pub struct CValueProperty {
+pub struct CValueNullable {
     has_value: bool,
     value: WrapBaseValue,
 }
 
-impl Default for CValueProperty {
+#[repr(C)]
+#[derive(Default)]
+pub struct CValueProperty {
+    value: CValueNullable,
+    last_updated: CTimeUnit,
+}
+
+impl Default for CValueNullable {
     fn default() -> Self {
-        CValueProperty {
+        CValueNullable {
             has_value: false,
-            value: WrapBaseValue {
-                ty: WrapBaseValueType::Float,
-                value: unsafe { std::mem::zeroed() },
+            value: unsafe { std::mem::zeroed() },
+        }
+    }
+}
+
+
+impl From<Option<BaseValue>> for CValueNullable {
+    fn from(value: Option<BaseValue>) -> Self {
+        match value {
+            Some(base_value) => CValueNullable {
+                has_value: true,
+                value: base_value.into(),
             },
+            None => CValueNullable::default(),
         }
     }
 }
 
 impl From<ValueProperty> for CValueProperty {
     fn from(prop: ValueProperty) -> Self {
-        match prop {
+        match prop.get_value() {
             Some(base_value) => CValueProperty {
-                has_value: true,
-                value: WrapBaseValue::from(base_value),
-            },
-            None => CValueProperty {
-                has_value: false,
-                value: WrapBaseValue {
-                    ty: WrapBaseValueType::Float,
-                    value: unsafe { std::mem::zeroed() },
+                value: CValueNullable {
+                    has_value: true,
+                    value: base_value.into(),
                 },
+                ..Default::default()
             },
+            None => CValueProperty::default(),
         }
     }
 }
@@ -104,9 +121,9 @@ pub unsafe extern "C" fn path_property_interpolate(
     ptr: *mut PathProperty,
     time: f32,
     context: *mut BaseProviderContext,
-) -> CValueProperty {
+) -> CValueNullable {
     if ptr.is_null() || context.is_null() {
-        return ValueProperty::default().into();
+        return CValueNullable::default();
     }
     unsafe {
         let context = &mut *context;
@@ -144,7 +161,9 @@ pub unsafe extern "C" fn property_get_type(ptr: *const ValueProperty) -> WrapBas
     }
 
     let inner = unsafe { &*ptr };
-    match inner {
+
+
+    match inner.get_value() {
         Some(value_type) => match value_type {
             BaseValue::Float(_) => WrapBaseValueType::Float,
             BaseValue::Vector3(_) => WrapBaseValueType::Vec3,
@@ -163,3 +182,15 @@ pub unsafe extern "C" fn property_get_value(ptr: *const ValueProperty) -> CValue
     let inner = *unsafe { &*ptr };
     inner.into()
 }
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn property_get_last_updated(ptr: *const ValueProperty) -> CTimeUnit {
+    if ptr.is_null() {
+        return CTimeUnit::default(); 
+        // Default type if pointer is null
+    }
+
+    let inner = *unsafe { &*ptr };
+    inner.last_updated.into()
+}
+
