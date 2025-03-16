@@ -2,9 +2,15 @@ use glam::{FloatExt, Vec4};
 use palette::{Hsv, IntoColor, LinSrgb, RgbHue, rgb::Rgb};
 
 use crate::{
-    base_provider_context::BaseProviderContext, easings::functions::Functions, modifiers::{
-        operation::Operation, vector4_modifier::{Vector4Modifier, Vector4Values}, Modifier
-    }, point_data::{vector4_point_data::Vector4PointData, PointData}, values::{AbstractValueProvider, ValueProvider}
+    base_provider_context::BaseProviderContext,
+    easings::functions::Functions,
+    modifiers::{
+        Modifier,
+        operation::Operation,
+        vector4_modifier::{Vector4Modifier, Vector4Values},
+    },
+    point_data::{PointData, vector4_point_data::Vector4PointData},
+    values::{AbstractValueProvider, ValueProvider},
 };
 
 use super::PointDefinition;

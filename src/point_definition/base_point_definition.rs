@@ -12,7 +12,10 @@ use crate::point_data::PointData;
 
 use crate::values::value::BaseValue;
 
-use super::{float_point_definition, quaternion_point_definition, vector3_point_definition, vector4_point_definition, PointDefinition};
+use super::{
+    PointDefinition, float_point_definition, quaternion_point_definition, vector3_point_definition,
+    vector4_point_definition,
+};
 
 pub enum BasePointDefinition {
     Float(float_point_definition::FloatPointDefinition),

@@ -1,9 +1,10 @@
-
-
 use crate::{
     base_provider_context::BaseProviderContext,
     easings::functions::Functions,
-    point_definition::{base_point_definition::{self}, PointDefinition},
+    point_definition::{
+        PointDefinition,
+        base_point_definition::{self},
+    },
 };
 
 use super::{
@@ -17,7 +18,6 @@ pub struct CoroutineManager<'a> {
     coroutines: Vec<CoroutineTask<'a>>,
     _marker: std::marker::PhantomData<&'a ()>,
 }
-
 
 struct CoroutineTask<'a> {
     event_type: EventType<'a>,
@@ -116,8 +116,8 @@ impl<'a> CoroutineManager<'a> {
                 }
 
                 let result = animate_track(
-                    point_data, property, track, duration, start_time, song_time, easing,
-                    has_base, context,
+                    point_data, property, track, duration, start_time, song_time, easing, has_base,
+                    context,
                 );
                 if result == CoroutineResult::Break {
                     repeat = repeat.saturating_sub(1);

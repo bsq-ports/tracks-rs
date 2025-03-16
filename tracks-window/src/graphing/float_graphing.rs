@@ -11,8 +11,8 @@ use plotters::{
 use serde_json::json;
 
 use tracks_rs::{
-    point_definition::{PointDefinition, float_point_definition::FloatPointDefinition},
     base_provider_context::BaseProviderContext,
+    point_definition::{PointDefinition, float_point_definition::FloatPointDefinition},
 };
 
 pub struct FloatContext {

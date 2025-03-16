@@ -1,11 +1,11 @@
 use crate::{
+    base_provider_context::BaseProviderContext,
     easings::functions::Functions,
     modifiers::{
         Modifier, ModifierBase,
         operation::Operation,
         vector4_modifier::{Vector4Modifier, Vector4Values},
     },
-    base_provider_context::BaseProviderContext,
 };
 use glam::Vec4;
 

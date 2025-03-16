@@ -1,4 +1,2 @@
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
-pub struct GameObject {
-    
-}
+pub struct GameObject {}

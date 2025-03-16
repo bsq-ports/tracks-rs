@@ -2,9 +2,15 @@ use glam::Vec3;
 use tracing::error;
 
 use crate::{
-    base_provider_context::BaseProviderContext, easings::functions::Functions, modifiers::{
-        operation::Operation, vector3_modifier::{Vector3Modifier, Vector3Values}, Modifier
-    }, point_data::{vector3_point_data::Vector3PointData, PointData}, values::{AbstractValueProvider, ValueProvider}
+    base_provider_context::BaseProviderContext,
+    easings::functions::Functions,
+    modifiers::{
+        Modifier,
+        operation::Operation,
+        vector3_modifier::{Vector3Modifier, Vector3Values},
+    },
+    point_data::{PointData, vector3_point_data::Vector3PointData},
+    values::{AbstractValueProvider, ValueProvider},
 };
 
 use super::PointDefinition;

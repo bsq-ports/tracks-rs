@@ -2,8 +2,8 @@ use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use serde_json::json;
 use std::hint::black_box;
 use tracks_rs::{
-    point_definition::{PointDefinition, vector4_point_definition::Vector4PointDefinition},
     base_provider_context::BaseProviderContext,
+    point_definition::{PointDefinition, vector4_point_definition::Vector4PointDefinition},
 };
 
 fn point_step(n: u64) {

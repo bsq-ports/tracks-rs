@@ -1,5 +1,8 @@
 use super::{Modifier, ModifierBase, operation::Operation, shared_has_base_provider};
-use crate::{base_provider_context::BaseProviderContext, values::{AbstractValueProvider, ValueProvider}};
+use crate::{
+    base_provider_context::BaseProviderContext,
+    values::{AbstractValueProvider, ValueProvider},
+};
 use glam::{EulerRot, Quat, Vec3};
 
 /// Is it ZXY or XYZ???
@@ -76,7 +79,7 @@ impl ModifierBase for QuaternionModifier {
         }
         // modifiers applied to the point
         let vector_point = self.get_vector_point(context);
-        
+
         Quat::from_euler(
             TRACKS_EULER_ROT,
             vector_point.x.to_radians(),

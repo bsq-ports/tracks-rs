@@ -74,7 +74,6 @@ pub unsafe extern "C" fn tracks_context_add_point_definition(
     }
 }
 
-
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_context_get_track_by_name(
     context: *mut TracksContext<'_>,

@@ -2,8 +2,8 @@ use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use serde_json::json;
 use std::hint::black_box;
 use tracks_rs::{
-    point_definition::{PointDefinition, float_point_definition::FloatPointDefinition},
     base_provider_context::BaseProviderContext,
+    point_definition::{PointDefinition, float_point_definition::FloatPointDefinition},
 };
 
 fn point_step(n: u64) {

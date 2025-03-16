@@ -3,9 +3,12 @@ use std::borrow::Borrow;
 use glam::{Quat, Vec3, Vec4};
 use tracing::info;
 
-use crate::values::{base::BaseProviderValues, quat::QuaternionProviderValues, value::{BaseValue, BaseValueRef}, ValueProvider};
-
-
+use crate::values::{
+    ValueProvider,
+    base::BaseProviderValues,
+    quat::QuaternionProviderValues,
+    value::{BaseValue, BaseValueRef},
+};
 
 #[derive(Default, Clone)]
 pub struct BaseProviderContext {

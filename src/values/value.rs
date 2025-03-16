@@ -108,12 +108,10 @@ impl BaseValue {
         match (a, b) {
             (BaseValue::Float(v1), BaseValue::Float(v2)) => f32::lerp(v1, v2, t).into(),
             (BaseValue::Vector3(v1), BaseValue::Vector3(v2)) => Vec3::lerp(v1, v2, t).into(),
-            (BaseValue::Vector4(v1), BaseValue::Vector4(v2)) => {
-                Vec4::lerp(v1, v2, t).into()
-            }
+            (BaseValue::Vector4(v1), BaseValue::Vector4(v2)) => Vec4::lerp(v1, v2, t).into(),
             (BaseValue::Quaternion(v1), BaseValue::Quaternion(v2)) => {
                 // lerp or slerp?
-                
+
                 Quat::slerp(v1, v2, t).into()
             }
             _ => panic!("Invalid interpolation"),

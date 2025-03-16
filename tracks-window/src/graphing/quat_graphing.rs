@@ -13,8 +13,8 @@ use plotters::{
 use serde_json::json;
 
 use tracks_rs::{
-    point_definition::{PointDefinition, quaternion_point_definition::QuaternionPointDefinition},
     base_provider_context::BaseProviderContext,
+    point_definition::{PointDefinition, quaternion_point_definition::QuaternionPointDefinition},
 };
 
 pub struct QuatContext {

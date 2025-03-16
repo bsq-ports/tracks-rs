@@ -1,11 +1,11 @@
 use crate::{
+    base_provider_context::BaseProviderContext,
     easings::functions::Functions,
     modifiers::{
         Modifier, ModifierBase,
         float_modifier::{FloatModifier, FloatValues},
         operation::Operation,
     },
-    base_provider_context::BaseProviderContext,
 };
 
 use super::BasePointData;

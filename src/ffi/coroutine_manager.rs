@@ -14,12 +14,14 @@ pub extern "C" fn create_coroutine_manager<'a>() -> *mut CoroutineManager<'a> {
 
 /// Destroys a CoroutineManager instance, freeing its memory.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn destroy_coroutine_manager(manager: *mut CoroutineManager) { unsafe {
-    if manager.is_null() {
-        return;
+pub unsafe extern "C" fn destroy_coroutine_manager(manager: *mut CoroutineManager) {
+    unsafe {
+        if manager.is_null() {
+            return;
+        }
+        let _ = Box::from_raw(manager);
     }
-    let _ = Box::from_raw(manager);
-}}
+}
 
 /// Starts an event coroutine in the manager. Consumes event_data
 #[unsafe(no_mangle)]

@@ -4,8 +4,6 @@ use crate::base_provider_context::BaseProviderContext;
 
 use super::UpdateableValues;
 
-
-
 use super::AbstractValueProvider;
 
 #[derive(Clone, Debug)]

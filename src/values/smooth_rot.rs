@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use super::UpdateableValues;
 
 use crate::{
-    base_provider_context::BaseProviderContext, modifiers::quaternion_modifier::TRACKS_EULER_ROT
+    base_provider_context::BaseProviderContext, modifiers::quaternion_modifier::TRACKS_EULER_ROT,
 };
 
 use super::AbstractValueProvider;

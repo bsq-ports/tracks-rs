@@ -1,4 +1,3 @@
-
 use crate::{
     point_definition::point_definition_interpolation::PointDefinitionInterpolation,
     values::value::BaseValue,

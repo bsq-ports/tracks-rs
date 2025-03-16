@@ -3,7 +3,6 @@ use std::{
     slice,
 };
 
-
 /// JSON FFI
 #[repr(C)]
 #[derive(Debug)]

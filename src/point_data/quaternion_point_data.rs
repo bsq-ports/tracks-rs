@@ -1,11 +1,11 @@
 use crate::{
+    base_provider_context::BaseProviderContext,
     easings::functions::Functions,
     modifiers::{
         Modifier, ModifierBase,
         operation::Operation,
         quaternion_modifier::{QuaternionModifier, QuaternionValues},
     },
-    base_provider_context::BaseProviderContext,
 };
 use glam::Quat;
 

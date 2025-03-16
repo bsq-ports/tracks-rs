@@ -10,8 +10,8 @@ use quaternion_modifier::QuaternionModifier;
 use vector3_modifier::Vector3Modifier;
 use vector4_modifier::Vector4Modifier;
 
-use crate::modifiers::operation::Operation;
 use crate::base_provider_context::BaseProviderContext;
+use crate::modifiers::operation::Operation;
 use crate::values::{AbstractValueProvider, ValueProvider};
 
 #[derive(Clone, Debug)]
