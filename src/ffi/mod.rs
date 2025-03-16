@@ -6,3 +6,4 @@ pub mod track;
 pub mod property;
 pub mod context;
 pub mod easings;
+pub mod event_data;

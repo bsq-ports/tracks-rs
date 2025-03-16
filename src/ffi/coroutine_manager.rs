@@ -12,7 +12,7 @@ use std::ptr;
 /// Creates a new CoroutineManager instance and returns a raw pointer to it.
 /// The caller is responsible for freeing the memory using destroy_coroutine_manager.
 #[unsafe(no_mangle)]
-pub extern "C" fn create_coroutine_manager<'a>() -> *mut CoroutineManager<'static> {
+pub extern "C" fn create_coroutine_manager<'a>() -> *mut CoroutineManager<'a> {
     let manager = Box::new(CoroutineManager::default());
     Box::into_raw(manager)
 }

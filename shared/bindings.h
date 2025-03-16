@@ -10,6 +10,18 @@ namespace Tracks {
 namespace ffi {
 #endif  // __cplusplus
 
+enum CEventTypeEnum
+#ifdef __cplusplus
+  : uint32_t
+#endif // __cplusplus
+ {
+  AnimateTrack = 0,
+  AssignPathAnimation = 1,
+};
+#ifndef __cplusplus
+typedef uint32_t CEventTypeEnum;
+#endif // __cplusplus
+
 typedef enum Functions {
   EaseLinear,
   EaseStep,
@@ -173,6 +185,26 @@ typedef struct CValueProperty {
   bool has_value;
   struct WrapBaseValue value;
 } CValueProperty;
+
+typedef union CEventTypeData {
+  const ValueProperty *property;
+  const PathProperty *path_property;
+} CEventTypeData;
+
+typedef struct CEventType {
+  CEventTypeEnum ty;
+  union CEventTypeData data;
+} CEventType;
+
+typedef struct CEventData {
+  float raw_duration;
+  enum Functions easing;
+  uint32_t repeat;
+  float start_time;
+  struct CEventType event_type;
+  struct Track *track_ptr;
+  const struct BasePointDefinition *point_data_ptr;
+} CEventData;
 
 
 
@@ -391,6 +423,15 @@ enum Functions get_easing_function_by_index(int32_t index);
  * Gets the total number of available easing functions
  */
 int32_t get_easing_function_count(void);
+
+/**
+ * Converts a CEventData into a Rust EventData
+ * Does not consume the CEventData
+ * Returns a raw pointer to the Rust EventData
+ */
+struct EventData *event_data_to_rust(const struct CEventData *c_event_data);
+
+void event_data_dispose(struct EventData *event_data);
 
 #ifdef __cplusplus
 }  // extern "C"
