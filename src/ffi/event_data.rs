@@ -29,7 +29,9 @@ pub enum CEventTypeEnum {
 }
 #[repr(C)]
 pub union CEventTypeData<'a> {
+    /// AnimateTrack(ValueProperty)
     pub property: *const ValueProperty,
+    /// AssignPathAnimation(PathProperty)
     pub path_property: *const PathProperty<'a>,
 }
 #[repr(C)]

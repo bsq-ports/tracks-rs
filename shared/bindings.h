@@ -102,6 +102,36 @@ typedef struct Vector3PointDefinition Vector3PointDefinition;
 
 typedef struct Vector4PointDefinition Vector4PointDefinition;
 
+typedef struct Option_BaseValue ValueProperty;
+
+typedef struct PointDefinitionInterpolation PathProperty;
+
+typedef union CEventTypeData {
+  /**
+   * AnimateTrack(ValueProperty)
+   */
+  const ValueProperty *property;
+  /**
+   * AssignPathAnimation(PathProperty)
+   */
+  const PathProperty *path_property;
+} CEventTypeData;
+
+typedef struct CEventType {
+  CEventTypeEnum ty;
+  union CEventTypeData data;
+} CEventType;
+
+typedef struct CEventData {
+  float raw_duration;
+  enum Functions easing;
+  uint32_t repeat;
+  float start_time;
+  struct CEventType event_type;
+  struct Track *track_ptr;
+  const struct BasePointDefinition *point_data_ptr;
+} CEventData;
+
 typedef struct JsonArray {
   const struct FFIJsonValue *elements;
   uintptr_t length;
@@ -177,40 +207,96 @@ typedef struct QuaternionInterpolationResult {
   bool is_last;
 } QuaternionInterpolationResult;
 
-typedef struct Option_BaseValue ValueProperty;
-
-typedef struct PointDefinitionInterpolation PathProperty;
-
 typedef struct CValueProperty {
   bool has_value;
   struct WrapBaseValue value;
 } CValueProperty;
-
-typedef union CEventTypeData {
-  const ValueProperty *property;
-  const PathProperty *path_property;
-} CEventTypeData;
-
-typedef struct CEventType {
-  CEventTypeEnum ty;
-  union CEventTypeData data;
-} CEventType;
-
-typedef struct CEventData {
-  float raw_duration;
-  enum Functions easing;
-  uint32_t repeat;
-  float start_time;
-  struct CEventType event_type;
-  struct Track *track_ptr;
-  const struct BasePointDefinition *point_data_ptr;
-} CEventData;
 
 
 
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
+
+struct TracksContext *tracks_context_create(void);
+
+/**
+ * Consumes the context and frees its memory.
+ */
+void tracks_context_destroy(struct TracksContext *context);
+
+/**
+ * Consumes the track and moves
+ * it into the context. Returns a const pointer to the track.
+ */
+const struct Track *tracks_context_add_track(struct TracksContext *context, struct Track *track);
+
+/**
+ * Consumes the point definition and moves it into the context.
+ * Returns a const pointer to the point definition.
+ */
+const struct BasePointDefinition *tracks_context_add_point_definition(struct TracksContext *context,
+                                                                      struct BasePointDefinition *point_def);
+
+struct Track *tracks_context_get_track_by_name(struct TracksContext *context, const char *name);
+
+struct Track *tracks_context_get_track(struct TracksContext *context, uintptr_t index);
+
+struct CoroutineManager *tracks_context_get_coroutine_manager(struct TracksContext *context);
+
+struct BaseProviderContext *tracks_context_get_base_provider_context(struct TracksContext *context);
+
+/**
+ * Creates a new CoroutineManager instance and returns a raw pointer to it.
+ * The caller is responsible for freeing the memory using destroy_coroutine_manager.
+ */
+struct CoroutineManager *create_coroutine_manager(void);
+
+/**
+ * Destroys a CoroutineManager instance, freeing its memory.
+ */
+void destroy_coroutine_manager(struct CoroutineManager *manager);
+
+/**
+ * Starts an event coroutine in the manager. Consumes event_data
+ */
+void start_event_coroutine(struct CoroutineManager *manager,
+                           float bpm,
+                           float song_time,
+                           const struct BaseProviderContext *context,
+                           struct EventData *event_data);
+
+/**
+ * Polls all events in the manager, updating their state based on the current song time.
+ */
+void poll_events(struct CoroutineManager *manager,
+                 float song_time,
+                 const struct BaseProviderContext *context);
+
+/**
+ * C-compatible wrapper for easing functions
+ */
+float interpolate_easing(enum Functions easing_function, float t);
+
+/**
+ * Gets an easing function by index (useful for FFI where enums might be troublesome)
+ * Returns Functions::EaseLinear if the index is out of bounds
+ */
+enum Functions get_easing_function_by_index(int32_t index);
+
+/**
+ * Gets the total number of available easing functions
+ */
+int32_t get_easing_function_count(void);
+
+/**
+ * Converts a CEventData into a Rust EventData
+ * Does not consume the CEventData
+ * Returns a raw pointer to the Rust EventData
+ */
+struct EventData *event_data_to_rust(const struct CEventData *c_event_data);
+
+void event_data_dispose(struct EventData *event_data);
 
 struct FFIJsonValue tracks_create_json_number(double value);
 
@@ -311,54 +397,6 @@ uintptr_t tracks_quat_count(const struct QuaternionPointDefinition *point_defini
 
 bool tracks_quat_has_base_provider(const struct QuaternionPointDefinition *point_definition);
 
-/**
- * Creates a new CoroutineManager instance and returns a raw pointer to it.
- * The caller is responsible for freeing the memory using destroy_coroutine_manager.
- */
-struct CoroutineManager *create_coroutine_manager(void);
-
-/**
- * Destroys a CoroutineManager instance, freeing its memory.
- */
-void destroy_coroutine_manager(struct CoroutineManager *manager);
-
-/**
- * Starts an event coroutine in the manager. Consumes event_data
- */
-void start_event_coroutine(struct CoroutineManager *manager,
-                           float bpm,
-                           float song_time,
-                           const struct BaseProviderContext *context,
-                           struct EventData *event_data);
-
-/**
- * Polls all events in the manager, updating their state based on the current song time.
- */
-void poll_events(struct CoroutineManager *manager,
-                 float song_time,
-                 const struct BaseProviderContext *context);
-
-struct Track *track_create(void);
-
-/**
- * Consumes the track and frees its memory.
- */
-void track_destroy(struct Track *track);
-
-void track_set_name(struct Track *track, const char *name);
-
-const char *track_get_name(const struct Track *track);
-
-void track_register_game_object(struct Track *track, struct GameObject *game_object);
-
-void track_register_property(struct Track *track, const char *id, ValueProperty *property);
-
-const ValueProperty *track_get_property(const struct Track *track, const char *id);
-
-PathProperty *track_get_path_property(struct Track *track, const char *id);
-
-void track_mark_updated(struct Track *track);
-
 PathProperty *path_property_create(void);
 
 void path_property_finish(PathProperty *ptr);
@@ -380,58 +418,26 @@ enum WrapBaseValueType property_get_type(const ValueProperty *ptr);
 
 enum WrapBaseValueType path_property_get_type(const PathProperty *ptr);
 
-struct TracksContext *tracks_context_create(void);
+struct Track *track_create(void);
 
 /**
- * Consumes the context and frees its memory.
+ * Consumes the track and frees its memory.
  */
-void tracks_context_destroy(struct TracksContext *context);
+void track_destroy(struct Track *track);
 
-/**
- * Consumes the track and moves
- * it into the context. Returns a const pointer to the track.
- */
-const struct Track *tracks_context_add_track(struct TracksContext *context, struct Track *track);
+void track_set_name(struct Track *track, const char *name);
 
-/**
- * Consumes the point definition and moves it into the context.
- * Returns a const pointer to the point definition.
- */
-const struct BasePointDefinition *tracks_context_add_point_definition(struct TracksContext *context,
-                                                                      struct BasePointDefinition *point_def);
+const char *track_get_name(const struct Track *track);
 
-struct Track *tracks_context_get_track_by_name(struct TracksContext *context, const char *name);
+void track_register_game_object(struct Track *track, struct GameObject *game_object);
 
-struct Track *tracks_context_get_track(struct TracksContext *context, uintptr_t index);
+void track_register_property(struct Track *track, const char *id, ValueProperty *property);
 
-struct CoroutineManager *tracks_context_get_coroutine_manager(struct TracksContext *context);
+const ValueProperty *track_get_property(const struct Track *track, const char *id);
 
-struct BaseProviderContext *tracks_context_get_base_provider_context(struct TracksContext *context);
+PathProperty *track_get_path_property(struct Track *track, const char *id);
 
-/**
- * C-compatible wrapper for easing functions
- */
-float interpolate_easing(enum Functions easing_function, float t);
-
-/**
- * Gets an easing function by index (useful for FFI where enums might be troublesome)
- * Returns Functions::EaseLinear if the index is out of bounds
- */
-enum Functions get_easing_function_by_index(int32_t index);
-
-/**
- * Gets the total number of available easing functions
- */
-int32_t get_easing_function_count(void);
-
-/**
- * Converts a CEventData into a Rust EventData
- * Does not consume the CEventData
- * Returns a raw pointer to the Rust EventData
- */
-struct EventData *event_data_to_rust(const struct CEventData *c_event_data);
-
-void event_data_dispose(struct EventData *event_data);
+void track_mark_updated(struct Track *track);
 
 #ifdef __cplusplus
 }  // extern "C"
