@@ -10,6 +10,18 @@ pub struct CValueProperty {
     value: WrapBaseValue,
 }
 
+impl Default for CValueProperty {
+    fn default() -> Self {
+        CValueProperty {
+            has_value: false,
+            value: WrapBaseValue {
+                ty: WrapBaseValueType::Float,
+                value: unsafe { std::mem::zeroed() },
+            },
+        }
+    }
+}
+
 impl From<Option<BaseValue>> for CValueProperty {
     fn from(prop: Option<BaseValue>) -> Self {
         match prop {
@@ -39,6 +51,20 @@ pub unsafe extern "C" fn path_property_finish(ptr: *mut PathProperty) {
             let inner = &mut *ptr;
             inner.finish();
         }
+    }
+}
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn path_property_init(
+    ptr: *mut PathProperty,
+    // nullable
+    new_point_data: *const base_point_definition::BasePointDefinition,
+) {
+    if ptr.is_null() {
+        return;
+    }
+    unsafe {
+        let inner = &mut *ptr;
+        inner.init(new_point_data.as_ref());
     }
 }
 
@@ -90,24 +116,6 @@ pub unsafe extern "C" fn path_property_interpolate(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn property_get_type(ptr: *const ValueProperty) -> WrapBaseValueType {
-    if ptr.is_null() {
-        return WrapBaseValueType::Float; // Default type if pointer is null
-    }
-
-    let inner = unsafe { &*ptr };
-    match inner {
-        Some(value_type) => match value_type {
-            BaseValue::Float(_) => WrapBaseValueType::Float,
-            BaseValue::Vector3(_) => WrapBaseValueType::Vec3,
-            BaseValue::Quaternion(_) => WrapBaseValueType::Quat,
-            BaseValue::Vector4(_) => WrapBaseValueType::Vec4,
-        },
-        None => WrapBaseValueType::Float, // Default to Float if type is not set
-    }
-}
-
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn path_property_get_type(ptr: *const PathProperty) -> WrapBaseValueType {
     unsafe {
         if ptr.is_null() {
@@ -127,4 +135,31 @@ pub unsafe extern "C" fn path_property_get_type(ptr: *const PathProperty) -> Wra
             None => WrapBaseValueType::Float, // Default to Float if type is not set
         }
     }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn property_get_type(ptr: *const ValueProperty) -> WrapBaseValueType {
+    if ptr.is_null() {
+        return WrapBaseValueType::Float; // Default type if pointer is null
+    }
+
+    let inner = unsafe { &*ptr };
+    match inner {
+        Some(value_type) => match value_type {
+            BaseValue::Float(_) => WrapBaseValueType::Float,
+            BaseValue::Vector3(_) => WrapBaseValueType::Vec3,
+            BaseValue::Quaternion(_) => WrapBaseValueType::Quat,
+            BaseValue::Vector4(_) => WrapBaseValueType::Vec4,
+        },
+        None => WrapBaseValueType::Float, // Default to Float if type is not set
+    }
+}
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn property_get_value(ptr: *const ValueProperty) -> CValueProperty {
+    if ptr.is_null() {
+        return CValueProperty::default(); // Default type if pointer is null
+    }
+
+    let inner = *unsafe { &*ptr };
+    inner.into()
 }

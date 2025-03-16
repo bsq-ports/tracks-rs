@@ -401,6 +401,8 @@ PathProperty *path_property_create(void);
 
 void path_property_finish(PathProperty *ptr);
 
+void path_property_init(PathProperty *ptr, const struct BasePointDefinition *new_point_data);
+
 /**
  * Consumes the path property and frees its memory.
  */
@@ -414,9 +416,11 @@ struct CValueProperty path_property_interpolate(PathProperty *ptr,
                                                 float time,
                                                 struct BaseProviderContext *context);
 
+enum WrapBaseValueType path_property_get_type(const PathProperty *ptr);
+
 enum WrapBaseValueType property_get_type(const ValueProperty *ptr);
 
-enum WrapBaseValueType path_property_get_type(const PathProperty *ptr);
+struct CValueProperty property_get_value(const ValueProperty *ptr);
 
 struct Track *track_create(void);
 
