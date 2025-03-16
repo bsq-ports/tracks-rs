@@ -1,14 +1,9 @@
 use glam::{Quat, Vec3, vec3};
 
 use crate::{
-    easings::functions::Functions,
-    modifiers::{
-        Modifier,
-        operation::Operation,
-        quaternion_modifier::{QuaternionModifier, QuaternionValues, TRACKS_EULER_ROT},
-    },
-    point_data::{PointData, quaternion_point_data::QuaternionPointData},
-    values::{AbstractValueProvider, ValueProvider, base_provider_context::BaseProviderContext},
+    base_provider_context::BaseProviderContext, easings::functions::Functions, modifiers::{
+        operation::Operation, quaternion_modifier::{QuaternionModifier, QuaternionValues, TRACKS_EULER_ROT}, Modifier
+    }, point_data::{quaternion_point_data::QuaternionPointData, PointData}, values::{AbstractValueProvider, ValueProvider}
 };
 
 use super::PointDefinition;

@@ -5,6 +5,7 @@ use super::{
     property::{PathProperty, ValueProperty},
 };
 
+#[derive(Clone)]
 pub struct Track<'a> {
     pub properties: HashMap<String, ValueProperty>,
     pub path_properties: HashMap<String, PathProperty<'a>>,

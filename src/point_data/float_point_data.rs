@@ -5,7 +5,7 @@ use crate::{
         float_modifier::{FloatModifier, FloatValues},
         operation::Operation,
     },
-    values::base_provider_context::BaseProviderContext,
+    base_provider_context::BaseProviderContext,
 };
 
 use super::BasePointData;

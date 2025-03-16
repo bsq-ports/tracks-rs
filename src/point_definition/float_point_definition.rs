@@ -1,14 +1,9 @@
 use glam::FloatExt;
 
 use crate::{
-    easings::functions::Functions,
-    modifiers::{
-        Modifier,
-        float_modifier::{FloatModifier, FloatValues},
-        operation::Operation,
-    },
-    point_data::{PointData, float_point_data::FloatPointData},
-    values::{AbstractValueProvider, ValueProvider, base_provider_context::BaseProviderContext},
+    base_provider_context::BaseProviderContext, easings::functions::Functions, modifiers::{
+        float_modifier::{FloatModifier, FloatValues}, operation::Operation, Modifier
+    }, point_data::{float_point_data::FloatPointData, PointData}, values::{AbstractValueProvider, ValueProvider}
 };
 
 use super::PointDefinition;

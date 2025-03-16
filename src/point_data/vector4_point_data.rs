@@ -5,7 +5,7 @@ use crate::{
         operation::Operation,
         vector4_modifier::{Vector4Modifier, Vector4Values},
     },
-    values::base_provider_context::BaseProviderContext,
+    base_provider_context::BaseProviderContext,
 };
 use glam::Vec4;
 

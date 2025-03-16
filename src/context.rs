@@ -1,13 +1,14 @@
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-    animation::{coroutine_manager::CoroutineManager, tracks::Track},
-    point_definition::BasePointDefinition,
-    values::base_provider_context::BaseProviderContext,
+    animation::{coroutine_manager::CoroutineManager, tracks::Track}, base_provider_context::BaseProviderContext, point_definition::base_point_definition::BasePointDefinition
 };
 
 pub struct TracksContext<'a> {
-    // TODO: Removable tracks/
+    // we use an Rc here so vec reallocs don't break the track pointers
+    // though we could also use a linkedlist
+
+    // TODO: Removable tracks
     pub tracks: Vec<Rc<RefCell<Track<'a>>>>,
     // TODO: Removable point definitions?
     pub point_definitions: Vec<Rc<BasePointDefinition>>,
@@ -20,7 +21,10 @@ impl<'a> TracksContext<'a> {
         self.tracks.push(track);
     }
 
-    pub fn add_point_definition(&mut self, point_definition: Rc<BasePointDefinition>) {
+    pub fn add_point_definition(
+        &mut self,
+        point_definition: Rc<BasePointDefinition>,
+    ) {
         self.point_definitions.push(point_definition);
     }
 

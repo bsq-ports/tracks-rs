@@ -1,6 +1,6 @@
 use super::{Modifier, ModifierBase, operation::Operation};
 use super::{ModifierValues, shared_has_base_provider};
-use crate::values::base_provider_context::BaseProviderContext;
+use crate::base_provider_context::BaseProviderContext;
 use glam::Vec4;
 
 pub type Vector4Values = ModifierValues<Vec4>;

@@ -16,11 +16,14 @@ pub mod easings;
 
 #[cfg(feature = "ffi")]
 pub mod ffi;
+
 pub mod modifiers;
 pub mod point_data;
 pub mod point_definition;
 pub mod values;
 pub mod animation;
+pub mod base_provider_context;
+
 
 #[cfg(target_os = "android")]
 #[ctor::ctor]

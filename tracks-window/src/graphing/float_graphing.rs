@@ -12,7 +12,7 @@ use serde_json::json;
 
 use tracks_rs::{
     point_definition::{PointDefinition, float_point_definition::FloatPointDefinition},
-    values::base_provider_context::BaseProviderContext,
+    base_provider_context::BaseProviderContext,
 };
 
 pub struct FloatContext {

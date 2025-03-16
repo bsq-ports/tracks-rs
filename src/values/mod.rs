@@ -1,4 +1,4 @@
-use crate::values::base_provider_context::BaseProviderContext;
+use crate::base_provider_context::BaseProviderContext;
 use base::BaseProviderValues;
 use serde_json::Value as JsonValue;
 use std::borrow::Cow;
@@ -6,7 +6,6 @@ use std::borrow::Cow;
 pub mod base;
 #[cfg(feature = "ffi")]
 pub mod base_ffi;
-pub mod base_provider_context;
 pub mod quat;
 pub mod smooth;
 pub mod smooth_rot;

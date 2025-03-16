@@ -1,7 +1,5 @@
 use super::{Modifier, ModifierBase, operation::Operation, shared_has_base_provider};
-use crate::values::{
-    AbstractValueProvider, ValueProvider, base_provider_context::BaseProviderContext,
-};
+use crate::{base_provider_context::BaseProviderContext, values::{AbstractValueProvider, ValueProvider}};
 use glam::{EulerRot, Quat, Vec3};
 
 /// Is it ZXY or XYZ???

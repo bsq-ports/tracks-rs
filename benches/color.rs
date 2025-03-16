@@ -3,7 +3,7 @@ use serde_json::json;
 use std::hint::black_box;
 use tracks_rs::{
     point_definition::{PointDefinition, vector4_point_definition::Vector4PointDefinition},
-    values::base_provider_context::BaseProviderContext,
+    base_provider_context::BaseProviderContext,
 };
 
 fn point_step(n: u64) {
@@ -27,7 +27,7 @@ fn point_step(n: u64) {
 
 #[cfg(feature = "compare_old")]
 fn point_step_slow(n: u64) {
-    let context = track_rs_old::values::base_provider_context::BaseProviderContext::new();
+    let context = track_rs_old::base_provider_context::BaseProviderContext::new();
     let definition =
         track_rs_old::point_definition::vector4_point_definition::Vector4PointDefinition::new(
             &json!([

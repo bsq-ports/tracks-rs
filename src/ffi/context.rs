@@ -1,8 +1,9 @@
 use crate::animation::coroutine_manager::CoroutineManager;
 use crate::animation::tracks::Track;
+use crate::base_provider_context::BaseProviderContext;
 use crate::context::TracksContext;
-use crate::point_definition::BasePointDefinition;
-use crate::values::base_provider_context::BaseProviderContext;
+use crate::point_definition::base_point_definition::{self, BasePointDefinition};
+use crate::point_definition::PointDefinition;
 use std::cell::{Ref, RefCell};
 use std::ffi::{CStr, CString};
 use std::ops::{Deref, DerefMut};
@@ -58,8 +59,8 @@ pub unsafe extern "C" fn tracks_context_add_track<'a>(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_context_add_point_definition(
     context: *mut TracksContext,
-    point_def: *mut BasePointDefinition,
-) -> *const BasePointDefinition {
+    point_def: *mut base_point_definition::BasePointDefinition,
+) -> *const base_point_definition::BasePointDefinition {
     if context.is_null() || point_def.is_null() {
         return ptr::null();
     }
@@ -73,6 +74,7 @@ pub unsafe extern "C" fn tracks_context_add_point_definition(
         // Don't drop the Box here, ownership is transferred to the context
     }
 }
+
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_context_get_track_by_name<'a>(
@@ -118,7 +120,7 @@ pub unsafe extern "C" fn tracks_context_get_coroutine_manager<'a>(
 
     unsafe {
         // Return a mutable pointer to the coroutine manager
-        &mut(*context).coroutine_manager as *mut _
+        &mut (*context).coroutine_manager as *mut _
     }
 }
 #[unsafe(no_mangle)]

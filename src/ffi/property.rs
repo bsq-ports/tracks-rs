@@ -1,7 +1,7 @@
 use crate::animation::property::{PathProperty, ValueProperty};
 use crate::ffi::types::{WrapBaseValue, WrapBaseValueType};
-use crate::point_definition::BasePointDefinition;
-use crate::values::base_provider_context::BaseProviderContext;
+use crate::point_definition::base_point_definition::{self, BasePointDefinition};
+use crate::base_provider_context::BaseProviderContext;
 use crate::values::value::BaseValue;
 
 #[repr(C)]
@@ -116,10 +116,10 @@ pub unsafe extern "C" fn path_property_get_type(ptr: *const PathProperty) -> Wra
     let inner = &*ptr;
     match inner.point.or(inner.prev_point) {
         Some(value_type) => match value_type {
-            BasePointDefinition::Float(_) => WrapBaseValueType::Float,
-            BasePointDefinition::Vector3(_) => WrapBaseValueType::Vec3,
-            BasePointDefinition::Quaternion(_) => WrapBaseValueType::Quat,
-            BasePointDefinition::Vector4(_) => WrapBaseValueType::Vec4,
+            base_point_definition::BasePointDefinition::Float(_) => WrapBaseValueType::Float,
+            base_point_definition::BasePointDefinition::Vector3(_) => WrapBaseValueType::Vec3,
+            base_point_definition::BasePointDefinition::Quaternion(_) => WrapBaseValueType::Quat,
+            base_point_definition::BasePointDefinition::Vector4(_) => WrapBaseValueType::Vec4,
         },
         None => WrapBaseValueType::Float, // Default to Float if type is not set
     }

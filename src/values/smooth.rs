@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use super::{UpdateableValues, clamp_lerp};
 
-use crate::values::base_provider_context::BaseProviderContext;
+use crate::base_provider_context::BaseProviderContext;
 
 use super::AbstractValueProvider;
 

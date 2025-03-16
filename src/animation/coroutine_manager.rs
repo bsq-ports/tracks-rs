@@ -3,9 +3,9 @@ use std::{cell::RefCell, ops::DerefMut, rc::Rc};
 use itertools::Itertools;
 
 use crate::{
+    base_provider_context::BaseProviderContext,
     easings::functions::Functions,
-    point_definition::{BasePointDefinition, PointDefinition},
-    values::base_provider_context::BaseProviderContext,
+    point_definition::{base_point_definition::{self, BasePointDefinition}, PointDefinition},
 };
 
 use super::{
@@ -20,6 +20,7 @@ pub struct CoroutineManager<'a> {
     _marker: std::marker::PhantomData<&'a ()>,
 }
 
+
 struct CoroutineTask<'a> {
     event_type: EventType<'a>,
     repeat: u32,
@@ -27,7 +28,7 @@ struct CoroutineTask<'a> {
     easing: Functions,
     start_time: f32,
     track: &'a mut Track<'a>,
-    point_defintion: &'a BasePointDefinition,
+    point_defintion: &'a base_point_definition::BasePointDefinition,
 }
 
 #[derive(PartialEq, PartialOrd, Clone, Copy)]
@@ -206,7 +207,7 @@ impl<'a> CoroutineManager<'a> {
 }
 
 fn animate_track(
-    points: &BasePointDefinition,
+    points: &base_point_definition::BasePointDefinition,
     property: &mut ValueProperty,
     track: &mut Track,
     duration: f32,
@@ -250,7 +251,7 @@ fn assign_path_animation(
 }
 
 fn set_property_value(
-    points: &BasePointDefinition,
+    points: &base_point_definition::BasePointDefinition,
     property: &mut ValueProperty,
     track: &mut Track,
     time: f32,

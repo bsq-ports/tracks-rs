@@ -3,8 +3,8 @@ use crate::animation::events::{EventData, EventType};
 use crate::animation::property::{PathProperty, ValueProperty};
 use crate::animation::tracks::Track;
 use crate::easings::functions::Functions;
-use crate::point_definition::{BasePointDefinition, PointDefinition};
-use crate::values::base_provider_context::BaseProviderContext;
+use crate::point_definition::{base_point_definition::BasePointDefinition, PointDefinition};
+use crate::base_provider_context::BaseProviderContext;
 use std::ptr;
 
 // filepath: /Users/fern/Developer/tracks-rs/src/ffi/coroutine_manager.rs

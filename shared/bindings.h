@@ -78,7 +78,7 @@ typedef struct GameObject GameObject;
 
 typedef struct Option_BaseValue Option_BaseValue;
 
-typedef struct PathProperty PathProperty;
+typedef struct PointDefinitionInterpolation PointDefinitionInterpolation;
 
 typedef struct QuaternionPointDefinition QuaternionPointDefinition;
 
@@ -166,6 +166,8 @@ typedef struct QuaternionInterpolationResult {
 } QuaternionInterpolationResult;
 
 typedef struct Option_BaseValue ValueProperty;
+
+typedef struct PointDefinitionInterpolation PathProperty;
 
 typedef struct CValueProperty {
   bool has_value;
@@ -321,30 +323,30 @@ void track_register_property(struct Track *track, const char *id, ValueProperty 
 
 const ValueProperty *track_get_property(const struct Track *track, const char *id);
 
-struct PathProperty *track_get_path_property(struct Track *track, const char *id);
+PathProperty *track_get_path_property(struct Track *track, const char *id);
 
 void track_mark_updated(struct Track *track);
 
-struct PathProperty *path_property_create(void);
+PathProperty *path_property_create(void);
 
-void path_property_finish(struct PathProperty *ptr);
+void path_property_finish(PathProperty *ptr);
 
 /**
  * Consumes the path property and frees its memory.
  */
-void path_property_free(struct PathProperty *ptr);
+void path_property_free(PathProperty *ptr);
 
-float path_property_get_time(const struct PathProperty *ptr);
+float path_property_get_time(const PathProperty *ptr);
 
-void path_property_set_time(struct PathProperty *ptr, float time);
+void path_property_set_time(PathProperty *ptr, float time);
 
-struct CValueProperty path_property_interpolate(struct PathProperty *ptr,
+struct CValueProperty path_property_interpolate(PathProperty *ptr,
                                                 float time,
                                                 struct BaseProviderContext *context);
 
 enum WrapBaseValueType property_get_type(const ValueProperty *ptr);
 
-enum WrapBaseValueType path_property_get_type(const struct PathProperty *ptr);
+enum WrapBaseValueType path_property_get_type(const PathProperty *ptr);
 
 struct TracksContext *tracks_context_create(void);
 

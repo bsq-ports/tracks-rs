@@ -11,7 +11,7 @@ use vector3_modifier::Vector3Modifier;
 use vector4_modifier::Vector4Modifier;
 
 use crate::modifiers::operation::Operation;
-use crate::values::base_provider_context::BaseProviderContext;
+use crate::base_provider_context::BaseProviderContext;
 use crate::values::{AbstractValueProvider, ValueProvider};
 
 #[derive(Clone, Debug)]

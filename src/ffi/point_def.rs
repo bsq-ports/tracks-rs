@@ -1,5 +1,6 @@
 use tracing::info;
 
+use crate::point_definition::base_point_definition;
 use crate::point_definition::quaternion_point_definition::QuaternionPointDefinition;
 
 use crate::point_definition::vector4_point_definition::Vector4PointDefinition;
@@ -8,8 +9,8 @@ use crate::point_definition::vector3_point_definition::Vector3PointDefinition;
 
 use crate::point_definition::float_point_definition::FloatPointDefinition;
 
-use crate::point_definition::BasePointDefinition;
 use crate::point_definition::PointDefinition;
+use crate::point_definition::base_point_definition::BasePointDefinition;
 use crate::values::value::BaseValue;
 
 use std::cell::Ref;
@@ -20,7 +21,7 @@ use std::ffi::c_void;
 use std::rc::Rc;
 use std::slice;
 
-use crate::values::base_provider_context::BaseProviderContext;
+use crate::base_provider_context::BaseProviderContext;
 
 use crate::values::base_ffi::BaseFFIProviderValues;
 
@@ -160,11 +161,11 @@ pub unsafe extern "C" fn tracks_make_base_point_definition(
     json: *const FFIJsonValue,
     ty: WrapBaseValueType,
     context: *mut BaseProviderContext,
-) -> *mut BasePointDefinition {
+) -> *mut base_point_definition::BasePointDefinition {
     let value = unsafe { json::convert_json_value_to_serde(json) };
     let context = unsafe { &*context };
 
-    let point_definition: BasePointDefinition = match ty {
+    let point_definition: base_point_definition::BasePointDefinition = match ty {
         WrapBaseValueType::Vec3 => Vector3PointDefinition::new(value, context).into(),
         WrapBaseValueType::Quat => QuaternionPointDefinition::new(value, context).into(),
         WrapBaseValueType::Vec4 => Vector4PointDefinition::new(value, context).into(),
@@ -178,7 +179,7 @@ pub unsafe extern "C" fn tracks_make_base_point_definition(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_interpolate_base_point_definition(
-    point_definition: *const BasePointDefinition,
+    point_definition: *const base_point_definition::BasePointDefinition,
     time: f32,
     is_last_out: *mut bool,
     context: *mut BaseProviderContext,
@@ -192,7 +193,7 @@ pub unsafe extern "C" fn tracks_interpolate_base_point_definition(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_base_point_definition_count(
-    point_definition: *const BasePointDefinition,
+    point_definition: *const base_point_definition::BasePointDefinition,
 ) -> usize {
     let point_definition = unsafe { &*point_definition };
     point_definition.get_count()
@@ -200,7 +201,7 @@ pub unsafe extern "C" fn tracks_base_point_definition_count(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_base_point_definition_has_base_provider(
-    point_definition: *const BasePointDefinition,
+    point_definition: *const base_point_definition::BasePointDefinition,
 ) -> bool {
     let point_definition = unsafe { &*point_definition };
     point_definition.has_base_provider()

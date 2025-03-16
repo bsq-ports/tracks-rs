@@ -5,7 +5,7 @@ use crate::{
         operation::Operation,
         quaternion_modifier::{QuaternionModifier, QuaternionValues},
     },
-    values::base_provider_context::BaseProviderContext,
+    base_provider_context::BaseProviderContext,
 };
 use glam::Quat;
 
