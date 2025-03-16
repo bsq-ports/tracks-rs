@@ -67,6 +67,31 @@ typedef enum JsonValueType {
   Array,
 } JsonValueType;
 
+enum PropertyNames
+#ifdef __cplusplus
+  : uint32_t
+#endif // __cplusplus
+ {
+  Position,
+  Rotation,
+  Scale,
+  LocalRotation,
+  LocalPosition,
+  DefinitePosition,
+  Dissolve,
+  DissolveArrow,
+  Time,
+  Cuttable,
+  Color,
+  Attentuation,
+  FogOffset,
+  HeightFogStartY,
+  HeightFogHeight,
+};
+#ifndef __cplusplus
+typedef uint32_t PropertyNames;
+#endif // __cplusplus
+
 typedef enum WrapBaseValueType {
   Vec3 = 0,
   Quat = 1,
@@ -468,6 +493,10 @@ void track_register_game_object(struct Track *track, struct GameObject *game_obj
 void track_register_property(struct Track *track, const char *id, ValueProperty *property);
 
 const ValueProperty *track_get_property(const struct Track *track, const char *id);
+
+const ValueProperty *track_get_property_by_name(const struct Track *track, PropertyNames id);
+
+PathProperty *track_get_path_property_by_name(struct Track *track, PropertyNames id);
 
 void track_register_path_property(struct Track *track, const char *id, PathProperty *property);
 

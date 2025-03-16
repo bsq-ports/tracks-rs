@@ -1,7 +1,7 @@
 use crate::animation::{
     game_object::GameObject,
     property::{PathProperty, ValueProperty},
-    tracks::Track,
+    tracks::{PropertyNames, Track},
 };
 use std::{
     ffi::{CStr, CString, c_char},
@@ -184,6 +184,40 @@ pub unsafe extern "C" fn track_get_property(
         }
     }
 }
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn track_get_property_by_name(
+    track: *const Track,
+    id: PropertyNames,
+) -> *const ValueProperty {
+    if track.is_null() {
+        return ptr::null();
+    }
+
+    let track = unsafe { &*track };
+
+    match track.properties.get_property_by_name(id) {
+        Some(property) => property,
+        None => ptr::null(),
+    }
+}
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn track_get_path_property_by_name(
+    track: *mut Track,
+    id: PropertyNames,
+) -> *mut PathProperty {
+    if track.is_null() {
+        return ptr::null_mut();
+    }
+
+    let track = unsafe { &mut *track };
+
+    match track.path_properties.get_property_by_name_mut(id) {
+        Some(property) => property,
+        None => ptr::null_mut(),
+    }
+}
+
+
 
 // register path property
 #[unsafe(no_mangle)]

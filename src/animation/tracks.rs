@@ -1,9 +1,45 @@
-use std::time::Instant;
+use std::{fmt::Display, str::FromStr, time::Instant};
 
 use super::{
     game_object::GameObject,
     property::{PathProperty, ValueProperty},
 };
+
+// Define constants for property names
+pub const POSITION: &str = "position";
+pub const ROTATION: &str = "rotation";
+pub const SCALE: &str = "scale";
+pub const LOCAL_ROTATION: &str = "local_rotation";
+pub const LOCAL_POSITION: &str = "local_position";
+pub const DEFINITE_POSITION: &str = "definite_position";
+pub const DISSOLVE: &str = "dissolve";
+pub const DISSOLVE_ARROW: &str = "dissolve_arrow";
+pub const TIME: &str = "time";
+pub const CUTTABLE: &str = "cuttable";
+pub const COLOR: &str = "color";
+pub const ATTENTUATION: &str = "attentuation";
+pub const FOG_OFFSET: &str = "fog_offset";
+pub const HEIGHT_FOG_START_Y: &str = "height_fog_start_y";
+pub const HEIGHT_FOG_HEIGHT: &str = "height_fog_height";
+
+#[repr(u32)]
+pub enum PropertyNames {
+    Position,
+    Rotation,
+    Scale,
+    LocalRotation,
+    LocalPosition,
+    DefinitePosition,
+    Dissolve,
+    DissolveArrow,
+    Time,
+    Cuttable,
+    Color,
+    Attentuation,
+    FogOffset,
+    HeightFogStartY,
+    HeightFogHeight,
+}
 
 #[derive(Default, Clone)]
 pub struct PathPropertiesMap<'a> {
@@ -121,42 +157,56 @@ impl PropertiesMap {
         }
     }
 
+    pub fn get_property_by_name(&self, name: PropertyNames) -> Option<&ValueProperty> {
+        match name {
+            PropertyNames::Position => Some(&self.position),
+            PropertyNames::Rotation => Some(&self.rotation),
+            PropertyNames::Scale => Some(&self.scale),
+            PropertyNames::LocalRotation => Some(&self.local_rotation),
+            PropertyNames::LocalPosition => Some(&self.local_position),
+            PropertyNames::Dissolve => Some(&self.dissolve),
+            PropertyNames::DissolveArrow => Some(&self.dissolve_arrow),
+            PropertyNames::Time => Some(&self.time),
+            PropertyNames::Cuttable => Some(&self.cuttable),
+            PropertyNames::Color => Some(&self.color),
+            PropertyNames::Attentuation => Some(&self.attentuation),
+            PropertyNames::FogOffset => Some(&self.fog_offset),
+            PropertyNames::HeightFogStartY => Some(&self.height_fog_start_y),
+            PropertyNames::HeightFogHeight => Some(&self.height_fog_height),
+            _ => None,
+        }
+    }
+
+    pub fn get_property_by_name_mut(&mut self, name: PropertyNames) -> Option<&mut ValueProperty> {
+        match name {
+            PropertyNames::Position => Some(&mut self.position),
+            PropertyNames::Rotation => Some(&mut self.rotation),
+            PropertyNames::Scale => Some(&mut self.scale),
+            PropertyNames::LocalRotation => Some(&mut self.local_rotation),
+            PropertyNames::LocalPosition => Some(&mut self.local_position),
+            PropertyNames::Dissolve => Some(&mut self.dissolve),
+            PropertyNames::DissolveArrow => Some(&mut self.dissolve_arrow),
+            PropertyNames::Time => Some(&mut self.time),
+            PropertyNames::Cuttable => Some(&mut self.cuttable),
+            PropertyNames::Color => Some(&mut self.color),
+            PropertyNames::Attentuation => Some(&mut self.attentuation),
+            PropertyNames::FogOffset => Some(&mut self.fog_offset),
+            PropertyNames::HeightFogStartY => Some(&mut self.height_fog_start_y),
+            PropertyNames::HeightFogHeight => Some(&mut self.height_fog_height),
+            _ => None,
+        }
+    }
+
     pub fn get(&self, id: &str) -> Option<&ValueProperty> {
-        match id {
-            "position" => Some(&self.position),
-            "rotation" => Some(&self.rotation),
-            "scale" => Some(&self.scale),
-            "local_rotation" => Some(&self.local_rotation),
-            "local_position" => Some(&self.local_position),
-            "dissolve" => Some(&self.dissolve),
-            "dissolve_arrow" => Some(&self.dissolve_arrow),
-            "time" => Some(&self.time),
-            "cuttable" => Some(&self.cuttable),
-            "color" => Some(&self.color),
-            "attentuation" => Some(&self.attentuation),
-            "fog_offset" => Some(&self.fog_offset),
-            "height_fog_start_y" => Some(&self.height_fog_start_y),
-            "height_fog_height" => Some(&self.height_fog_height),
+        match PropertyNames::from_str(id) {
+            Ok(name) => self.get_property_by_name(name),
             _ => self.properties.get(id),
         }
     }
 
     pub fn get_mut(&mut self, id: &str) -> Option<&mut ValueProperty> {
-        match id {
-            "position" => Some(&mut self.position),
-            "rotation" => Some(&mut self.rotation),
-            "scale" => Some(&mut self.scale),
-            "local_rotation" => Some(&mut self.local_rotation),
-            "local_position" => Some(&mut self.local_position),
-            "dissolve" => Some(&mut self.dissolve),
-            "dissolve_arrow" => Some(&mut self.dissolve_arrow),
-            "time" => Some(&mut self.time),
-            "cuttable" => Some(&mut self.cuttable),
-            "color" => Some(&mut self.color),
-            "attentuation" => Some(&mut self.attentuation),
-            "fog_offset" => Some(&mut self.fog_offset),
-            "height_fog_start_y" => Some(&mut self.height_fog_start_y),
-            "height_fog_height" => Some(&mut self.height_fog_height),
+        match PropertyNames::from_str(id) {
+            Ok(name) => self.get_property_by_name_mut(name),
             _ => self.properties.get_mut(id),
         }
     }
@@ -172,35 +222,99 @@ impl<'a> PathPropertiesMap<'a> {
         }
     }
 
+    pub fn get_property_by_name(&self, name: PropertyNames) -> Option<&PathProperty<'a>> {
+        match name {
+            PropertyNames::Position => Some(&self.position),
+            PropertyNames::Rotation => Some(&self.rotation),
+            PropertyNames::Scale => Some(&self.scale),
+            PropertyNames::LocalRotation => Some(&self.local_rotation),
+            PropertyNames::LocalPosition => Some(&self.local_position),
+            PropertyNames::DefinitePosition => Some(&self.definite_position),
+            PropertyNames::Dissolve => Some(&self.dissolve),
+            PropertyNames::DissolveArrow => Some(&self.dissolve_arrow),
+            PropertyNames::Cuttable => Some(&self.cuttable),
+            PropertyNames::Color => Some(&self.color),
+            _ => None,
+        }
+    }
+
+    pub fn get_property_by_name_mut(
+        &mut self,
+        name: PropertyNames,
+    ) -> Option<&mut PathProperty<'a>> {
+        match name {
+            PropertyNames::Position => Some(&mut self.position),
+            PropertyNames::Rotation => Some(&mut self.rotation),
+            PropertyNames::Scale => Some(&mut self.scale),
+            PropertyNames::LocalRotation => Some(&mut self.local_rotation),
+            PropertyNames::LocalPosition => Some(&mut self.local_position),
+            PropertyNames::DefinitePosition => Some(&mut self.definite_position),
+            PropertyNames::Dissolve => Some(&mut self.dissolve),
+            PropertyNames::DissolveArrow => Some(&mut self.dissolve_arrow),
+            PropertyNames::Cuttable => Some(&mut self.cuttable),
+            PropertyNames::Color => Some(&mut self.color),
+            _ => None,
+        }
+    }
+
     pub fn get(&self, id: &str) -> Option<&PathProperty<'a>> {
-        match id {
-            "position" => Some(&self.position),
-            "rotation" => Some(&self.rotation),
-            "scale" => Some(&self.scale),
-            "local_rotation" => Some(&self.local_rotation),
-            "local_position" => Some(&self.local_position),
-            "definite_position" => Some(&self.definite_position),
-            "dissolve" => Some(&self.dissolve),
-            "dissolve_arrow" => Some(&self.dissolve_arrow),
-            "cuttable" => Some(&self.cuttable),
-            "color" => Some(&self.color),
+        match PropertyNames::from_str(id) {
+            Ok(name) => self.get_property_by_name(name),
             _ => self.path_properties.get(id),
         }
     }
 
     pub fn get_mut(&mut self, id: &str) -> Option<&mut PathProperty<'a>> {
-        match id {
-            "position" => Some(&mut self.position),
-            "rotation" => Some(&mut self.rotation),
-            "scale" => Some(&mut self.scale),
-            "local_rotation" => Some(&mut self.local_rotation),
-            "local_position" => Some(&mut self.local_position),
-            "definite_position" => Some(&mut self.definite_position),
-            "dissolve" => Some(&mut self.dissolve),
-            "dissolve_arrow" => Some(&mut self.dissolve_arrow),
-            "cuttable" => Some(&mut self.cuttable),
-            "color" => Some(&mut self.color),
+        match PropertyNames::from_str(id) {
+            Ok(name) => self.get_property_by_name_mut(name),
             _ => self.path_properties.get_mut(id),
+        }
+    }
+}
+
+impl FromStr for PropertyNames {
+    type Err = ();
+
+    fn from_str(name: &str) -> Result<Self, Self::Err> {
+        match name {
+            POSITION => Ok(PropertyNames::Position),
+            ROTATION => Ok(PropertyNames::Rotation),
+            SCALE => Ok(PropertyNames::Scale),
+            LOCAL_ROTATION => Ok(PropertyNames::LocalRotation),
+            LOCAL_POSITION => Ok(PropertyNames::LocalPosition),
+            DEFINITE_POSITION => Ok(PropertyNames::DefinitePosition),
+            DISSOLVE => Ok(PropertyNames::Dissolve),
+            DISSOLVE_ARROW => Ok(PropertyNames::DissolveArrow),
+            TIME => Ok(PropertyNames::Time),
+            CUTTABLE => Ok(PropertyNames::Cuttable),
+            COLOR => Ok(PropertyNames::Color),
+            ATTENTUATION => Ok(PropertyNames::Attentuation),
+            FOG_OFFSET => Ok(PropertyNames::FogOffset),
+            HEIGHT_FOG_START_Y => Ok(PropertyNames::HeightFogStartY),
+            HEIGHT_FOG_HEIGHT => Ok(PropertyNames::HeightFogHeight),
+            _ => Err(()),
+        }
+    }
+}
+
+impl Display for PropertyNames {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PropertyNames::Position => write!(f, "{}", POSITION),
+            PropertyNames::Rotation => write!(f, "{}", ROTATION),
+            PropertyNames::Scale => write!(f, "{}", SCALE),
+            PropertyNames::LocalRotation => write!(f, "{}", LOCAL_ROTATION),
+            PropertyNames::LocalPosition => write!(f, "{}", LOCAL_POSITION),
+            PropertyNames::DefinitePosition => write!(f, "{}", DEFINITE_POSITION),
+            PropertyNames::Dissolve => write!(f, "{}", DISSOLVE),
+            PropertyNames::DissolveArrow => write!(f, "{}", DISSOLVE_ARROW),
+            PropertyNames::Time => write!(f, "{}", TIME),
+            PropertyNames::Cuttable => write!(f, "{}", CUTTABLE),
+            PropertyNames::Color => write!(f, "{}", COLOR),
+            PropertyNames::Attentuation => write!(f, "{}", ATTENTUATION),
+            PropertyNames::FogOffset => write!(f, "{}", FOG_OFFSET),
+            PropertyNames::HeightFogStartY => write!(f, "{}", HEIGHT_FOG_START_Y),
+            PropertyNames::HeightFogHeight => write!(f, "{}", HEIGHT_FOG_HEIGHT),
         }
     }
 }
