@@ -1,5 +1,3 @@
-use std::ffi::{CStr, c_char, c_float, c_uint};
-use std::os::raw::c_void;
 use std::ptr;
 
 use palette::bool_mask::BoolMask;

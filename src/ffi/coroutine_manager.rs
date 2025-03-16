@@ -1,11 +1,6 @@
 use crate::animation::coroutine_manager::CoroutineManager;
-use crate::animation::events::{EventData, EventType};
-use crate::animation::property::{PathProperty, ValueProperty};
-use crate::animation::tracks::Track;
-use crate::easings::functions::Functions;
-use crate::point_definition::{base_point_definition::BasePointDefinition, PointDefinition};
+use crate::animation::events::EventData;
 use crate::base_provider_context::BaseProviderContext;
-use std::ptr;
 
 // filepath: /Users/fern/Developer/tracks-rs/src/ffi/coroutine_manager.rs
 
@@ -19,12 +14,12 @@ pub extern "C" fn create_coroutine_manager<'a>() -> *mut CoroutineManager<'a> {
 
 /// Destroys a CoroutineManager instance, freeing its memory.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn destroy_coroutine_manager(manager: *mut CoroutineManager) {
+pub unsafe extern "C" fn destroy_coroutine_manager(manager: *mut CoroutineManager) { unsafe {
     if manager.is_null() {
         return;
     }
     let _ = Box::from_raw(manager);
-}
+}}
 
 /// Starts an event coroutine in the manager. Consumes event_data
 #[unsafe(no_mangle)]

@@ -53,7 +53,7 @@ impl ModifierBase for FloatPointData {
 
 impl BasePointData<f32> for FloatPointData {
     fn get_easing(&self) -> Functions {
-        self.easing.clone()
+        self.easing
     }
 
     fn get_time(&self) -> f32 {

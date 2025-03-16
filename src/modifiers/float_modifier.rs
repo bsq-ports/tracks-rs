@@ -31,7 +31,7 @@ impl ModifierBase for FloatModifier {
     fn get_point(&self, context: &BaseProviderContext) -> f32 {
         let original_point = match &self.values {
             FloatValues::Static(s) => *s,
-            FloatValues::Dynamic(value_providers) => self.convert(&value_providers, context),
+            FloatValues::Dynamic(value_providers) => self.convert(value_providers, context),
         };
         self.modifiers
             .iter()

@@ -32,7 +32,7 @@ impl ModifierBase for Vector3Modifier {
     fn get_point(&self, context: &BaseProviderContext) -> Vec3 {
         let original_point = match &self.values {
             Vector3Values::Static(s) => *s,
-            Vector3Values::Dynamic(value_providers) => self.convert(&value_providers, context),
+            Vector3Values::Dynamic(value_providers) => self.convert(value_providers, context),
         };
         self.modifiers
             .iter()

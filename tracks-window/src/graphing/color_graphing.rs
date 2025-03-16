@@ -64,7 +64,7 @@ pub fn draw_color(
     _window: &Window,
 ) {
     {
-        let mut chart = chart.clone().restore(&root);
+        let mut chart = chart.clone().restore(root);
         chart.plotting_area().fill(&WHITE).unwrap();
 
         chart

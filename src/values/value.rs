@@ -91,6 +91,10 @@ impl BaseValue {
         }
     }
 
+    pub fn is_empty(&self) -> bool {
+        false
+    }
+
     pub fn as_slice(&self) -> &[f32] {
         match self {
             BaseValue::Float(v) => std::slice::from_ref(v),
@@ -117,7 +121,7 @@ impl BaseValue {
     }
 }
 
-impl<'a> BaseValueRef<'a> {
+impl BaseValueRef<'_> {
     pub fn as_float(&self) -> Option<&f32> {
         match self {
             BaseValueRef::Float(v) => Some(v),
@@ -155,7 +159,11 @@ impl<'a> BaseValueRef<'a> {
         }
     }
 
-    pub fn as_slice<'b>(&'b self) -> &'b [f32] {
+    pub fn is_empty(&self) -> bool {
+        false
+    }
+
+    pub fn as_slice(&self) -> &[f32] {
         match self {
             BaseValueRef::Float(v) => std::slice::from_ref(v),
             BaseValueRef::Vector3(v) => v.as_ref(),

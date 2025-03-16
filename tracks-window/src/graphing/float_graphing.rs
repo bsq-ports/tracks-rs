@@ -61,7 +61,7 @@ pub fn draw_2d(
     _epoch: f64,
 ) {
     {
-        let mut chart = chart.clone().restore(&root);
+        let mut chart = chart.clone().restore(root);
         chart.plotting_area().fill(&BLACK).unwrap();
 
         chart

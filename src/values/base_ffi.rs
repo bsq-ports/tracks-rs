@@ -1,6 +1,6 @@
 use std::{
     borrow::Cow,
-    ffi::{self, c_void},
+    ffi::{c_void},
     slice,
 };
 

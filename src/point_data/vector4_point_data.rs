@@ -62,7 +62,7 @@ impl ModifierBase for Vector4PointData {
 
 impl BasePointData<Vec4> for Vector4PointData {
     fn get_easing(&self) -> Functions {
-        self.easing.clone()
+        self.easing
     }
 
     fn get_time(&self) -> f32 {

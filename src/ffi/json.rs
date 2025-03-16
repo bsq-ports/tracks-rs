@@ -3,7 +3,6 @@ use std::{
     slice,
 };
 
-use super::types;
 
 /// JSON FFI
 #[repr(C)]

@@ -3,7 +3,7 @@ use std::borrow::Borrow;
 use glam::{Quat, Vec3, Vec4};
 use tracing::info;
 
-use crate::{modifiers::quaternion_modifier::QuaternionValues, values::{base::BaseProviderValues, quat::QuaternionProviderValues, value::{BaseValue, BaseValueRef}, ValueProvider}};
+use crate::values::{base::BaseProviderValues, quat::QuaternionProviderValues, value::{BaseValue, BaseValueRef}, ValueProvider};
 
 
 

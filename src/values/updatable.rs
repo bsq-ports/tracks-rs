@@ -32,7 +32,7 @@ impl AbstractValueProvider for PartialProviderValues {
 }
 
 impl UpdateableValues for PartialProviderValues {
-    fn update(&mut self, t: f32) {
+    fn update(&mut self, _t: f32) {
         for (i, &part) in self.parts.iter().enumerate() {
             self.values[i] = self.source[part];
         }

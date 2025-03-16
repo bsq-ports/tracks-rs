@@ -1,10 +1,6 @@
-use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-    point_definition::{
-        PointDefinition, base_point_definition::BasePointDefinition,
-        point_definition_interpolation::PointDefinitionInterpolation,
-    },
+    point_definition::point_definition_interpolation::PointDefinitionInterpolation,
     values::value::BaseValue,
 };
 

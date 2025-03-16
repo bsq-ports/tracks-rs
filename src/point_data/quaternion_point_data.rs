@@ -59,7 +59,7 @@ impl ModifierBase for QuaternionPointData {
 
 impl BasePointData<Quat> for QuaternionPointData {
     fn get_easing(&self) -> Functions {
-        self.easing.clone()
+        self.easing
     }
 
     fn get_time(&self) -> f32 {

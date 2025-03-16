@@ -10,15 +10,11 @@ use crate::point_definition::vector3_point_definition::Vector3PointDefinition;
 use crate::point_definition::float_point_definition::FloatPointDefinition;
 
 use crate::point_definition::PointDefinition;
-use crate::point_definition::base_point_definition::BasePointDefinition;
 use crate::values::value::BaseValue;
 
-use std::cell::Ref;
-use std::cell::RefCell;
 use std::ffi::CStr;
 use std::ffi::c_char;
 use std::ffi::c_void;
-use std::rc::Rc;
 use std::slice;
 
 use crate::base_provider_context::BaseProviderContext;
@@ -34,7 +30,6 @@ use super::types::WrapBaseValueType;
 use super::types::WrapQuat;
 use super::types::WrapVec3;
 use super::types::WrapVec4;
-use super::types::WrappedValues;
 
 #[repr(C)]
 pub enum PointDefinitionType {

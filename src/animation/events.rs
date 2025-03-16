@@ -1,5 +1,5 @@
 use crate::{
-    easings::functions::Functions, point_definition::base_point_definition::{self, BasePointDefinition},
+    easings::functions::Functions, point_definition::base_point_definition::{self},
 };
 
 use super::{

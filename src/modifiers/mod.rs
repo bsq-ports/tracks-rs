@@ -125,7 +125,7 @@ pub trait ModifierBase {
     }
 }
 
-pub fn shared_has_base_provider(is_dynamic: bool, modifiers: &Vec<Modifier>) -> bool {
+pub fn shared_has_base_provider(is_dynamic: bool, modifiers: &[Modifier]) -> bool {
     match is_dynamic {
         true => true,
         false => modifiers.iter().any(|m| m.has_base_provider()),

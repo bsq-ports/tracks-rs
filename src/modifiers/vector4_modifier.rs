@@ -32,7 +32,7 @@ impl ModifierBase for Vector4Modifier {
     fn get_point(&self, context: &BaseProviderContext) -> Vec4 {
         let original_point = match &self.values {
             Vector4Values::Static(s) => *s,
-            Vector4Values::Dynamic(value_providers) => self.convert(&value_providers, context),
+            Vector4Values::Dynamic(value_providers) => self.convert(value_providers, context),
         };
         let result = self
             .modifiers

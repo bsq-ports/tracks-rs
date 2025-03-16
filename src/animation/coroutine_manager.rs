@@ -1,11 +1,9 @@
-use std::{cell::RefCell, ops::DerefMut, rc::Rc};
 
-use itertools::Itertools;
 
 use crate::{
     base_provider_context::BaseProviderContext,
     easings::functions::Functions,
-    point_definition::{base_point_definition::{self, BasePointDefinition}, PointDefinition},
+    point_definition::{base_point_definition::{self}, PointDefinition},
 };
 
 use super::{
@@ -101,7 +99,7 @@ impl<'a> CoroutineManager<'a> {
         let no_duration =
             duration == 0.0 || start_time + (duration * (repeat as f32 + 1.0)) < song_time;
         let mut property = data.property;
-        let mut track = data.track;
+        let track = data.track;
 
         let Some(point_data) = data.point_data else {
             track.mark_updated();
@@ -113,12 +111,12 @@ impl<'a> CoroutineManager<'a> {
         match &mut property {
             EventType::AnimateTrack(property) => {
                 if no_duration || (point_data.get_points().len() <= 1 && !has_base) {
-                    set_property_value(&point_data, property, &mut track, 1.0, context);
+                    set_property_value(point_data, property, track, 1.0, context);
                     return None;
                 }
 
                 let result = animate_track(
-                    point_data, property, &mut track, duration, start_time, song_time, easing,
+                    point_data, property, track, duration, start_time, song_time, easing,
                     has_base, context,
                 );
                 if result == CoroutineResult::Break {
@@ -206,6 +204,7 @@ impl<'a> CoroutineManager<'a> {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn animate_track(
     points: &base_point_definition::BasePointDefinition,
     property: &mut ValueProperty,

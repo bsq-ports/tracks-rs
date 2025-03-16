@@ -2,10 +2,9 @@ use crate::animation::coroutine_manager::CoroutineManager;
 use crate::animation::tracks::Track;
 use crate::base_provider_context::BaseProviderContext;
 use crate::context::TracksContext;
-use crate::point_definition::base_point_definition::{self, BasePointDefinition};
-use crate::point_definition::PointDefinition;
-use std::cell::{Ref, RefCell};
-use std::ffi::{CStr, CString};
+use crate::point_definition::base_point_definition::{self};
+use std::cell::RefCell;
+use std::ffi::CStr;
 use std::ops::{Deref, DerefMut};
 use std::os::raw::c_char;
 use std::ptr;
@@ -77,10 +76,10 @@ pub unsafe extern "C" fn tracks_context_add_point_definition(
 
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn tracks_context_get_track_by_name<'a>(
-    context: *mut TracksContext<'a>,
+pub unsafe extern "C" fn tracks_context_get_track_by_name(
+    context: *mut TracksContext<'_>,
     name: *const c_char,
-) -> *mut Track<'a> {
+) -> *mut Track<'_> {
     if context.is_null() || name.is_null() {
         return ptr::null_mut();
     }
@@ -95,10 +94,10 @@ pub unsafe extern "C" fn tracks_context_get_track_by_name<'a>(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn tracks_context_get_track<'a>(
-    context: *mut TracksContext<'a>,
+pub unsafe extern "C" fn tracks_context_get_track(
+    context: *mut TracksContext<'_>,
     index: usize,
-) -> *mut Track<'a> {
+) -> *mut Track<'_> {
     if context.is_null() {
         return ptr::null_mut();
     }
@@ -111,9 +110,9 @@ pub unsafe extern "C" fn tracks_context_get_track<'a>(
     }
 }
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn tracks_context_get_coroutine_manager<'a>(
-    context: *mut TracksContext<'a>,
-) -> *mut CoroutineManager<'a> {
+pub unsafe extern "C" fn tracks_context_get_coroutine_manager(
+    context: *mut TracksContext<'_>,
+) -> *mut CoroutineManager<'_> {
     if context.is_null() {
         return ptr::null_mut();
     }
@@ -124,8 +123,8 @@ pub unsafe extern "C" fn tracks_context_get_coroutine_manager<'a>(
     }
 }
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn tracks_context_get_base_provider_context<'a>(
-    context: *mut TracksContext<'a>,
+pub unsafe extern "C" fn tracks_context_get_base_provider_context(
+    context: *mut TracksContext<'_>,
 ) -> *mut BaseProviderContext {
     if context.is_null() {
         return ptr::null_mut();

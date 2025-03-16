@@ -78,7 +78,7 @@ pub fn draw_vec3(
             '_,
             BitMapBackend<'_, BGRXPixel>,
             Cartesian3d<RangedCoordf64, RangedCoordf64, RangedCoordf64>,
-        > = chart.clone().restore(&root);
+        > = chart.clone().restore(root);
         chart.plotting_area().fill(&WHITE).unwrap();
 
         chart.with_projection(|mut pb| {
@@ -108,19 +108,19 @@ pub fn draw_vec3(
             .unwrap();
 
         let dot_and_label = |x: f64, y: f64, z: f64| {
-            return EmptyElement::<(f64, f64, f64), BitMapBackend<BGRXPixel>>::at((x, y, z))
+            EmptyElement::<(f64, f64, f64), BitMapBackend<BGRXPixel>>::at((x, y, z))
                 + Circle::new((0, 0), 3, ShapeStyle::from(&BLACK).filled())
                 + Text::new(
                     format!("({:.2},{:.2},{:.2})", x, y, z),
                     (10, 0),
                     ("sans-serif", 15.0).into_font(),
-                );
+                )
         };
 
         let mut draw_t = |x: f32| {
             let point = context
                 .definition
-                .interpolate(x as f32, &context.context.borrow())
+                .interpolate(x, &context.context.borrow())
                 .0;
             chart
                 .draw_series(std::iter::once(dot_and_label(

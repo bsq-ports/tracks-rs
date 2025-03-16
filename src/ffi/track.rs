@@ -81,7 +81,7 @@ pub unsafe extern "C" fn track_register_property(
     unsafe {
         let c_str = CStr::from_ptr(id);
         if let Ok(str_id) = c_str.to_str() {
-            let property_clone = (*property).clone();
+            let property_clone = *property;
             (*track).register_property(str_id.to_string(), property_clone);
         }
     }

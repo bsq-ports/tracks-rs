@@ -1,6 +1,6 @@
 use crate::animation::property::{PathProperty, ValueProperty};
 use crate::ffi::types::{WrapBaseValue, WrapBaseValueType};
-use crate::point_definition::base_point_definition::{self, BasePointDefinition};
+use crate::point_definition::base_point_definition::{self};
 use crate::base_provider_context::BaseProviderContext;
 use crate::values::value::BaseValue;
 
@@ -108,7 +108,7 @@ pub unsafe extern "C" fn property_get_type(ptr: *const ValueProperty) -> WrapBas
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn path_property_get_type(ptr: *const PathProperty) -> WrapBaseValueType {
+pub unsafe extern "C" fn path_property_get_type(ptr: *const PathProperty) -> WrapBaseValueType { unsafe {
     if ptr.is_null() {
         return WrapBaseValueType::Float; // Default type if pointer is null
     }
@@ -123,5 +123,5 @@ pub unsafe extern "C" fn path_property_get_type(ptr: *const PathProperty) -> Wra
         },
         None => WrapBaseValueType::Float, // Default to Float if type is not set
     }
-}
+}}
 

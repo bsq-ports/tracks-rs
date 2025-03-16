@@ -62,7 +62,7 @@ impl ModifierBase for Vector3PointData {
 
 impl BasePointData<Vec3> for Vector3PointData {
     fn get_easing(&self) -> Functions {
-        self.easing.clone()
+        self.easing
     }
 
     fn get_time(&self) -> f32 {

@@ -71,7 +71,7 @@ pub fn draw_quat(
             "baseCombo",
             ((epoch.sin() as f32 + 1.0) * 0.5 * 45.0).into(),
         );
-        let mut chart = chart.clone().restore(&root);
+        let mut chart = chart.clone().restore(root);
         chart.plotting_area().fill(&WHITE).unwrap();
 
         chart.with_projection(|mut pb| {

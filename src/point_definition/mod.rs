@@ -5,9 +5,6 @@ pub mod quaternion_point_definition;
 pub mod vector3_point_definition;
 pub mod vector4_point_definition;
 
-use std::cell::Ref;
-use std::cell::RefCell;
-use std::rc::Rc;
 use std::str::FromStr;
 
 use serde_json::Value as JsonValue;
@@ -15,7 +12,6 @@ use serde_json::json;
 
 use crate::base_provider_context::BaseProviderContext;
 use crate::point_data::PointData;
-use crate::values::value::BaseValue;
 use crate::{
     easings::functions::Functions,
     modifiers::{Modifier, operation::Operation},

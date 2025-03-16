@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use super::{ValueProvider, value::BaseValue};
+use super::ValueProvider;
 
 use crate::{
     base_provider_context::BaseProviderContext, modifiers::quaternion_modifier::TRACKS_EULER_ROT

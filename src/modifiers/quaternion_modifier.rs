@@ -76,13 +76,13 @@ impl ModifierBase for QuaternionModifier {
         }
         // modifiers applied to the point
         let vector_point = self.get_vector_point(context);
-        let res = Quat::from_euler(
+        
+        Quat::from_euler(
             TRACKS_EULER_ROT,
             vector_point.x.to_radians(),
             vector_point.y.to_radians(),
             vector_point.z.to_radians(),
-        );
-        res
+        )
     }
 
     fn get_raw_point(&self) -> Quat {
