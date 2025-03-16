@@ -22,8 +22,8 @@ impl Default for CValueProperty {
     }
 }
 
-impl From<Option<BaseValue>> for CValueProperty {
-    fn from(prop: Option<BaseValue>) -> Self {
+impl From<ValueProperty> for CValueProperty {
+    fn from(prop: ValueProperty) -> Self {
         match prop {
             Some(base_value) => CValueProperty {
                 has_value: true,

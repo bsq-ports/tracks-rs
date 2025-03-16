@@ -8,6 +8,82 @@ use std::{
     ptr,
 };
 
+#[repr(C)]
+pub struct CPropertiesMap {
+    // using the pointers reduces the size of the struct
+    // to 112 bytes from 312 bytes
+
+    // Noodle
+    pub position: *const ValueProperty,
+    pub rotation: *const ValueProperty,
+    pub scale: *const ValueProperty,
+    pub local_rotation: *const ValueProperty,
+    pub local_position: *const ValueProperty,
+    pub dissolve: *const ValueProperty,
+    pub dissolve_arrow: *const ValueProperty,
+    pub time: *const ValueProperty,
+    pub cuttable: *const ValueProperty,
+
+    // Chroma
+    pub color: *const ValueProperty,
+    pub attentuation: *const ValueProperty,       // PropertyType::linear
+    pub fog_offset: *const ValueProperty,         // PropertyType::linear
+    pub height_fog_start_y: *const ValueProperty, // PropertyType::linear
+    pub height_fog_height: *const ValueProperty,  // PropertyType::linear
+}
+
+#[repr(C)]
+pub struct CPathPropertiesMap<'a> {
+    pub position: *mut PathProperty<'a>,
+    pub rotation: *mut PathProperty<'a>,
+    pub scale: *mut PathProperty<'a>,
+    pub local_rotation: *mut PathProperty<'a>,
+    pub local_position: *mut PathProperty<'a>,
+    pub definite_position: *mut PathProperty<'a>,
+    pub dissolve: *mut PathProperty<'a>,
+    pub dissolve_arrow: *mut PathProperty<'a>,
+    pub cuttable: *mut PathProperty<'a>,
+    pub color: *mut PathProperty<'a>,
+}
+
+impl Default for CPropertiesMap {
+    fn default() -> Self {
+        CPropertiesMap {
+            position: ptr::null(),
+            rotation: ptr::null(),
+            scale: ptr::null(),
+            local_rotation: ptr::null(),
+            local_position: ptr::null(),
+            dissolve: ptr::null(),
+            dissolve_arrow: ptr::null(),
+            time: ptr::null(),
+            cuttable: ptr::null(),
+            color: ptr::null(),
+            attentuation: ptr::null(),
+            fog_offset: ptr::null(),
+            height_fog_start_y: ptr::null(),
+            height_fog_height: ptr::null(),
+        }
+    }
+}
+
+impl Default for CPathPropertiesMap<'_> {
+    fn default() -> Self {
+        CPathPropertiesMap {
+            position: ptr::null_mut(),
+            rotation: ptr::null_mut(),
+            scale: ptr::null_mut(),
+            local_rotation: ptr::null_mut(),
+            local_position: ptr::null_mut(),
+            definite_position: ptr::null_mut(),
+            dissolve: ptr::null_mut(),
+            dissolve_arrow: ptr::null_mut(),
+            cuttable: ptr::null_mut(),
+            color: ptr::null_mut(),
+        }
+    }
+}
+
 #[unsafe(no_mangle)]
 pub extern "C" fn track_create() -> *mut Track<'static> {
     let track = Track::default();
@@ -109,6 +185,26 @@ pub unsafe extern "C" fn track_get_property(
     }
 }
 
+// register path property
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn track_register_path_property<'a>(
+    track: *mut Track<'a>,
+    id: *const c_char,
+    property: *mut PathProperty<'a>,
+) {
+    if track.is_null() || id.is_null() || property.is_null() {
+        return;
+    }
+
+    unsafe {
+        let c_str = CStr::from_ptr(id);
+        if let Ok(str_id) = c_str.to_str() {
+            let property_clone = (*property).clone();
+            (*track).register_path_property(str_id.to_string(), property_clone);
+        }
+    }
+}
+
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn track_get_path_property(
     track: *mut Track,
@@ -132,9 +228,58 @@ pub unsafe extern "C" fn track_get_path_property(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn track_mark_updated(track: *mut Track) {
-    if !track.is_null() {
-        unsafe {
-            (*track).mark_updated();
-        }
+    if track.is_null() {
+        return;
     }
+    unsafe {
+        (*track).mark_updated();
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn track_get_properties_map(track: *const Track) -> CPropertiesMap {
+    if track.is_null() {
+        return Default::default();
+    }
+    let track = unsafe { &*track };
+    let map = CPropertiesMap {
+        position: &track.properties.position as *const ValueProperty,
+        rotation: &track.properties.rotation as *const ValueProperty,
+        scale: &track.properties.scale as *const ValueProperty,
+        local_rotation: &track.properties.local_rotation as *const ValueProperty,
+        local_position: &track.properties.local_position as *const ValueProperty,
+        dissolve: &track.properties.dissolve as *const ValueProperty,
+        dissolve_arrow: &track.properties.dissolve_arrow as *const ValueProperty,
+        time: &track.properties.time as *const ValueProperty,
+        cuttable: &track.properties.cuttable as *const ValueProperty,
+        color: &track.properties.color as *const ValueProperty,
+        attentuation: &track.properties.attentuation as *const ValueProperty,
+        fog_offset: &track.properties.fog_offset as *const ValueProperty,
+        height_fog_start_y: &track.properties.height_fog_start_y as *const ValueProperty,
+        height_fog_height: &track.properties.height_fog_height as *const ValueProperty,
+    };
+
+    map
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn track_get_path_properties_map<'a>(track: *mut Track<'a>) -> CPathPropertiesMap<'a> {
+    if track.is_null() {
+        return Default::default();
+    }
+    let track = unsafe { &mut *track };
+    let map = CPathPropertiesMap {
+        position: &mut track.path_properties.position as *mut PathProperty,
+        rotation: &mut track.path_properties.rotation as *mut PathProperty,
+        scale: &mut track.path_properties.scale as *mut PathProperty,
+        local_rotation: &mut track.path_properties.local_rotation as *mut PathProperty,
+        local_position: &mut track.path_properties.local_position as *mut PathProperty,
+        definite_position: &mut track.path_properties.definite_position as *mut PathProperty,
+        dissolve: &mut track.path_properties.dissolve as *mut PathProperty,
+        dissolve_arrow: &mut track.path_properties.dissolve_arrow as *mut PathProperty,
+        cuttable: &mut track.path_properties.cuttable as *mut PathProperty,
+        color: &mut track.path_properties.color as *mut PathProperty,
+    };
+
+    map
 }

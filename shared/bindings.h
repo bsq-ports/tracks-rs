@@ -212,6 +212,36 @@ typedef struct CValueProperty {
   struct WrapBaseValue value;
 } CValueProperty;
 
+typedef struct CPropertiesMap {
+  const ValueProperty *position;
+  const ValueProperty *rotation;
+  const ValueProperty *scale;
+  const ValueProperty *local_rotation;
+  const ValueProperty *local_position;
+  const ValueProperty *dissolve;
+  const ValueProperty *dissolve_arrow;
+  const ValueProperty *time;
+  const ValueProperty *cuttable;
+  const ValueProperty *color;
+  const ValueProperty *attentuation;
+  const ValueProperty *fog_offset;
+  const ValueProperty *height_fog_start_y;
+  const ValueProperty *height_fog_height;
+} CPropertiesMap;
+
+typedef struct CPathPropertiesMap {
+  PathProperty *position;
+  PathProperty *rotation;
+  PathProperty *scale;
+  PathProperty *local_rotation;
+  PathProperty *local_position;
+  PathProperty *definite_position;
+  PathProperty *dissolve;
+  PathProperty *dissolve_arrow;
+  PathProperty *cuttable;
+  PathProperty *color;
+} CPathPropertiesMap;
+
 
 
 #ifdef __cplusplus
@@ -439,9 +469,15 @@ void track_register_property(struct Track *track, const char *id, ValueProperty 
 
 const ValueProperty *track_get_property(const struct Track *track, const char *id);
 
+void track_register_path_property(struct Track *track, const char *id, PathProperty *property);
+
 PathProperty *track_get_path_property(struct Track *track, const char *id);
 
 void track_mark_updated(struct Track *track);
+
+struct CPropertiesMap track_get_properties_map(const struct Track *track);
+
+struct CPathPropertiesMap track_get_path_properties_map(struct Track *track);
 
 #ifdef __cplusplus
 }  // extern "C"
