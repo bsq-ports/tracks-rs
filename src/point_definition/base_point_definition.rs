@@ -185,6 +185,15 @@ impl PointDefinition for BasePointDefinition {
             }
         }
     }
+    
+    fn get_type(&self) -> crate::ffi::types::WrapBaseValueType {
+        match self {
+            BasePointDefinition::Float(_) => crate::ffi::types::WrapBaseValueType::Float,
+            BasePointDefinition::Vector3(_) => crate::ffi::types::WrapBaseValueType::Vec3,
+            BasePointDefinition::Vector4(_) => crate::ffi::types::WrapBaseValueType::Vec4,
+            BasePointDefinition::Quaternion(_) => crate::ffi::types::WrapBaseValueType::Quat,
+        }
+    }
 }
 
 impl From<float_point_definition::FloatPointDefinition> for BasePointDefinition {

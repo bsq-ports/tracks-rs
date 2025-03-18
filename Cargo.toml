@@ -46,6 +46,7 @@ ctor = "0.3.6"
 paranoid-android = "*"
 itertools = "0.14.0"
 ahash = "0.8.11"
+uuid = {version = "1", features = ["v4"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 tracing-subscriber = { version = "0.3", features = [

@@ -63,6 +63,10 @@ impl PointDefinition for Vector3PointDefinition {
         self.points.len()
     }
 
+        fn get_type(&self) -> crate::ffi::types::WrapBaseValueType {
+        crate::ffi::types::WrapBaseValueType::Vec3
+    }
+
     fn has_base_provider(&self) -> bool {
         self.points.iter().any(|p| p.has_base_provider())
     }

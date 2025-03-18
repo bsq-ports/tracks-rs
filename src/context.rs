@@ -1,9 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-    animation::{coroutine_manager::CoroutineManager, tracks::Track},
-    base_provider_context::BaseProviderContext,
-    point_definition::base_point_definition::BasePointDefinition,
+    animation::{coroutine_manager::CoroutineManager, tracks::Track}, base_provider_context::BaseProviderContext, ffi::types::WrapBaseValueType, point_definition::{base_point_definition::BasePointDefinition, PointDefinition}
 };
 
 pub struct TracksContext<'a> {
@@ -13,7 +11,7 @@ pub struct TracksContext<'a> {
     // TODO: Removable tracks
     pub tracks: Vec<Rc<RefCell<Track<'a>>>>,
     // TODO: Removable point definitions?
-    pub point_definitions: Vec<Rc<BasePointDefinition>>,
+    pub point_definitions: ahash::AHashMap<(String, WrapBaseValueType), Rc<BasePointDefinition>>,
     pub coroutine_manager: CoroutineManager<'a>,
     pub base_providers: BaseProviderContext,
 }
@@ -23,8 +21,13 @@ impl<'a> TracksContext<'a> {
         self.tracks.push(track);
     }
 
-    pub fn add_point_definition(&mut self, point_definition: Rc<BasePointDefinition>) {
-        self.point_definitions.push(point_definition);
+    pub fn add_point_definition(&mut self, id: String, point_definition: Rc<BasePointDefinition>) {
+        let ty = point_definition.get_type();
+        self.point_definitions.insert((id, ty), point_definition);
+    }
+
+    pub fn get_point_definition(&self, name: &str, typ: WrapBaseValueType) -> Option<Rc<BasePointDefinition>> {
+        self.point_definitions.get(&(name.to_string(), typ)).cloned()
     }
 
     pub fn get_track(&mut self, index: usize) -> Option<Rc<RefCell<Track<'a>>>> {

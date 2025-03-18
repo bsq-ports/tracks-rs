@@ -5,16 +5,18 @@ use crate::context::TracksContext;
 use crate::point_definition::base_point_definition::{self};
 use std::cell::RefCell;
 use std::ffi::CStr;
-use std::ops::{Deref, DerefMut};
+use std::ops::{Deref, DerefMut, Not};
 use std::os::raw::c_char;
 use std::ptr;
 use std::rc::Rc;
+
+use super::types::WrapBaseValueType;
 
 #[unsafe(no_mangle)]
 pub extern "C" fn tracks_context_create<'a>() -> *mut TracksContext<'a> {
     let context = TracksContext {
         tracks: Vec::new(),
-        point_definitions: Vec::new(),
+        point_definitions: Default::default(),
         coroutine_manager: Default::default(),
         base_providers: Default::default(),
     };
@@ -55,9 +57,12 @@ pub unsafe extern "C" fn tracks_context_add_track<'a>(
 
 /// Consumes the point definition and moves it into the context.
 /// Returns a const pointer to the point definition.
+/// 
+/// If id is null/empty, generates a uuid for the point definition.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_context_add_point_definition(
     context: *mut TracksContext,
+    id: *const c_char,
     point_def: *mut base_point_definition::BasePointDefinition,
 ) -> *const base_point_definition::BasePointDefinition {
     if context.is_null() || point_def.is_null() {
@@ -65,12 +70,42 @@ pub unsafe extern "C" fn tracks_context_add_point_definition(
     }
 
     unsafe {
+        let c_str = id
+            .is_null()
+            .not()
+            .then(|| CStr::from_ptr(id).to_str().unwrap_or_default());
+
+        let id_str = if c_str.is_some_and(|c| !c.is_empty()) {
+            c_str.unwrap().to_string()
+        } else {
+            uuid::Uuid::new_v4().to_string()
+        };
+
         let point_def_obj = Box::from_raw(point_def);
         let rc = Rc::new(*point_def_obj);
-        (*context).add_point_definition(rc.clone());
+        (*context).add_point_definition(id_str.to_owned(), rc.clone());
 
         rc.as_ref()
         // Don't drop the Box here, ownership is transferred to the context
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn tracks_context_get_point_definition(
+    context: *mut TracksContext,
+    name: *const c_char,
+    ty: WrapBaseValueType,
+) -> *const base_point_definition::BasePointDefinition {
+    if context.is_null() || name.is_null() {
+        return ptr::null();
+    }
+
+    unsafe {
+        let name_str = CStr::from_ptr(name).to_str().unwrap_or_default();
+        match (*context).get_point_definition(name_str, ty) {
+            Some(point_def) => point_def.as_ref(),
+            None => ptr::null(),
+        }
     }
 }
 

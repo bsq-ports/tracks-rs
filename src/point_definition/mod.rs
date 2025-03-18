@@ -11,6 +11,7 @@ use serde_json::Value as JsonValue;
 use serde_json::json;
 
 use crate::base_provider_context::BaseProviderContext;
+use crate::ffi::types::WrapBaseValueType;
 use crate::point_data::PointData;
 use crate::{
     easings::functions::Functions,
@@ -58,6 +59,7 @@ pub trait PointDefinition {
     fn get_points_mut(&mut self) -> &mut Vec<PointData>;
     fn get_points(&self) -> &Vec<PointData>;
     fn get_point(&self, point: &PointData, context: &BaseProviderContext) -> Self::Value;
+    fn get_type(&self) -> WrapBaseValueType;
 
     #[cfg(feature = "json")]
     fn deserialize_modifier(&self, list: &JsonValue, context: &BaseProviderContext) -> Modifier {

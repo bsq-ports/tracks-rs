@@ -87,6 +87,10 @@ impl PointDefinition for Vector4PointDefinition {
         Modifier::Vector4(Vector4Modifier::new(values, modifiers, operation))
     }
 
+    fn get_type(&self) -> crate::ffi::types::WrapBaseValueType {
+        crate::ffi::types::WrapBaseValueType::Vec4
+    }
+
     fn create_point_data(
         &self,
         values: Vec<ValueProvider>,

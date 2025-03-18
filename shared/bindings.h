@@ -297,9 +297,16 @@ const struct Track *tracks_context_add_track(struct TracksContext *context, stru
 /**
  * Consumes the point definition and moves it into the context.
  * Returns a const pointer to the point definition.
+ *
+ * If id is null/empty, generates a uuid for the point definition.
  */
 const struct BasePointDefinition *tracks_context_add_point_definition(struct TracksContext *context,
+                                                                      const char *id,
                                                                       struct BasePointDefinition *point_def);
+
+const struct BasePointDefinition *tracks_context_get_point_definition(struct TracksContext *context,
+                                                                      const char *name,
+                                                                      enum WrapBaseValueType ty);
 
 struct Track *tracks_context_get_track_by_name(struct TracksContext *context, const char *name);
 

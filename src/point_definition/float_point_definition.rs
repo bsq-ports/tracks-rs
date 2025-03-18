@@ -115,6 +115,10 @@ impl PointDefinition for FloatPointDefinition {
     fn get_point(&self, point: &PointData, context: &BaseProviderContext) -> f32 {
         point.get_float(context)
     }
+    
+    fn get_type(&self) -> crate::ffi::types::WrapBaseValueType {
+        crate::ffi::types::WrapBaseValueType::Float
+    }
 }
 
 impl FloatPointDefinition {
