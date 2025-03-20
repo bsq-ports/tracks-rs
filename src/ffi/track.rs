@@ -157,8 +157,7 @@ pub unsafe extern "C" fn track_unregister_game_object(
     }
 }
 
-
-
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn track_get_game_objects(track: *const Track, size: *mut usize) -> *const GameObject {
     if track.is_null() {
         return ptr::null();
