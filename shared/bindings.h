@@ -111,8 +111,6 @@ typedef struct EventData EventData;
 
 typedef struct FloatPointDefinition FloatPointDefinition;
 
-typedef struct GameObject GameObject;
-
 typedef struct PointDefinitionInterpolation PointDefinitionInterpolation;
 
 typedef struct QuaternionPointDefinition QuaternionPointDefinition;
@@ -244,6 +242,10 @@ typedef struct CValueProperty {
   struct CValueNullable value;
   struct CTimeUnit last_updated;
 } CValueProperty;
+
+typedef struct GameObject {
+
+} GameObject;
 
 typedef struct CPropertiesMap {
   const struct ValueProperty *position;
@@ -506,6 +508,8 @@ void track_set_name(struct Track *track, const char *name);
 const char *track_get_name(const struct Track *track);
 
 void track_register_game_object(struct Track *track, struct GameObject *game_object);
+
+void track_unregister_game_object(struct Track *track, struct GameObject *game_object);
 
 void track_register_property(struct Track *track, const char *id, struct ValueProperty *property);
 

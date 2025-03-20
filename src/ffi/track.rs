@@ -144,6 +144,38 @@ pub unsafe extern "C" fn track_register_game_object(
     }
 }
 
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn track_unregister_game_object(
+    track: *mut Track,
+    game_object: *mut GameObject,
+) {
+    if track.is_null() || game_object.is_null() {
+        return;
+    }
+
+    unsafe {
+        let game_object_clone = (*game_object).clone();
+        (*track).remove_game_object(&game_object_clone);
+    }
+}
+
+
+
+pub unsafe extern "C" fn track_get_game_objects(track: *const Track, size: *mut usize) -> *const GameObject {
+    if track.is_null() {
+        return ptr::null();
+    }
+
+    unsafe {
+        let track_ref = &*track;
+
+        *size = track_ref.game_objects.len();
+
+        track_ref.game_objects.as_ptr()
+    }
+}
+
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn track_register_property(
     track: *mut Track,
