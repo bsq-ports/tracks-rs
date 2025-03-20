@@ -244,7 +244,7 @@ typedef struct CValueProperty {
 } CValueProperty;
 
 typedef struct GameObject {
-
+  const void *ptr;
 } GameObject;
 
 typedef struct CPropertiesMap {
@@ -507,9 +507,9 @@ void track_set_name(struct Track *track, const char *name);
 
 const char *track_get_name(const struct Track *track);
 
-void track_register_game_object(struct Track *track, struct GameObject *game_object);
+void track_register_game_object(struct Track *track, struct GameObject game_object);
 
-void track_unregister_game_object(struct Track *track, struct GameObject *game_object);
+void track_unregister_game_object(struct Track *track, struct GameObject game_object);
 
 void track_register_property(struct Track *track, const char *id, struct ValueProperty *property);
 

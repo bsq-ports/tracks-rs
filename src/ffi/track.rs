@@ -4,8 +4,7 @@ use crate::animation::{
     tracks::{PropertyNames, Track},
 };
 use std::{
-    ffi::{CStr, CString, c_char},
-    ptr,
+    ffi::{c_char, CStr, CString}, os::raw::c_void, ptr
 };
 
 #[repr(C)]
@@ -132,15 +131,14 @@ pub unsafe extern "C" fn track_get_name(track: *const Track) -> *const c_char {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn track_register_game_object(
     track: *mut Track,
-    game_object: *mut GameObject,
+    game_object: GameObject,
 ) {
-    if track.is_null() || game_object.is_null() {
+    if track.is_null() {
         return;
     }
 
     unsafe {
-        let game_object_clone = (*game_object).clone();
-        (*track).register_game_object(game_object_clone);
+        (*track).register_game_object(game_object);
     }
 }
 
@@ -148,15 +146,14 @@ pub unsafe extern "C" fn track_register_game_object(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn track_unregister_game_object(
     track: *mut Track,
-    game_object: *mut GameObject,
+    game_object: GameObject,
 ) {
-    if track.is_null() || game_object.is_null() {
+    if track.is_null() {
         return;
     }
 
     unsafe {
-        let game_object_clone = (*game_object).clone();
-        (*track).remove_game_object(&game_object_clone);
+        (*track).remove_game_object(&game_object);
     }
 }
 
