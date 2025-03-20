@@ -511,6 +511,8 @@ void track_register_game_object(struct Track *track, struct GameObject game_obje
 
 void track_unregister_game_object(struct Track *track, struct GameObject game_object);
 
+const struct GameObject *track_get_game_objects(const struct Track *track, uintptr_t *size);
+
 void track_register_property(struct Track *track, const char *id, struct ValueProperty *property);
 
 const struct ValueProperty *track_get_property(const struct Track *track, const char *id);
