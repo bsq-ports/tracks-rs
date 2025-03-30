@@ -47,7 +47,7 @@ log = "0.4"
 
 
 [build-dependencies]
-cbindgen = { version = "0.28", optional = true }
+cbindgen = { version = "0.28", optional = true, default-features = false}
 
 [features]
 json = ["dep:serde_json"]
