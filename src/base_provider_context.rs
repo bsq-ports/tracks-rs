@@ -1,7 +1,6 @@
 use std::borrow::Borrow;
 
 use glam::{Quat, Vec3, Vec4};
-use tracing::info;
 
 use crate::values::{
     ValueProvider,
@@ -231,7 +230,6 @@ impl BaseProviderContext {
         let base_value = ValueProvider::BaseProvider(BaseProviderValues::new(base_name.to_owned()));
         let base_value: ValueProvider = match self.get_values(base_name) {
             BaseValueRef::Quaternion(_) => {
-                info!("Quaternion provider");
                 ValueProvider::QuaternionProvider(QuaternionProviderValues::new(base_value))
             }
             _ => base_value,

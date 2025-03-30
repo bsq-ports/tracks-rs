@@ -1,5 +1,5 @@
 use glam::Vec3;
-use tracing::error;
+use log::error;
 
 use crate::{
     base_provider_context::BaseProviderContext,
@@ -63,7 +63,7 @@ impl PointDefinition for Vector3PointDefinition {
         self.points.len()
     }
 
-        fn get_type(&self) -> crate::ffi::types::WrapBaseValueType {
+    fn get_type(&self) -> crate::ffi::types::WrapBaseValueType {
         crate::ffi::types::WrapBaseValueType::Vec3
     }
 

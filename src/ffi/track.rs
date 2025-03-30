@@ -4,7 +4,7 @@ use crate::animation::{
     tracks::{PropertyNames, Track},
 };
 use std::{
-    ffi::{c_char, CStr, CString}, os::raw::c_void, ptr
+    ffi::{c_char, CStr, CString}, ptr
 };
 
 #[repr(C)]

@@ -1,4 +1,3 @@
-use tracing::info;
 
 use crate::point_definition::base_point_definition;
 use crate::point_definition::quaternion_point_definition::QuaternionPointDefinition;
@@ -106,7 +105,6 @@ pub unsafe extern "C" fn tracks_set_base_provider(
     let context = unsafe { &mut *context };
     context.set_values(base_str, unsafe {
         let v = slice::from_raw_parts(values, count);
-        info!("v: {} {:?}", base_str, v);
         BaseValue::from_slice(v, quat)
     });
 }
