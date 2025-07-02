@@ -1,11 +1,15 @@
 use crate::animation::{
     game_object::GameObject,
     property::{PathProperty, ValueProperty},
-    tracks::{PropertyNames, Track},
+    tracks::{GameObjectCallback, PropertyNames, Track},
 };
 use std::{
-    ffi::{c_char, CStr, CString}, ptr
+    ffi::{c_char, CStr, CString}, ptr, rc::Rc
 };
+
+// C-compatible callback function type for game object modifications
+// Parameters: game_object, was_added (true for added, false for removed), user_data
+pub type CGameObjectCallback = extern "C" fn(GameObject, bool, *mut std::ffi::c_void);
 
 #[repr(C)]
 pub struct CPropertiesMap {
@@ -191,6 +195,8 @@ pub unsafe extern "C" fn track_register_property(
     }
 }
 
+
+
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn track_get_property(
     track: *const Track,
@@ -333,5 +339,49 @@ pub unsafe extern "C" fn track_get_path_properties_map(track: *mut Track<'_>) ->
         dissolve_arrow: &mut track.path_properties.dissolve_arrow as *mut PathProperty,
         cuttable: &mut track.path_properties.cuttable as *mut PathProperty,
         color: &mut track.path_properties.color as *mut PathProperty,
+    }
+}
+
+// FFI functions for per-track game object modification callbacks
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn track_register_game_object_callback(
+    track: *mut Track,
+    callback: CGameObjectCallback,
+    user_data: *mut std::ffi::c_void,
+) -> *const fn(GameObject, bool) {
+    if track.is_null() {
+        return ptr::null();
+    }
+
+    unsafe {
+        let track_ref = &mut *track;
+        // Create a closure that captures the C callback and user data
+        let rust_callback = move |game_object: GameObject, was_added: bool| {
+            callback(game_object, was_added, user_data);
+        };
+
+        let rc = Rc::new(rust_callback);
+        
+        track_ref.register_game_object_callback(rc.clone());
+
+        return Rc::into_raw(rc) as *const fn(GameObject, bool);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn track_remove_game_object_callback(
+    track: *mut Track,
+    callback: *const fn(GameObject, bool),
+) {
+    if track.is_null() {
+        return;
+    }
+
+    unsafe {
+        let track_ref = &mut *track;
+        // Create a closure that matches the one we want to remove
+        let rc: Rc<fn(GameObject, bool)> = Rc::from_raw(callback);
+        
+        track_ref.remove_game_object_callback(rc);
     }
 }

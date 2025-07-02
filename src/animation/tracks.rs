@@ -1,4 +1,4 @@
-use std::{fmt::Display, str::FromStr};
+use std::{fmt::Display, rc::Rc, str::FromStr};
 
 use super::{
     game_object::GameObject,
@@ -82,6 +82,8 @@ pub struct PropertiesMap {
     pub height_fog_height: ValueProperty,  // PropertyType::linear
 }
 
+pub trait GameObjectCallback = Fn(GameObject, bool);
+
 #[derive(Clone)]
 pub struct Track<'a> {
     pub properties: PropertiesMap,
@@ -91,6 +93,7 @@ pub struct Track<'a> {
 
     // hashset but must be insertion ordered
     pub game_objects: Vec<GameObject>,
+    pub game_object_callbacks: Vec<Rc<dyn GameObjectCallback>>,
 }
 
 impl<'a> Track<'a> {
@@ -108,6 +111,17 @@ impl<'a> Track<'a> {
         }
 
         self.game_objects.push(game_object);
+
+        self.game_object_callbacks
+            .iter()
+            .for_each(|callback| callback(game_object, true));
+    }
+
+    pub fn register_game_object_callback<F>(&mut self, callback: Rc<F>)
+    where
+        F: GameObjectCallback + 'static,
+    {
+        self.game_object_callbacks.push(callback);
     }
 
     pub fn get_property(&self, id: &str) -> Option<&ValueProperty> {
@@ -126,6 +140,19 @@ impl<'a> Track<'a> {
 
     pub fn remove_game_object(&mut self, game_object: &GameObject) {
         self.game_objects.retain(|go| go != game_object);
+
+        self.game_object_callbacks
+            .iter()
+            .for_each(|callback| callback(*game_object, false));
+    }
+
+    pub fn remove_game_object_callback<F>(&mut self, callback: Rc<F>)
+    where
+        F: GameObjectCallback + 'static,
+    {
+        let callback_ref: Rc<dyn GameObjectCallback> = callback;
+        self.game_object_callbacks
+            .retain(|cb| !Rc::ptr_eq(cb, &callback_ref));
     }
 }
 
@@ -136,6 +163,7 @@ impl Default for Track<'_> {
             path_properties: Default::default(),
             game_objects: Default::default(),
             name: "".to_string(),
+            game_object_callbacks: Vec::new(),
         }
     }
 }

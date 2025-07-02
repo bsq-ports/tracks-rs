@@ -1,6 +1,6 @@
 use std::ffi::c_void;
 
-#[derive(Hash, PartialEq, Eq, Clone, Debug)]
+#[derive(Hash, PartialEq, Eq, Clone, Copy, Debug)]
 #[repr(C)]
 pub struct GameObject{
     pub ptr: *const c_void

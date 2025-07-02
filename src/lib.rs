@@ -5,7 +5,7 @@
 #![feature(type_alias_impl_trait)]
 #![feature(trait_alias)]
 #![feature(box_into_inner)]
-
+#![feature(unboxed_closures)]
 
 
 
