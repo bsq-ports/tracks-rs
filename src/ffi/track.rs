@@ -117,6 +117,8 @@ pub unsafe extern "C" fn track_set_name(track: *mut Track, name: *const c_char) 
     }
 }
 
+/// Returns the name of the track as a C string.
+/// This leaks memory
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn track_get_name(track: *const Track) -> *const c_char {
     if track.is_null() {

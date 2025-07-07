@@ -507,6 +507,10 @@ void track_destroy(struct Track *track);
 
 void track_set_name(struct Track *track, const char *name);
 
+/**
+ * Returns the name of the track as a C string.
+ * This leaks memory
+ */
 const char *track_get_name(const struct Track *track);
 
 void track_register_game_object(struct Track *track, struct GameObject game_object);
