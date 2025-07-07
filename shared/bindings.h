@@ -521,7 +521,7 @@ const struct GameObject *track_get_game_objects(const struct Track *track, uintp
 
 void track_register_property(struct Track *track, const char *id, struct ValueProperty *property);
 
-const struct ValueProperty *track_get_property(const struct Track *track, const char *id);
+struct ValueProperty *track_get_property(struct Track *track, const char *id);
 
 struct ValueProperty *track_get_property_by_name(struct Track *track, PropertyNames id);
 

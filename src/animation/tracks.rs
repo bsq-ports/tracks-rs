@@ -147,6 +147,10 @@ impl<'a> Track<'a> {
         self.path_properties.get(id)
     }
 
+    pub fn get_mut_property(&mut self, id: &str) -> Option<&mut ValueProperty> {
+        self.properties.get_mut(id)
+    }
+
     pub fn get_mut_path_property(&mut self, id: &str) -> Option<&mut PathProperty<'a>> {
         self.path_properties.get_mut(id)
     }

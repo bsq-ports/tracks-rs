@@ -197,21 +197,21 @@ pub unsafe extern "C" fn track_register_property(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn track_get_property(
-    track: *const Track,
+    track: *mut Track,
     id: *const c_char,
-) -> *const ValueProperty {
+) -> *mut ValueProperty {
     if track.is_null() || id.is_null() {
-        return ptr::null();
+        return ptr::null_mut();
     }
 
     unsafe {
         let c_str = CStr::from_ptr(id);
         let Ok(str_id) = c_str.to_str() else {
-            return ptr::null();
+            return ptr::null_mut();
         };
-        match (*track).get_property(str_id) {
+        match (*track).get_mut_property(str_id) {
             Some(property) => property,
-            None => ptr::null(),
+            None => ptr::null_mut(),
         }
     }
 }
