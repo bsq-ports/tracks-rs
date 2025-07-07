@@ -7,7 +7,7 @@ use crate::{
 
 
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct ValueProperty {
     value: Option<BaseValue>,
     pub last_updated: SystemTime,
