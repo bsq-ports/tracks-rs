@@ -4,7 +4,9 @@ use crate::animation::{
     tracks::{GameObjectCallback, PropertyNames, Track},
 };
 use std::{
-    ffi::{c_char, CStr, CString}, ptr, rc::Rc
+    ffi::{CStr, CString, c_char},
+    ptr,
+    rc::Rc,
 };
 
 // C-compatible callback function type for game object modifications
@@ -29,10 +31,10 @@ pub struct CPropertiesMap {
 
     // Chroma
     pub color: *const ValueProperty,
-    pub attentuation: *const ValueProperty,       // PropertyType::linear
-    pub fog_offset: *const ValueProperty,         // PropertyType::linear
+    pub attentuation: *const ValueProperty, // PropertyType::linear
+    pub fog_offset: *const ValueProperty,   // PropertyType::linear
     pub height_fog_start_y: *const ValueProperty, // PropertyType::linear
-    pub height_fog_height: *const ValueProperty,  // PropertyType::linear
+    pub height_fog_height: *const ValueProperty, // PropertyType::linear
 }
 
 #[repr(C)]
@@ -135,10 +137,7 @@ pub unsafe extern "C" fn track_get_name(track: *const Track) -> *const c_char {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn track_register_game_object(
-    track: *mut Track,
-    game_object: GameObject,
-) {
+pub unsafe extern "C" fn track_register_game_object(track: *mut Track, game_object: GameObject) {
     if track.is_null() {
         return;
     }
@@ -148,12 +147,8 @@ pub unsafe extern "C" fn track_register_game_object(
     }
 }
 
-
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn track_unregister_game_object(
-    track: *mut Track,
-    game_object: GameObject,
-) {
+pub unsafe extern "C" fn track_unregister_game_object(track: *mut Track, game_object: GameObject) {
     if track.is_null() {
         return;
     }
@@ -164,7 +159,10 @@ pub unsafe extern "C" fn track_unregister_game_object(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn track_get_game_objects(track: *const Track, size: *mut usize) -> *const GameObject {
+pub unsafe extern "C" fn track_get_game_objects(
+    track: *const Track,
+    size: *mut usize,
+) -> *const GameObject {
     if track.is_null() {
         return ptr::null();
     }
@@ -197,8 +195,6 @@ pub unsafe extern "C" fn track_register_property(
     }
 }
 
-
-
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn track_get_property(
     track: *const Track,
@@ -210,13 +206,12 @@ pub unsafe extern "C" fn track_get_property(
 
     unsafe {
         let c_str = CStr::from_ptr(id);
-        if let Ok(str_id) = c_str.to_str() {
-            match (*track).get_property(str_id) {
-                Some(property) => property,
-                None => ptr::null(),
-            }
-        } else {
-            ptr::null()
+        let Ok(str_id) = c_str.to_str() else {
+            return ptr::null();
+        };
+        match (*track).get_property(str_id) {
+            Some(property) => property,
+            None => ptr::null(),
         }
     }
 }
@@ -252,8 +247,6 @@ pub unsafe extern "C" fn track_get_path_property_by_name(
         None => ptr::null_mut(),
     }
 }
-
-
 
 // register path property
 #[unsafe(no_mangle)]
@@ -302,7 +295,6 @@ pub unsafe extern "C" fn track_get_properties_map(track: *const Track) -> CPrope
         return Default::default();
     }
     let track = unsafe { &*track };
-    
 
     CPropertiesMap {
         position: &track.properties.position as *const ValueProperty,
@@ -323,12 +315,13 @@ pub unsafe extern "C" fn track_get_properties_map(track: *const Track) -> CPrope
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn track_get_path_properties_map(track: *mut Track<'_>) -> CPathPropertiesMap<'_> {
+pub unsafe extern "C" fn track_get_path_properties_map(
+    track: *mut Track<'_>,
+) -> CPathPropertiesMap<'_> {
     if track.is_null() {
         return Default::default();
     }
     let track = unsafe { &mut *track };
-    
 
     CPathPropertiesMap {
         position: &mut track.path_properties.position as *mut PathProperty,
@@ -363,7 +356,7 @@ pub unsafe extern "C" fn track_register_game_object_callback(
         };
 
         let rc = Rc::new(rust_callback);
-        
+
         track_ref.register_game_object_callback(rc.clone());
 
         return Rc::into_raw(rc) as *const fn(GameObject, bool);
@@ -383,7 +376,7 @@ pub unsafe extern "C" fn track_remove_game_object_callback(
         let track_ref = &mut *track;
         // Create a closure that matches the one we want to remove
         let rc: Rc<fn(GameObject, bool)> = Rc::from_raw(callback);
-        
+
         track_ref.remove_game_object_callback(rc);
     }
 }

@@ -22,6 +22,23 @@ pub const FOG_OFFSET: &str = "fog_offset";
 pub const HEIGHT_FOG_START_Y: &str = "height_fog_start_y";
 pub const HEIGHT_FOG_HEIGHT: &str = "height_fog_height";
 
+// v2 keys
+pub const V2_POSITION: &str = "_position";
+pub const V2_LOCAL_POSITION: &str = "_localPosition";
+pub const V2_ROTATION: &str = "_rotation";
+pub const V2_LOCAL_ROTATION: &str = "_localRotation";
+pub const V2_SCALE: &str = "_scale";
+pub const V2_DEFINITE_POSITION: &str = "_definitePosition";
+pub const V2_DISSOLVE: &str = "_dissolve";
+pub const V2_DISSOLVE_ARROW: &str = "_dissolveArrow";
+pub const V2_TIME: &str = "_time";
+pub const V2_CUTTABLE: &str = "_cuttable";
+pub const V2_COLOR: &str = "_color";
+pub const V2_ATTENTUATION: &str = "_attentuation";
+pub const V2_FOG_OFFSET: &str = "_fogOffset";
+pub const V2_HEIGHT_FOG_START_Y: &str = "_heightFogStartY";
+pub const V2_HEIGHT_FOG_HEIGHT: &str = "_heightFogHeight";
+
 #[repr(u32)]
 pub enum PropertyNames {
     Position,
@@ -255,6 +272,7 @@ impl<'a> PathPropertiesMap<'a> {
             PropertyNames::DissolveArrow => Some(&self.dissolve_arrow),
             PropertyNames::Cuttable => Some(&self.cuttable),
             PropertyNames::Color => Some(&self.color),
+            
             _ => None,
         }
     }
@@ -313,6 +331,23 @@ impl FromStr for PropertyNames {
             FOG_OFFSET => Ok(PropertyNames::FogOffset),
             HEIGHT_FOG_START_Y => Ok(PropertyNames::HeightFogStartY),
             HEIGHT_FOG_HEIGHT => Ok(PropertyNames::HeightFogHeight),
+
+            V2_POSITION => Ok(PropertyNames::Position),
+            V2_LOCAL_POSITION => Ok(PropertyNames::LocalPosition),
+            V2_ROTATION => Ok(PropertyNames::Rotation),
+            V2_LOCAL_ROTATION => Ok(PropertyNames::LocalRotation),
+            V2_SCALE => Ok(PropertyNames::Scale),
+            V2_DEFINITE_POSITION => Ok(PropertyNames::DefinitePosition),
+            V2_DISSOLVE => Ok(PropertyNames::Dissolve),
+            V2_DISSOLVE_ARROW => Ok(PropertyNames::DissolveArrow),
+            V2_TIME => Ok(PropertyNames::Time),
+            V2_CUTTABLE => Ok(PropertyNames::Cuttable),
+            V2_COLOR => Ok(PropertyNames::Color),
+            V2_ATTENTUATION => Ok(PropertyNames::Attentuation),
+            V2_FOG_OFFSET => Ok(PropertyNames::FogOffset),
+            V2_HEIGHT_FOG_START_Y => Ok(PropertyNames::HeightFogStartY),
+            V2_HEIGHT_FOG_HEIGHT => Ok(PropertyNames::HeightFogHeight),
+
             _ => Err(()),
         }
     }
