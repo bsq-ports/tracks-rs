@@ -11,6 +11,7 @@ use glam::Quat;
 
 use super::BasePointData;
 
+#[derive(Debug)]
 pub struct QuaternionPointData {
     base_modifier: QuaternionModifier,
     easing: Functions,

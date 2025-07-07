@@ -15,7 +15,7 @@ use crate::{
 
 use super::PointDefinition;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Vector3PointDefinition {
     points: Vec<PointData>,
 }

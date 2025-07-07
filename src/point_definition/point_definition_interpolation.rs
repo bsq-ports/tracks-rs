@@ -2,9 +2,10 @@ use crate::{base_provider_context::BaseProviderContext, values::value::BaseValue
 
 use super::{PointDefinition, base_point_definition::BasePointDefinition};
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug)]
 pub struct PointDefinitionInterpolation<'a> {
     pub time: f32,
+    // use refs here to avoid mass cloning
     pub prev_point: Option<&'a BasePointDefinition>,
     pub point: Option<&'a BasePointDefinition>,
 }

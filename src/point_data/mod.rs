@@ -12,6 +12,7 @@ use vector4_point_data::Vector4PointData;
 use crate::base_provider_context::BaseProviderContext;
 use crate::easings::functions::Functions;
 
+#[derive(Debug)]
 pub enum PointData {
     Float(FloatPointData),
     Vector3(Vector3PointData),

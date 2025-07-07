@@ -51,7 +51,6 @@ impl From<ValueProperty> for CValueProperty {
                     value: base_value.into(),
                 },
                 last_updated: prop.last_updated.into(),
-                
             },
             None => CValueProperty::default(),
         }
@@ -180,8 +179,8 @@ pub unsafe extern "C" fn property_get_value(ptr: *const ValueProperty) -> CValue
         return CValueProperty::default(); // Default type if pointer is null
     }
 
-    let inner = *unsafe { &*ptr };
-    inner.into()
+    let inner = unsafe { &*ptr };
+    inner.clone().into()
 }
 
 #[unsafe(no_mangle)]
@@ -191,7 +190,7 @@ pub unsafe extern "C" fn property_get_last_updated(ptr: *const ValueProperty) ->
         // Default type if pointer is null
     }
 
-    let inner = *unsafe { &*ptr };
+    let inner = unsafe { &*ptr };
     inner.last_updated.into()
 }
 

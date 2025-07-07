@@ -5,6 +5,7 @@ use glam::Vec3;
 
 pub type Vector3Values = ModifierValues<Vec3>;
 
+#[derive(Debug)]
 pub struct Vector3Modifier {
     values: Vector3Values,
     has_base_provider: bool,

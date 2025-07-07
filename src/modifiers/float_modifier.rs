@@ -4,6 +4,7 @@ use crate::base_provider_context::BaseProviderContext;
 
 pub type FloatValues = ModifierValues<f32>;
 
+#[derive(Debug)]
 pub struct FloatModifier {
     values: FloatValues,
     has_base_provider: bool,

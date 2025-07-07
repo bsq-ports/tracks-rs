@@ -9,12 +9,14 @@ use glam::{EulerRot, Quat, Vec3};
 /// Is it just XYZ because it's the default?
 pub const TRACKS_EULER_ROT: EulerRot = EulerRot::XYZ;
 
+#[derive(Debug)]
 pub enum QuaternionValues {
     // equivalents but different repr
     Static(Vec3, Quat),
     Dynamic(Vec<ValueProvider>),
 }
 
+#[derive(Debug)]
 pub struct QuaternionModifier {
     values: QuaternionValues,
     has_base_provider: bool,

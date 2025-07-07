@@ -1,4 +1,4 @@
-use log::info;
+use log::{debug, info};
 
 use crate::{
     base_provider_context::BaseProviderContext,
@@ -42,7 +42,7 @@ impl EventType<'_> {
         match self {
             EventType::AnimateTrack(property) => {
                 property.set_value(None);
-            },
+            }
             EventType::AssignPathAnimation(path_property) => path_property.init(None),
         }
     }
@@ -62,7 +62,11 @@ impl<'a> CoroutineManager<'a> {
         let easing = event_group_data.easing;
         let repeat = event_group_data.repeat;
 
-        let value = Self::enqueue_event(
+        // cancel any existing coroutines for the same event type
+        self.coroutines
+            .retain(|c| c.event_type != event_group_data.property);
+
+        let value = Self::make_event_task(
             song_time,
             duration,
             start_time,
@@ -72,8 +76,10 @@ impl<'a> CoroutineManager<'a> {
             context,
         );
         let Some(value) = value else {
+            debug!("CoroutineTask has 0 duration or no points, skipping");
             return;
         };
+
         self.coroutines.push(value);
 
         // let event_tasks = event_group_data
@@ -89,7 +95,7 @@ impl<'a> CoroutineManager<'a> {
         // self.coroutines.extend(event_tasks);
     }
 
-    fn enqueue_event(
+    fn make_event_task(
         song_time: f32,
         duration: f32,
         start_time: f32,
@@ -114,12 +120,19 @@ impl<'a> CoroutineManager<'a> {
         match &mut property {
             EventType::AnimateTrack(property) => {
                 if no_duration || (point_data.get_points().len() <= 1 && !has_base) {
-                    set_property_value(point_data, property, track, 1.0, context);
+                    set_property_value(point_data, property, 1.0, context);
                     return None;
                 }
 
                 let result = animate_track(
-                    point_data, property, track, duration, start_time, song_time, easing, has_base,
+                    point_data,
+                    property,
+                    track,
+                    duration,
+                    start_time,
+                    song_time,
+                    easing,
+                    has_base,
                     context,
                 );
                 if result == CoroutineResult::Break {
@@ -137,8 +150,13 @@ impl<'a> CoroutineManager<'a> {
                     path_property.finish();
                     return None;
                 }
-                let res =
-                    assign_path_animation(path_property, duration, start_time, easing, song_time);
+                let res = assign_path_animation(
+                    path_property,
+                    duration,
+                    start_time,
+                    easing,
+                    song_time,
+                );
                 if res == CoroutineResult::Break {
                     return None;
                 }
@@ -224,7 +242,7 @@ fn animate_track(
 
     let normalized_time = (elapsed_time / duration).min(1.0);
     let time = easing.interpolate(normalized_time);
-    let on_last = set_property_value(points, property, track, time, context);
+    let on_last = set_property_value(points, property, time, context);
     let skip = !non_lazy && on_last;
 
     if elapsed_time < duration && !skip {
@@ -252,20 +270,20 @@ fn assign_path_animation(
     interpolation.finish();
     CoroutineResult::Break
 }
-
+/// Sets the value of a property based on the points defined in the BasePointDefinition.
+/// Returns true if the property was set to the last point's value. aka finished
 fn set_property_value(
     points: &base_point_definition::BasePointDefinition,
     property: &mut ValueProperty,
-    track: &mut Track,
     time: f32,
     context: &BaseProviderContext,
 ) -> bool {
-    let (value, on_last) = points.interpolate(time, context);
+    let (value, finished) = points.interpolate(time, context);
 
     if Some(value) == property.get_value() {
-        return on_last;
+        return finished;
     }
 
     property.set_value(Some(value));
-    on_last
+    finished
 }

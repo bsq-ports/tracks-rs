@@ -10,6 +10,7 @@ use crate::{
 
 use super::BasePointData;
 
+#[derive(Debug)]
 pub struct FloatPointData {
     base_modifier: FloatModifier,
     easing: Functions,

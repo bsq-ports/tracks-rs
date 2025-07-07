@@ -1,4 +1,6 @@
+use std::cell::RefCell;
 use std::ptr;
+use std::rc::Rc;
 
 use palette::bool_mask::BoolMask;
 
@@ -30,9 +32,9 @@ pub enum CEventTypeEnum {
 #[repr(C)]
 pub union CEventTypeData<'a> {
     /// AnimateTrack(ValueProperty)
-    pub property: *const ValueProperty,
+    pub property: *mut ValueProperty,
     /// AssignPathAnimation(PathProperty)
-    pub path_property: *const PathProperty<'a>,
+    pub path_property: *mut PathProperty<'a>,
 }
 #[repr(C)]
 pub struct CEventType<'a> {
@@ -55,12 +57,12 @@ pub unsafe extern "C" fn event_data_to_rust<'a>(
 
         let event_type = match c_event_data.event_type.ty {
             CEventTypeEnum::AnimateTrack => {
-                let value_property = *c_event_data.event_type.data.property;
+                let value_property = &mut *(c_event_data.event_type.data.property);
                 EventType::AnimateTrack(value_property)
             }
             CEventTypeEnum::AssignPathAnimation => {
-                let path_property = &*c_event_data.event_type.data.path_property;
-                EventType::AssignPathAnimation(path_property.clone())
+                let path_property = &mut *(c_event_data.event_type.data.path_property);
+                EventType::AssignPathAnimation(path_property)
             }
         };
         let track = &mut *c_event_data.track_ptr;

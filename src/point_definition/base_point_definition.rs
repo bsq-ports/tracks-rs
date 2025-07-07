@@ -17,6 +17,7 @@ use super::{
     vector4_point_definition,
 };
 
+#[derive(Debug)]
 pub enum BasePointDefinition {
     Float(float_point_definition::FloatPointDefinition),
     Vector3(vector3_point_definition::Vector3PointDefinition),

@@ -19,22 +19,22 @@ pub struct CPropertiesMap {
     // to 112 bytes from 312 bytes
 
     // Noodle
-    pub position: *const ValueProperty,
-    pub rotation: *const ValueProperty,
-    pub scale: *const ValueProperty,
-    pub local_rotation: *const ValueProperty,
-    pub local_position: *const ValueProperty,
-    pub dissolve: *const ValueProperty,
-    pub dissolve_arrow: *const ValueProperty,
-    pub time: *const ValueProperty,
-    pub cuttable: *const ValueProperty,
+    pub position: *mut ValueProperty,
+    pub rotation: *mut ValueProperty,
+    pub scale: *mut ValueProperty,
+    pub local_rotation: *mut ValueProperty,
+    pub local_position: *mut ValueProperty,
+    pub dissolve: *mut ValueProperty,
+    pub dissolve_arrow: *mut ValueProperty,
+    pub time: *mut ValueProperty,
+    pub cuttable: *mut ValueProperty,
 
     // Chroma
-    pub color: *const ValueProperty,
-    pub attentuation: *const ValueProperty, // PropertyType::linear
-    pub fog_offset: *const ValueProperty,   // PropertyType::linear
-    pub height_fog_start_y: *const ValueProperty, // PropertyType::linear
-    pub height_fog_height: *const ValueProperty, // PropertyType::linear
+    pub color: *mut ValueProperty,
+    pub attentuation: *mut ValueProperty, // PropertyType::linear
+    pub fog_offset: *mut ValueProperty,   // PropertyType::linear
+    pub height_fog_start_y: *mut ValueProperty, // PropertyType::linear
+    pub height_fog_height: *mut ValueProperty, // PropertyType::linear
 }
 
 #[repr(C)]
@@ -54,20 +54,20 @@ pub struct CPathPropertiesMap<'a> {
 impl Default for CPropertiesMap {
     fn default() -> Self {
         CPropertiesMap {
-            position: ptr::null(),
-            rotation: ptr::null(),
-            scale: ptr::null(),
-            local_rotation: ptr::null(),
-            local_position: ptr::null(),
-            dissolve: ptr::null(),
-            dissolve_arrow: ptr::null(),
-            time: ptr::null(),
-            cuttable: ptr::null(),
-            color: ptr::null(),
-            attentuation: ptr::null(),
-            fog_offset: ptr::null(),
-            height_fog_start_y: ptr::null(),
-            height_fog_height: ptr::null(),
+            position: ptr::null_mut(),
+            rotation: ptr::null_mut(),
+            scale: ptr::null_mut(),
+            local_rotation: ptr::null_mut(),
+            local_position: ptr::null_mut(),
+            dissolve: ptr::null_mut(),
+            dissolve_arrow: ptr::null_mut(),
+            time: ptr::null_mut(),
+            cuttable: ptr::null_mut(),
+            color: ptr::null_mut(),
+            attentuation: ptr::null_mut(),
+            fog_offset: ptr::null_mut(),
+            height_fog_start_y: ptr::null_mut(),
+            height_fog_height: ptr::null_mut(),
         }
     }
 }
@@ -189,7 +189,7 @@ pub unsafe extern "C" fn track_register_property(
     unsafe {
         let c_str = CStr::from_ptr(id);
         if let Ok(str_id) = c_str.to_str() {
-            let property_clone = *property;
+            let property_clone = (*property).clone();
             (*track).register_property(str_id.to_string(), property_clone);
         }
     }
@@ -217,18 +217,18 @@ pub unsafe extern "C" fn track_get_property(
 }
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn track_get_property_by_name(
-    track: *const Track,
+    track: *mut Track,
     id: PropertyNames,
-) -> *const ValueProperty {
+) -> *mut ValueProperty {
     if track.is_null() {
-        return ptr::null();
+        return ptr::null_mut();
     }
 
-    let track = unsafe { &*track };
+    let track = unsafe { &mut *track };
 
-    match track.properties.get_property_by_name(id) {
+    match track.properties.get_property_by_name_mut(id) {
         Some(property) => property,
-        None => ptr::null(),
+        None => ptr::null_mut(),
     }
 }
 #[unsafe(no_mangle)]
@@ -290,27 +290,27 @@ pub unsafe extern "C" fn track_get_path_property(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn track_get_properties_map(track: *const Track) -> CPropertiesMap {
+pub unsafe extern "C" fn track_get_properties_map(track: *mut Track) -> CPropertiesMap {
     if track.is_null() {
         return Default::default();
     }
-    let track = unsafe { &*track };
+    let track = unsafe { &mut *track };
 
     CPropertiesMap {
-        position: &track.properties.position as *const ValueProperty,
-        rotation: &track.properties.rotation as *const ValueProperty,
-        scale: &track.properties.scale as *const ValueProperty,
-        local_rotation: &track.properties.local_rotation as *const ValueProperty,
-        local_position: &track.properties.local_position as *const ValueProperty,
-        dissolve: &track.properties.dissolve as *const ValueProperty,
-        dissolve_arrow: &track.properties.dissolve_arrow as *const ValueProperty,
-        time: &track.properties.time as *const ValueProperty,
-        cuttable: &track.properties.cuttable as *const ValueProperty,
-        color: &track.properties.color as *const ValueProperty,
-        attentuation: &track.properties.attentuation as *const ValueProperty,
-        fog_offset: &track.properties.fog_offset as *const ValueProperty,
-        height_fog_start_y: &track.properties.height_fog_start_y as *const ValueProperty,
-        height_fog_height: &track.properties.height_fog_height as *const ValueProperty,
+        position: &mut track.properties.position as *mut ValueProperty,
+        rotation: &mut track.properties.rotation as *mut ValueProperty,
+        scale: &mut track.properties.scale as *mut ValueProperty,
+        local_rotation: &mut track.properties.local_rotation as *mut ValueProperty,
+        local_position: &mut track.properties.local_position as *mut ValueProperty,
+        dissolve: &mut track.properties.dissolve as *mut ValueProperty,
+        dissolve_arrow: &mut track.properties.dissolve_arrow as *mut ValueProperty,
+        time: &mut track.properties.time as *mut ValueProperty,
+        cuttable: &mut track.properties.cuttable as *mut ValueProperty,
+        color: &mut track.properties.color as *mut ValueProperty,
+        attentuation: &mut track.properties.attentuation as *mut ValueProperty,
+        fog_offset: &mut track.properties.fog_offset as *mut ValueProperty,
+        height_fog_start_y: &mut track.properties.height_fog_start_y as *mut ValueProperty,
+        height_fog_height: &mut track.properties.height_fog_height as *mut ValueProperty,
     }
 }
 

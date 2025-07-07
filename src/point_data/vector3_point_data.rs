@@ -11,6 +11,7 @@ use glam::Vec3;
 
 use super::BasePointData;
 
+#[derive(Debug)]
 pub struct Vector3PointData {
     base_modifier: Vector3Modifier,
     easing: Functions,

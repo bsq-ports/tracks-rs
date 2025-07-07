@@ -20,6 +20,7 @@ pub enum ModifierValues<T> {
     Dynamic(Vec<ValueProvider>),
 }
 
+#[derive(Debug)]
 pub enum Modifier {
     Float(FloatModifier),
     Vector3(Vector3Modifier),

@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::{
     easings::functions::Functions,
     point_definition::base_point_definition::{self},
@@ -20,8 +22,20 @@ pub struct EventData<'a> {
     pub point_data: Option<&'a base_point_definition::BasePointDefinition>,
 }
 
-#[derive(Clone)]
+#[derive(Debug)]
 pub enum EventType<'a> {
-    AnimateTrack(ValueProperty),
-    AssignPathAnimation(PathProperty<'a>),
+    AnimateTrack(&'a mut ValueProperty),
+    AssignPathAnimation(&'a mut PathProperty<'a>),
+}
+
+impl PartialEq for EventType<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (EventType::AnimateTrack(a), EventType::AnimateTrack(b)) => std::ptr::eq(a, b),
+            (EventType::AssignPathAnimation(a), EventType::AssignPathAnimation(b)) => {
+                std::ptr::eq(a, b)
+            }
+            _ => false,
+        }
+    }
 }

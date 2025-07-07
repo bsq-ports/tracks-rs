@@ -1,13 +1,17 @@
-use std::time::SystemTime;
+use std::{cell::{Cell, RefCell}, rc::Rc, time::SystemTime};
 
 use crate::{
     point_definition::point_definition_interpolation::PointDefinitionInterpolation,
     values::value::BaseValue,
 };
 
+// pub type ValuePropertyCell = Cell<ValueProperty>;
+// pub type PathPropertyCell<'a> = Cell<PointDefinitionInterpolation<'a>>;
 
+// pub type ValuePropertyShared = Rc<ValuePropertyCell>;
+// pub type PathPropertyShared<'a> = Rc<PathPropertyCell<'a>>;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ValueProperty {
     value: Option<BaseValue>,
     pub last_updated: SystemTime,

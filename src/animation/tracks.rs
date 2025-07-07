@@ -1,9 +1,8 @@
 use std::{fmt::Display, rc::Rc, str::FromStr};
 
-use super::{
-    game_object::GameObject,
-    property::{PathProperty, ValueProperty},
-};
+use crate::animation::property::{PathProperty, ValueProperty};
+
+use super::game_object::GameObject;
 
 // Define constants for property names
 pub const POSITION: &str = "position";
@@ -144,10 +143,7 @@ impl<'a> Track<'a> {
     pub fn get_property(&self, id: &str) -> Option<&ValueProperty> {
         self.properties.get(id)
     }
-    pub fn get_mut_property(&mut self, id: &str) -> Option<&mut ValueProperty> {
-        self.properties.get_mut(id)
-    }
-    pub fn get_path_property(&self, id: &str) -> Option<&PathProperty> {
+    pub fn get_path_property(&self, id: &str) -> Option<&PathProperty<'a>> {
         self.path_properties.get(id)
     }
 
@@ -272,7 +268,7 @@ impl<'a> PathPropertiesMap<'a> {
             PropertyNames::DissolveArrow => Some(&self.dissolve_arrow),
             PropertyNames::Cuttable => Some(&self.cuttable),
             PropertyNames::Color => Some(&self.color),
-            
+
             _ => None,
         }
     }
