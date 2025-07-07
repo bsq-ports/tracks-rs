@@ -29,7 +29,7 @@ pub struct WrapQuat {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone, PartialEq, PartialOrd, Eq, Hash)]
+#[derive(Copy, Clone, PartialEq, PartialOrd, Eq, Hash, Ord, Debug)]
 pub enum WrapBaseValueType {
     Vec3 = 0,
     Quat = 1,
