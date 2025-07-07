@@ -44,9 +44,9 @@ pub struct CEventType<'a> {
 /// Does not consume the CEventData
 /// Returns a raw pointer to the Rust EventData
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn event_data_to_rust(
-    c_event_data: *const CEventData<'_>,
-) -> *mut EventData<'_> {
+pub unsafe extern "C" fn event_data_to_rust<'a>(
+    c_event_data: *const CEventData<'a>,
+) -> *mut EventData<'a> {
     if c_event_data.is_null() {
         return ptr::null_mut();
     }
@@ -64,11 +64,7 @@ pub unsafe extern "C" fn event_data_to_rust(
             }
         };
         let track = &mut *c_event_data.track_ptr;
-        let point_data = c_event_data
-            .point_data_ptr
-            .is_null()
-            .is_false()
-            .then(|| &*c_event_data.point_data_ptr);
+        let point_data = c_event_data.point_data_ptr.as_ref();
 
         let event_data = EventData {
             raw_duration: c_event_data.raw_duration,
