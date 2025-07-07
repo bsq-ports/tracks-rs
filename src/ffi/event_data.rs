@@ -1,8 +1,4 @@
-use std::cell::RefCell;
 use std::ptr;
-use std::rc::Rc;
-
-use palette::bool_mask::BoolMask;
 
 use crate::animation::events::{EventData, EventType};
 use crate::animation::property::{PathProperty, ValueProperty};

@@ -1,4 +1,3 @@
-
 use crate::point_definition::base_point_definition;
 use crate::point_definition::quaternion_point_definition::QuaternionPointDefinition;
 
@@ -70,8 +69,8 @@ pub unsafe extern "C" fn tracks_make_base_ffi_provider(
     assert!(!func.is_null());
 
     let context = Box::new(BaseFFIProviderValues::new(func, user_value));
-    let context_ptr = Box::leak(context);
-    context_ptr
+
+    (Box::leak(context)) as _
 }
 
 /// Dispose the base provider. Consumes
@@ -89,8 +88,8 @@ pub unsafe extern "C" fn tracks_dipose_base_ffi_provider(func: *mut BaseFFIProvi
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_make_base_provider_context() -> *mut BaseProviderContext {
     let context = Box::new(BaseProviderContext::new());
-    let context_ptr = Box::leak(context);
-    context_ptr
+
+    (Box::leak(context)) as _
 }
 
 #[unsafe(no_mangle)]
@@ -117,8 +116,8 @@ pub unsafe extern "C" fn tracks_make_float_point_definition(
 ) -> *const FloatPointDefinition {
     let value = unsafe { json::convert_json_value_to_serde(json) };
     let point_definition = Box::new(FloatPointDefinition::new(value, unsafe { &*context }));
-    let point_definition_ptr = Box::leak(point_definition);
-    point_definition_ptr
+
+    (Box::leak(point_definition)) as _
 }
 
 #[unsafe(no_mangle)]
@@ -169,8 +168,8 @@ pub unsafe extern "C" fn tracks_make_base_point_definition(
     };
 
     let point_definition = Box::new(point_definition);
-    let point_definition_ptr = Box::leak(point_definition);
-    point_definition_ptr
+
+    (Box::leak(point_definition)) as _
 }
 
 #[unsafe(no_mangle)]
@@ -211,8 +210,8 @@ pub unsafe extern "C" fn tracks_make_vector3_point_definition(
 ) -> *const Vector3PointDefinition {
     let value = unsafe { json::convert_json_value_to_serde(json) };
     let point_definition = Box::new(Vector3PointDefinition::new(value, unsafe { &*context }));
-    let point_definition_ptr = Box::leak(point_definition);
-    point_definition_ptr
+
+    (Box::leak(point_definition)) as _
 }
 
 #[unsafe(no_mangle)]
@@ -257,8 +256,8 @@ pub unsafe extern "C" fn tracks_make_vector4_point_definition(
 ) -> *const Vector4PointDefinition {
     let value = unsafe { json::convert_json_value_to_serde(json) };
     let point_definition = Box::new(Vector4PointDefinition::new(value, unsafe { &*context }));
-    let point_definition_ptr = Box::leak(point_definition);
-    point_definition_ptr
+
+    (Box::leak(point_definition)) as _
 }
 
 #[unsafe(no_mangle)]
@@ -304,8 +303,8 @@ pub unsafe extern "C" fn tracks_make_quat_point_definition(
 ) -> *const QuaternionPointDefinition {
     let value = unsafe { json::convert_json_value_to_serde(json) };
     let point_definition = Box::new(QuaternionPointDefinition::new(value, unsafe { &*context }));
-    let point_definition_ptr = Box::leak(point_definition);
-    point_definition_ptr
+
+    (Box::leak(point_definition)) as _
 }
 
 #[unsafe(no_mangle)]

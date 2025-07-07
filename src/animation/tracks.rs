@@ -1,6 +1,9 @@
 use std::{fmt::Display, rc::Rc, str::FromStr};
 
-use crate::{animation::property::{PathProperty, ValueProperty}, ffi::types::WrapBaseValueType};
+use crate::{
+    animation::property::{PathProperty, ValueProperty},
+    ffi::types::WrapBaseValueType,
+};
 
 use super::game_object::GameObject;
 
@@ -192,7 +195,6 @@ impl Default for PropertiesMap {
             fog_offset: ValueProperty::empty(WrapBaseValueType::Float),
             height_fog_start_y: ValueProperty::empty(WrapBaseValueType::Float),
             height_fog_height: ValueProperty::empty(WrapBaseValueType::Float),
-            
         }
     }
 }
@@ -398,21 +400,21 @@ impl FromStr for PropertyNames {
 impl Display for PropertyNames {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            PropertyNames::Position => write!(f, "{}", POSITION),
-            PropertyNames::Rotation => write!(f, "{}", ROTATION),
-            PropertyNames::Scale => write!(f, "{}", SCALE),
-            PropertyNames::LocalRotation => write!(f, "{}", LOCAL_ROTATION),
-            PropertyNames::LocalPosition => write!(f, "{}", LOCAL_POSITION),
-            PropertyNames::DefinitePosition => write!(f, "{}", DEFINITE_POSITION),
-            PropertyNames::Dissolve => write!(f, "{}", DISSOLVE),
-            PropertyNames::DissolveArrow => write!(f, "{}", DISSOLVE_ARROW),
-            PropertyNames::Time => write!(f, "{}", TIME),
-            PropertyNames::Cuttable => write!(f, "{}", CUTTABLE),
-            PropertyNames::Color => write!(f, "{}", COLOR),
-            PropertyNames::Attentuation => write!(f, "{}", ATTENTUATION),
-            PropertyNames::FogOffset => write!(f, "{}", FOG_OFFSET),
-            PropertyNames::HeightFogStartY => write!(f, "{}", HEIGHT_FOG_START_Y),
-            PropertyNames::HeightFogHeight => write!(f, "{}", HEIGHT_FOG_HEIGHT),
+            PropertyNames::Position => write!(f, "{POSITION}"),
+            PropertyNames::Rotation => write!(f, "{ROTATION}"),
+            PropertyNames::Scale => write!(f, "{SCALE}"),
+            PropertyNames::LocalRotation => write!(f, "{LOCAL_ROTATION}"),
+            PropertyNames::LocalPosition => write!(f, "{LOCAL_POSITION}"),
+            PropertyNames::DefinitePosition => write!(f, "{DEFINITE_POSITION}"),
+            PropertyNames::Dissolve => write!(f, "{DISSOLVE}"),
+            PropertyNames::DissolveArrow => write!(f, "{DISSOLVE_ARROW}"),
+            PropertyNames::Time => write!(f, "{TIME}"),
+            PropertyNames::Cuttable => write!(f, "{CUTTABLE}"),
+            PropertyNames::Color => write!(f, "{COLOR}"),
+            PropertyNames::Attentuation => write!(f, "{ATTENTUATION}"),
+            PropertyNames::FogOffset => write!(f, "{FOG_OFFSET}"),
+            PropertyNames::HeightFogStartY => write!(f, "{HEIGHT_FOG_START_Y}"),
+            PropertyNames::HeightFogHeight => write!(f, "{HEIGHT_FOG_HEIGHT}"),
         }
     }
 }

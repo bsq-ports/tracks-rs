@@ -359,7 +359,7 @@ pub unsafe extern "C" fn track_register_game_object_callback(
 
         track_ref.register_game_object_callback(rc.clone());
 
-        return Rc::into_raw(rc) as *const fn(GameObject, bool);
+        Rc::into_raw(rc) as *const fn(GameObject, bool)
     }
 }
 

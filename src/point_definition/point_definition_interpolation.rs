@@ -1,5 +1,5 @@
 use crate::{
-    base_provider_context::BaseProviderContext, ffi::types::WrapBaseValueType, point_data,
+    base_provider_context::BaseProviderContext, ffi::types::WrapBaseValueType,
     values::value::BaseValue,
 };
 

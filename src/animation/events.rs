@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 use crate::{
     easings::functions::Functions,
     point_definition::base_point_definition::{self},

@@ -2,8 +2,8 @@ use std::ffi::c_void;
 
 #[derive(Hash, PartialEq, Eq, Clone, Copy, Debug)]
 #[repr(C)]
-pub struct GameObject{
-    pub ptr: *const c_void
+pub struct GameObject {
+    pub ptr: *const c_void,
 }
 
 impl From<*const c_void> for GameObject {

@@ -1,4 +1,4 @@
-use log::{debug, info};
+use log::debug;
 
 use crate::{
     base_provider_context::BaseProviderContext,
@@ -125,14 +125,7 @@ impl<'a> CoroutineManager<'a> {
                 }
 
                 let result = animate_track(
-                    point_data,
-                    property,
-                    track,
-                    duration,
-                    start_time,
-                    song_time,
-                    easing,
-                    has_base,
+                    point_data, property, track, duration, start_time, song_time, easing, has_base,
                     context,
                 );
                 if result == CoroutineResult::Break {
@@ -150,13 +143,8 @@ impl<'a> CoroutineManager<'a> {
                     path_property.finish();
                     return None;
                 }
-                let res = assign_path_animation(
-                    path_property,
-                    duration,
-                    start_time,
-                    easing,
-                    song_time,
-                );
+                let res =
+                    assign_path_animation(path_property, duration, start_time, easing, song_time);
                 if res == CoroutineResult::Break {
                     return None;
                 }

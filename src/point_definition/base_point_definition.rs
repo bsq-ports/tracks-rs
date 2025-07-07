@@ -186,7 +186,7 @@ impl PointDefinition for BasePointDefinition {
             }
         }
     }
-    
+
     fn get_type(&self) -> crate::ffi::types::WrapBaseValueType {
         match self {
             BasePointDefinition::Float(_) => crate::ffi::types::WrapBaseValueType::Float,

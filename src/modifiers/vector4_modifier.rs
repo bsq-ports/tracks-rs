@@ -35,8 +35,8 @@ impl ModifierBase for Vector4Modifier {
             Vector4Values::Static(s) => *s,
             Vector4Values::Dynamic(value_providers) => self.convert(value_providers, context),
         };
-        let result = self
-            .modifiers
+
+        self.modifiers
             .iter()
             .fold(original_point, |acc, x| match x.get_operation() {
                 Operation::Add => acc + x.get_vector4(context),
@@ -44,8 +44,7 @@ impl ModifierBase for Vector4Modifier {
                 Operation::Mul => acc * x.get_vector4(context),
                 Operation::Div => acc / x.get_vector4(context),
                 Operation::None => x.get_vector4(context),
-            });
-        result
+            })
     }
 
     fn get_raw_point(&self) -> Vec4 {

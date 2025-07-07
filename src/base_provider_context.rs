@@ -105,7 +105,7 @@ impl BaseProviderContext {
             "baseRightHandLocalScale" => self.right_hand_local_scale.borrow().into(),
             "baseRightHandPosition" => self.right_hand_position.borrow().into(),
             "baseRightHandRotation" => self.right_hand_rotation.borrow().into(),
-            _ => panic!("Base provider not found {}", base),
+            _ => panic!("Base provider not found {base}"),
         }
     }
 

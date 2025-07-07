@@ -45,15 +45,14 @@ pub enum ValueProvider {
 
 impl AbstractValueProvider for ValueProvider {
     fn values<'a>(&'a self, context: &BaseProviderContext) -> Cow<'a, [f32]> {
-        let items = match self {
+        match self {
             ValueProvider::Static(v) => v.values(context),
             ValueProvider::BaseProvider(v) => v.values(context),
             ValueProvider::QuaternionProvider(v) => v.values(context),
             ValueProvider::PartialProvider(v) => v.values(context),
             ValueProvider::SmoothProviders(v) => v.values(context),
             ValueProvider::SmoothRotationProviders(v) => v.values(context),
-        };
-        items
+        }
     }
 }
 

@@ -5,7 +5,7 @@ use crate::context::TracksContext;
 use crate::point_definition::base_point_definition::{self};
 use std::cell::RefCell;
 use std::ffi::CStr;
-use std::ops::{Deref, DerefMut, Not};
+use std::ops::{Deref, DerefMut};
 use std::os::raw::c_char;
 use std::ptr;
 use std::rc::Rc;

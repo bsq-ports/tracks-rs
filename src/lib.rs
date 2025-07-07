@@ -7,8 +7,6 @@
 #![feature(box_into_inner)]
 #![feature(unboxed_closures)]
 
-
-
 pub mod context;
 pub mod easings;
 
