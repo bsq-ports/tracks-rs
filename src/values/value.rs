@@ -10,6 +10,8 @@ use glam::Vec3;
 
 use glam::Vec4;
 
+use crate::ffi::types::WrapBaseValueType;
+
 ///
 /// Time based number
 ///
@@ -115,6 +117,15 @@ impl BaseValue {
                 Quat::slerp(v1, v2, t).into()
             }
             _ => panic!("Invalid interpolation"),
+        }
+    }
+
+    pub fn get_type(&self) -> WrapBaseValueType {
+        match self {
+            BaseValue::Float(_) => WrapBaseValueType::Float,
+            BaseValue::Vector3(_) => WrapBaseValueType::Vec3,
+            BaseValue::Vector4(_) => WrapBaseValueType::Vec4,
+            BaseValue::Quaternion(_) => WrapBaseValueType::Quat,
         }
     }
 }

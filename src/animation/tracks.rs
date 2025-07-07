@@ -1,6 +1,6 @@
 use std::{fmt::Display, rc::Rc, str::FromStr};
 
-use crate::animation::property::{PathProperty, ValueProperty};
+use crate::{animation::property::{PathProperty, ValueProperty}, ffi::types::WrapBaseValueType};
 
 use super::game_object::GameObject;
 
@@ -57,7 +57,7 @@ pub enum PropertyNames {
     HeightFogHeight,
 }
 
-#[derive(Default, Clone)]
+#[derive(Clone)]
 pub struct PathPropertiesMap<'a> {
     pub path_properties: ahash::AHashMap<String, PathProperty<'a>>,
 
@@ -73,7 +73,7 @@ pub struct PathPropertiesMap<'a> {
     pub color: PathProperty<'a>,
 }
 
-#[derive(Default, Clone)]
+#[derive(Clone)]
 pub struct PropertiesMap {
     pub properties: ahash::AHashMap<String, ValueProperty>,
 
@@ -170,6 +170,48 @@ impl<'a> Track<'a> {
         let callback_ref: Rc<dyn GameObjectCallback> = callback;
         self.game_object_callbacks
             .retain(|cb| !Rc::ptr_eq(cb, &callback_ref));
+    }
+}
+
+impl Default for PropertiesMap {
+    fn default() -> Self {
+        Self {
+            properties: Default::default(),
+            position: ValueProperty::empty(WrapBaseValueType::Vec3),
+            rotation: ValueProperty::empty(WrapBaseValueType::Quat),
+            scale: ValueProperty::empty(WrapBaseValueType::Vec3),
+            local_rotation: ValueProperty::empty(WrapBaseValueType::Quat),
+            local_position: ValueProperty::empty(WrapBaseValueType::Vec3),
+            dissolve: ValueProperty::empty(WrapBaseValueType::Float),
+            dissolve_arrow: ValueProperty::empty(WrapBaseValueType::Float),
+            time: ValueProperty::empty(WrapBaseValueType::Float),
+            cuttable: ValueProperty::empty(WrapBaseValueType::Float),
+            color: ValueProperty::empty(WrapBaseValueType::Vec4),
+            attentuation: ValueProperty::empty(WrapBaseValueType::Float),
+
+            fog_offset: ValueProperty::empty(WrapBaseValueType::Float),
+            height_fog_start_y: ValueProperty::empty(WrapBaseValueType::Float),
+            height_fog_height: ValueProperty::empty(WrapBaseValueType::Float),
+            
+        }
+    }
+}
+
+impl Default for PathPropertiesMap<'_> {
+    fn default() -> Self {
+        Self {
+            path_properties: Default::default(),
+            position: PathProperty::empty(WrapBaseValueType::Vec3),
+            rotation: PathProperty::empty(WrapBaseValueType::Quat),
+            scale: PathProperty::empty(WrapBaseValueType::Vec3),
+            local_rotation: PathProperty::empty(WrapBaseValueType::Quat),
+            local_position: PathProperty::empty(WrapBaseValueType::Vec3),
+            definite_position: PathProperty::empty(WrapBaseValueType::Vec3),
+            dissolve: PathProperty::empty(WrapBaseValueType::Float),
+            dissolve_arrow: PathProperty::empty(WrapBaseValueType::Float),
+            cuttable: PathProperty::empty(WrapBaseValueType::Float),
+            color: PathProperty::empty(WrapBaseValueType::Vec4),
+        }
     }
 }
 

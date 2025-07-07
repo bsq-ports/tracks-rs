@@ -29,8 +29,10 @@ pub struct WrapQuat {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone, PartialEq, PartialOrd, Eq, Hash, Ord, Debug)]
+#[derive(Copy, Clone, PartialEq, PartialOrd, Eq, Hash, Ord, Debug, Default)]
 pub enum WrapBaseValueType {
+    #[default]
+    Unknown = -1,
     Vec3 = 0,
     Quat = 1,
     Vec4 = 2,
@@ -52,8 +54,6 @@ pub struct WrapBaseValue {
     pub(crate) ty: WrapBaseValueType,
     pub(crate) value: WrapBaseValueUnion,
 }
-
-
 
 impl From<BaseValue> for WrapBaseValue {
     fn from(value: BaseValue) -> Self {
@@ -120,6 +120,7 @@ impl From<WrapBaseValue> for BaseValue {
                     value.value.vec4.w,
                 )),
                 WrapBaseValueType::Float => BaseValue::Float(value.value.float_v),
+                WrapBaseValueType::Unknown => panic!("Unknown WrapBaseValueType encountered"),
             }
         }
     }

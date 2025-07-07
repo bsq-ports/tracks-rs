@@ -1,4 +1,7 @@
-use crate::{base_provider_context::BaseProviderContext, values::value::BaseValue};
+use crate::{
+    base_provider_context::BaseProviderContext, ffi::types::WrapBaseValueType, point_data,
+    values::value::BaseValue,
+};
 
 use super::{PointDefinition, base_point_definition::BasePointDefinition};
 
@@ -8,9 +11,32 @@ pub struct PointDefinitionInterpolation<'a> {
     // use refs here to avoid mass cloning
     pub prev_point: Option<&'a BasePointDefinition>,
     pub point: Option<&'a BasePointDefinition>,
+    ty: WrapBaseValueType,
 }
 
 impl<'a> PointDefinitionInterpolation<'a> {
+    pub fn new(point: Option<&'a BasePointDefinition>, ty: WrapBaseValueType) -> Self {
+        PointDefinitionInterpolation {
+            time: 0.0,
+            prev_point: None,
+            point,
+            ty,
+        }
+    }
+
+    pub fn empty(ty: WrapBaseValueType) -> Self {
+        PointDefinitionInterpolation {
+            time: 0.0,
+            prev_point: None,
+            point: None,
+            ty,
+        }
+    }
+
+    pub fn get_type(&self) -> WrapBaseValueType {
+        self.ty
+    }
+
     pub fn finish(&mut self) {
         self.prev_point = None;
     }
@@ -19,6 +45,15 @@ impl<'a> PointDefinitionInterpolation<'a> {
         self.time = 0.0;
         self.prev_point = self.point.take();
         self.point = new_point_data;
+
+        if let Some(point_data) = &self.point {
+            assert!(
+                point_data.get_type() == self.ty,
+                "PointDefinitionInterpolation type mismatch: expected {:?}, got {:?}",
+                self.ty,
+                point_data.get_type()
+            );
+        }
     }
 
     pub fn interpolate(&self, time: f32, context: &BaseProviderContext) -> Option<BaseValue> {

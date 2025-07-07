@@ -163,6 +163,9 @@ pub unsafe extern "C" fn tracks_make_base_point_definition(
         WrapBaseValueType::Quat => QuaternionPointDefinition::new(value, context).into(),
         WrapBaseValueType::Vec4 => Vector4PointDefinition::new(value, context).into(),
         WrapBaseValueType::Float => FloatPointDefinition::new(value, context).into(),
+        WrapBaseValueType::Unknown => {
+            panic!("Cannot create BasePointDefinition with Unknown type");
+        }
     };
 
     let point_definition = Box::new(point_definition);

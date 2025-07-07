@@ -93,6 +93,7 @@ typedef uint32_t PropertyNames;
 #endif // __cplusplus
 
 typedef enum WrapBaseValueType {
+  Unknown = -1,
   Vec3 = 0,
   Quat = 1,
   Vec4 = 2,
