@@ -1,6 +1,6 @@
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(C)]
 // seconds, nanos
 pub struct CTimeUnit(u64, u32);
@@ -10,12 +10,6 @@ pub extern "C" fn get_time() -> CTimeUnit {
     let t = SystemTime::now();
 
     t.into()
-}
-
-impl Default for CTimeUnit {
-    fn default() -> Self {
-        SystemTime::now().into()
-    }
 }
 
 impl From<SystemTime> for CTimeUnit {

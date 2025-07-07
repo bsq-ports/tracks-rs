@@ -50,7 +50,8 @@ impl From<ValueProperty> for CValueProperty {
                     has_value: true,
                     value: base_value.into(),
                 },
-                ..Default::default()
+                last_updated: prop.last_updated.into(),
+                
             },
             None => CValueProperty::default(),
         }
