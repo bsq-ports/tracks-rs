@@ -193,7 +193,6 @@ impl<'a> CoroutineManager<'a> {
 
         match &mut event_data.event_type {
             EventType::AnimateTrack(value_property) => {
-                log::debug!("Animating track: {value_property:#?} at time: {song_time}");
                 let mut result = animate_track(
                     point_def,
                     value_property,
