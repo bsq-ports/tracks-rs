@@ -34,7 +34,7 @@ impl PointDefinition for QuaternionPointDefinition {
         &mut self.points
     }
 
-        fn get_type(&self) -> crate::ffi::types::WrapBaseValueType {
+    fn get_type(&self) -> crate::ffi::types::WrapBaseValueType {
         crate::ffi::types::WrapBaseValueType::Quat
     }
 

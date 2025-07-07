@@ -57,7 +57,7 @@ pub unsafe extern "C" fn tracks_context_add_track<'a>(
 
 /// Consumes the point definition and moves it into the context.
 /// Returns a const pointer to the point definition.
-/// 
+///
 /// If id is null/empty, generates a uuid for the point definition.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_context_add_point_definition(
@@ -70,13 +70,16 @@ pub unsafe extern "C" fn tracks_context_add_point_definition(
     }
 
     unsafe {
-        let c_str = id
-            .is_null()
-            .not()
-            .then(|| CStr::from_ptr(id).to_str().unwrap_or_default());
+        let c_str = if id.is_null() {
+            None
+        } else {
+            CStr::from_ptr(id).to_str().ok()
+        };
 
-        let id_str = if c_str.is_some_and(|c| !c.is_empty()) {
-            c_str.unwrap().to_string()
+        let id_str = if let Some(c_str) = c_str
+            && !c_str.is_empty()
+        {
+            c_str.to_string()
         } else {
             uuid::Uuid::new_v4().to_string()
         };
@@ -86,7 +89,6 @@ pub unsafe extern "C" fn tracks_context_add_point_definition(
         (*context).add_point_definition(id_str.to_owned(), rc.clone());
 
         rc.as_ref()
-        // Don't drop the Box here, ownership is transferred to the context
     }
 }
 
