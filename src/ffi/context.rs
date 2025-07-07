@@ -14,12 +14,7 @@ use super::types::WrapBaseValueType;
 
 #[unsafe(no_mangle)]
 pub extern "C" fn tracks_context_create<'a>() -> *mut TracksContext<'a> {
-    let context = TracksContext {
-        tracks: Vec::new(),
-        point_definitions: Default::default(),
-        coroutine_manager: Default::default(),
-        base_providers: Default::default(),
-    };
+    let context = TracksContext::default();
 
     Box::into_raw(Box::new(context))
 }
