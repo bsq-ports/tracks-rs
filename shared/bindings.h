@@ -508,6 +508,8 @@ struct Track *track_create(void);
  */
 void track_destroy(struct Track *track);
 
+void track_reset(struct Track *track);
+
 void track_set_name(struct Track *track, const char *name);
 
 /**

@@ -104,6 +104,18 @@ pub unsafe extern "C" fn track_destroy(track: *mut Track) {
         }
     }
 }
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn track_reset(track: *mut Track) {
+    if track.is_null() {
+        return;
+    }
+
+    unsafe {
+        let track_ref = &mut *track;
+        track_ref.reset();
+    }
+}
+
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn track_set_name(track: *mut Track, name: *const c_char) {

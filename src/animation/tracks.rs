@@ -174,6 +174,13 @@ impl<'a> Track<'a> {
         self.game_object_callbacks
             .retain(|cb| !Rc::ptr_eq(cb, &callback_ref));
     }
+
+    pub fn reset(&mut self) {
+        self.properties = PropertiesMap::default();
+        self.path_properties = PathPropertiesMap::default();
+        self.game_objects.clear();
+        self.game_object_callbacks.clear();
+    }
 }
 
 impl Default for PropertiesMap {
