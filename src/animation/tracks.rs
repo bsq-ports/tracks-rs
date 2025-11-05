@@ -418,3 +418,162 @@ impl Display for PropertyNames {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::values::value::BaseValue;
+    use glam::{Quat, Vec3, Vec4};
+
+    #[test]
+    fn test_null_values_return_none() {
+        // default PropertiesMap initializes properties with None values
+        let props = PropertiesMap::default();
+
+        // ensure several default properties are None
+        assert!(
+            props.scale.get_value().is_none(),
+            "scale should be None by default"
+        );
+        assert!(
+            props.color.get_value().is_none(),
+            "color should be None by default"
+        );
+        assert!(
+            props.rotation.get_value().is_none(),
+            "rotation should be None by default"
+        );
+        assert!(
+            props.dissolve.get_value().is_none(),
+            "dissolve should be None by default"
+        );
+    }
+
+    #[test]
+    fn test_set_and_get_float_vec3_vec4_quat() {
+        let mut props = PropertiesMap::default();
+
+        // Linear / float (dissolve)
+        props.dissolve.set_value(Some(BaseValue::from(3.15_f32)));
+        let f = props.dissolve.get_value().unwrap().as_float().unwrap();
+        assert!((f - 3.15).abs() < 1e-6, "float value mismatch");
+
+        // Vec3 (scale) - user requested one test must be scale
+        let scale = Vec3::new(1.0, 2.0, 3.0);
+        props.scale.set_value(Some(BaseValue::from(scale)));
+        let got_scale = props.scale.get_value().unwrap().as_vec3().unwrap();
+        assert_eq!(got_scale, scale, "scale Vec3 mismatch");
+
+        // Vec4 (color)
+        let color = Vec4::new(0.1, 0.2, 0.3, 0.4);
+        props.color.set_value(Some(BaseValue::from(color)));
+        let got_color = props.color.get_value().unwrap().as_vec4().unwrap();
+        assert_eq!(got_color, color, "color Vec4 mismatch");
+
+        // Quat (rotation)
+        let quat = Quat::from_array([0.0, 0.0, 0.0, 1.0]);
+        props.rotation.set_value(Some(BaseValue::from(quat)));
+        let got_quat = props.rotation.get_value().unwrap().as_quat().unwrap();
+        assert_eq!(got_quat, quat, "rotation Quat mismatch");
+    }
+
+    #[test]
+    fn test_property_names_aliases_and_display() {
+        // v1 -> enum -> display -> v1
+        let pname = PropertyNames::from_str(POSITION).expect("POSITION should parse");
+        assert_eq!(pname.to_string(), POSITION);
+
+        // v2 alias -> enum -> display -> v1 canonical
+        let pname_v2 = PropertyNames::from_str(V2_POSITION).expect("V2_POSITION should parse");
+        assert_eq!(pname_v2.to_string(), POSITION);
+
+        // another example: color
+        let pcolor = PropertyNames::from_str(COLOR).expect("COLOR should parse");
+        assert_eq!(pcolor.to_string(), COLOR);
+        let pcolor_v2 = PropertyNames::from_str(V2_COLOR).expect("V2_COLOR should parse");
+        assert_eq!(pcolor_v2.to_string(), COLOR);
+    }
+
+    #[test]
+    fn test_insert_and_get_custom_property() {
+        let mut props = PropertiesMap::default();
+
+        // create a custom float property and insert it under a custom id
+        let mut custom_prop = ValueProperty::empty(WrapBaseValueType::Float);
+        custom_prop.set_value(Some(BaseValue::from(9.99_f32)));
+
+        props.insert("custom_prop".to_string(), custom_prop);
+
+        let got = props
+            .get("custom_prop")
+            .expect("custom_prop should be present")
+            .get_value()
+            .expect("custom_prop should have a value")
+            .as_float()
+            .expect("custom_prop should be a float");
+
+        assert!((got - 9.99).abs() < 1e-6, "custom_prop float mismatch");
+    }
+
+    #[test]
+    fn test_path_properties_v2_alias() {
+        let path_props = PathPropertiesMap::default();
+
+        // V2 alias should return the canonical path property (position)
+        let p_by_v2 = path_props
+            .get(V2_POSITION)
+            .expect("V2_POSITION should map to a path property");
+        let p_by_v3 = path_props
+            .get(POSITION)
+            .expect("POSITION should map to a path property");
+
+        // pointers should be to the same underlying canonical field (addresses equal)
+        assert!(
+            std::ptr::eq(p_by_v3, p_by_v2),
+            "V2_POSITION and POSITION should resolve to the same path property"
+        );
+    }
+
+    #[test]
+    fn test_last_updated() {
+        let mut props = PropertiesMap::default();
+
+        let time = props.dissolve.last_updated;
+        assert!(
+            time.elapsed().is_ok(),
+            "last_updated should be a valid SystemTime"
+        );
+
+        // Set dissolve to an initial value
+        props.dissolve.set_value(Some(BaseValue::from(0.1_f32)));
+        let first = props
+            .dissolve
+            .get_value()
+            .expect("first value present")
+            .as_float()
+            .expect("first is float");
+        assert!(
+            props.dissolve.last_updated.duration_since(time).is_ok(),
+            "last_updated should be a valid SystemTime after setting value"
+        );
+        assert!(
+            props.dissolve.last_updated.duration_since(time).unwrap() > std::time::Duration::from_millis(0),
+            "last_updated should be a valid SystemTime after setting value"
+        );
+
+        // Update dissolve to a new value
+        props.dissolve.set_value(Some(BaseValue::from(0.2_f32)));
+        let second = props
+            .dissolve
+            .get_value()
+            .expect("second value present")
+            .as_float()
+            .expect("second is float");
+
+        // Ensure the value actually changed (i.e., it was "updated")
+        assert!(
+            (second - first).abs() > 1e-6,
+            "dissolve should have been updated to a new value"
+        );
+    }
+}
