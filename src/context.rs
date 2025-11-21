@@ -8,6 +8,7 @@ use crate::{
     point_definition::{PointDefinition, base_point_definition::BasePointDefinition},
 };
 
+/// Context that holds tracks, point definitions, and coroutine manager.
 pub struct TracksContext<'a> {
     // we use an Rc here so vec reallocs don't break the track pointers
     // though we could also use a linkedlist

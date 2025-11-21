@@ -67,6 +67,9 @@ typedef enum JsonValueType {
   Array,
 } JsonValueType;
 
+/**
+ * An enumeration of common property names used in Tracks.
+ */
 enum PropertyNames
 #ifdef __cplusplus
   : uint32_t
@@ -102,8 +105,21 @@ typedef enum WrapBaseValueType {
 
 typedef struct BaseFFIProviderValues BaseFFIProviderValues;
 
+/**
+ * Point definitions are used to describe what happens over the course of an animation,
+ * they are used slightly differently for different properties.
+ * They consist of a collection of points over time.
+ */
 typedef struct BasePointDefinition BasePointDefinition;
 
+/**
+ * Context for base value providers
+ * Holds all the base values that can be accessed
+ * by base value providers
+ *
+ * This context is passed to the value providers
+ * to get the current base values
+ */
 typedef struct BaseProviderContext BaseProviderContext;
 
 typedef struct CoroutineManager CoroutineManager;
@@ -112,12 +128,22 @@ typedef struct EventData EventData;
 
 typedef struct FloatPointDefinition FloatPointDefinition;
 
+/**
+ * A structure to manage interpolation between two point definitions over time.
+ */
 typedef struct PointDefinitionInterpolation PointDefinitionInterpolation;
 
 typedef struct QuaternionPointDefinition QuaternionPointDefinition;
 
+/**
+ * A Track represents a collection of properties and path properties associated with game objects.
+ * It allows registering, retrieving, and managing properties and game objects.
+ */
 typedef struct Track Track;
 
+/**
+ * Context that holds tracks, point definitions, and coroutine manager.
+ */
 typedef struct TracksContext TracksContext;
 
 typedef struct ValueProperty ValueProperty;
@@ -125,6 +151,10 @@ typedef struct ValueProperty ValueProperty;
 typedef struct Vector3PointDefinition Vector3PointDefinition;
 
 typedef struct Vector4PointDefinition Vector4PointDefinition;
+
+typedef struct TrackKeyFFI {
+  uint64_t _0;
+} TrackKeyFFI;
 
 typedef struct PointDefinitionInterpolation PathProperty;
 
@@ -150,8 +180,8 @@ typedef struct CEventData {
   uint32_t repeat;
   float start_time;
   struct CEventType event_type;
-  struct Track *track_ptr;
-  const struct BasePointDefinition *point_data_ptr;
+  struct TrackKeyFFI track_key;
+  struct BasePointDefinition *point_data_ptr;
 } CEventData;
 
 typedef struct JsonArray {
@@ -176,11 +206,6 @@ typedef struct WrappedValues {
 } WrappedValues;
 
 typedef struct WrappedValues (*BaseFFIProvider)(const struct BaseProviderContext*, void*);
-
-typedef struct FloatInterpolationResult {
-  float value;
-  bool is_last;
-} FloatInterpolationResult;
 
 typedef struct WrapVec3 {
   float x;
@@ -213,6 +238,11 @@ typedef struct WrapBaseValue {
   enum WrapBaseValueType ty;
   union WrapBaseValueUnion value;
 } WrapBaseValue;
+
+typedef struct FloatInterpolationResult {
+  float value;
+  bool is_last;
+} FloatInterpolationResult;
 
 typedef struct Vector3InterpolationResult {
   struct WrapVec3 value;
@@ -297,7 +327,7 @@ void tracks_context_destroy(struct TracksContext *context);
  * Consumes the track and moves
  * it into the context. Returns a const pointer to the track.
  */
-const struct Track *tracks_context_add_track(struct TracksContext *context, struct Track *track);
+struct TrackKeyFFI tracks_context_add_track(struct TracksContext *context, struct Track *track);
 
 /**
  * Consumes the point definition and moves it into the context.
@@ -313,9 +343,9 @@ const struct BasePointDefinition *tracks_context_get_point_definition(struct Tra
                                                                       const char *name,
                                                                       enum WrapBaseValueType ty);
 
-struct Track *tracks_context_get_track_by_name(struct TracksContext *context, const char *name);
+struct TrackKeyFFI tracks_context_get_track_key(struct TracksContext *context, const char *name);
 
-struct Track *tracks_context_get_track(struct TracksContext *context, uintptr_t index);
+struct Track *tracks_context_get_track(struct TracksContext *context, struct TrackKeyFFI index);
 
 struct CoroutineManager *tracks_context_get_coroutine_manager(struct TracksContext *context);
 
@@ -401,6 +431,27 @@ void tracks_set_base_provider(struct BaseProviderContext *context,
                               bool quat);
 
 /**
+ *BASE POINT DEFINITION
+ */
+struct BasePointDefinition *tracks_make_base_point_definition(const struct FFIJsonValue *json,
+                                                              enum WrapBaseValueType ty,
+                                                              struct BaseProviderContext *context);
+
+/**
+ *BASE POINT DEFINITION
+ */
+void base_point_definition_free(struct BasePointDefinition *point_definition);
+
+struct WrapBaseValue tracks_interpolate_base_point_definition(const struct BasePointDefinition *point_definition,
+                                                              float time,
+                                                              bool *is_last_out,
+                                                              struct BaseProviderContext *context);
+
+uintptr_t tracks_base_point_definition_count(const struct BasePointDefinition *point_definition);
+
+bool tracks_base_point_definition_has_base_provider(const struct BasePointDefinition *point_definition);
+
+/**
  *FLOAT POINT DEFINITION
  */
 const struct FloatPointDefinition *tracks_make_float_point_definition(const struct FFIJsonValue *json,
@@ -413,22 +464,6 @@ struct FloatInterpolationResult tracks_interpolate_float(const struct FloatPoint
 uintptr_t tracks_float_count(const struct FloatPointDefinition *point_definition);
 
 bool tracks_float_has_base_provider(const struct FloatPointDefinition *point_definition);
-
-/**
- *BASE POINT DEFINITION
- */
-struct BasePointDefinition *tracks_make_base_point_definition(const struct FFIJsonValue *json,
-                                                              enum WrapBaseValueType ty,
-                                                              struct BaseProviderContext *context);
-
-struct WrapBaseValue tracks_interpolate_base_point_definition(const struct BasePointDefinition *point_definition,
-                                                              float time,
-                                                              bool *is_last_out,
-                                                              struct BaseProviderContext *context);
-
-uintptr_t tracks_base_point_definition_count(const struct BasePointDefinition *point_definition);
-
-bool tracks_base_point_definition_has_base_provider(const struct BasePointDefinition *point_definition);
 
 /**
  *VECTOR3 POINT DEFINITION
@@ -476,7 +511,7 @@ PathProperty *path_property_create(void);
 
 void path_property_finish(PathProperty *ptr);
 
-void path_property_init(PathProperty *ptr, const struct BasePointDefinition *new_point_data);
+void path_property_init(PathProperty *ptr, struct BasePointDefinition *new_point_data);
 
 /**
  * Consumes the path property and frees its memory.
