@@ -55,7 +55,7 @@ impl From<ValueProperty> for CValueProperty {
     }
 }
 #[unsafe(no_mangle)]
-pub extern "C" fn path_property_create() -> *mut PathProperty<'static> {
+pub extern "C" fn path_property_create() -> *mut PathProperty {
     Box::into_raw(Box::new(PathProperty::default()))
 }
 
@@ -72,14 +72,20 @@ pub unsafe extern "C" fn path_property_finish(ptr: *mut PathProperty) {
 pub unsafe extern "C" fn path_property_init(
     ptr: *mut PathProperty,
     // nullable
-    new_point_data: *const base_point_definition::BasePointDefinition,
+    new_point_data: *mut base_point_definition::BasePointDefinition,
 ) {
     if ptr.is_null() {
         return;
     }
     unsafe {
         let inner = &mut *ptr;
-        inner.init(new_point_data.as_ref());
+        let point_data = if new_point_data.is_null() {
+            None
+        } else {
+            Some(std::mem::take(&mut *new_point_data))
+        };
+
+        inner.init(point_data);
     }
 }
 

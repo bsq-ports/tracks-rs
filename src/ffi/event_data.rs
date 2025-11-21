@@ -2,22 +2,22 @@ use std::ptr;
 
 use crate::animation::events::{EventData, EventType};
 use crate::animation::property::{PathProperty, ValueProperty};
-use crate::animation::tracks::Track;
 use crate::easings::functions::Functions;
+use crate::ffi::track::TrackKeyFFI;
 use crate::point_definition::base_point_definition::BasePointDefinition;
 
 // Type-safe enum for event types
 #[repr(C)]
-pub struct CEventData<'a> {
+pub struct CEventData {
     pub raw_duration: f32,
     pub easing: Functions,
     pub repeat: u32,
     // song time or beatmap time?
     pub start_time: f32,
 
-    pub event_type: CEventType<'a>,
-    pub track_ptr: *mut Track<'a>,
-    pub point_data_ptr: *const BasePointDefinition,
+    pub event_type: CEventType,
+    pub track_key: TrackKeyFFI,
+    pub point_data_ptr: *mut BasePointDefinition,
 }
 
 #[repr(u32)]
@@ -26,16 +26,16 @@ pub enum CEventTypeEnum {
     AssignPathAnimation = 1,
 }
 #[repr(C)]
-pub union CEventTypeData<'a> {
+pub union CEventTypeData {
     /// AnimateTrack(ValueProperty)
     pub property: *mut ValueProperty,
     /// AssignPathAnimation(PathProperty)
-    pub path_property: *mut PathProperty<'a>,
+    pub path_property: *mut PathProperty,
 }
 #[repr(C)]
-pub struct CEventType<'a> {
+pub struct CEventType {
     pub ty: CEventTypeEnum,
-    pub data: CEventTypeData<'a>,
+    pub data: CEventTypeData,
 }
 
 /// Converts a CEventData into a Rust EventData
@@ -43,7 +43,7 @@ pub struct CEventType<'a> {
 /// Returns a raw pointer to the Rust EventData
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn event_data_to_rust<'a>(
-    c_event_data: *const CEventData<'a>,
+    c_event_data: *const CEventData,
 ) -> *mut EventData<'a> {
     if c_event_data.is_null() {
         return ptr::null_mut();
@@ -61,15 +61,19 @@ pub unsafe extern "C" fn event_data_to_rust<'a>(
                 EventType::AssignPathAnimation(path_property)
             }
         };
-        let track = &mut *c_event_data.track_ptr;
-        let point_data = c_event_data.point_data_ptr.as_ref();
+        let track_key = c_event_data.track_key;
+        let point_data = if c_event_data.point_data_ptr.is_null() {
+            None
+        } else {
+            Some(std::mem::take(&mut *c_event_data.point_data_ptr))
+        };
 
         let event_data = EventData {
             raw_duration: c_event_data.raw_duration,
             easing: c_event_data.easing,
             repeat: c_event_data.repeat,
             start_time: c_event_data.start_time,
-            track,
+            track_key: track_key.into(),
             point_data,
             property: event_type,
         };

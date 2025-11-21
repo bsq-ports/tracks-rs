@@ -20,6 +20,8 @@ pub enum ModifierValues<T> {
     Dynamic(Vec<ValueProvider>),
 }
 
+/// Modifiers are added at the end of points to allow you to do basic arithmetic on points.
+///  How these modifiers interact can be defined using operations, all of which are done componentwise.
 #[derive(Debug)]
 pub enum Modifier {
     Float(FloatModifier),

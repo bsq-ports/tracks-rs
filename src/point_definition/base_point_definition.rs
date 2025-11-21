@@ -17,6 +17,9 @@ use super::{
     vector4_point_definition,
 };
 
+/// Point definitions are used to describe what happens over the course of an animation,
+/// they are used slightly differently for different properties.
+/// They consist of a collection of points over time.
 #[derive(Debug)]
 pub enum BasePointDefinition {
     Float(float_point_definition::FloatPointDefinition),
@@ -194,6 +197,12 @@ impl PointDefinition for BasePointDefinition {
             BasePointDefinition::Vector4(_) => crate::ffi::types::WrapBaseValueType::Vec4,
             BasePointDefinition::Quaternion(_) => crate::ffi::types::WrapBaseValueType::Quat,
         }
+    }
+}
+
+impl Default for BasePointDefinition {
+    fn default() -> Self {
+        BasePointDefinition::Float(float_point_definition::FloatPointDefinition::default())
     }
 }
 

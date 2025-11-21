@@ -1,12 +1,10 @@
 use crate::{
+    animation::tracks_holder::TrackKey,
     easings::functions::Functions,
     point_definition::base_point_definition::{self},
 };
 
-use super::{
-    property::{PathProperty, ValueProperty},
-    tracks::Track,
-};
+use super::property::{PathProperty, ValueProperty};
 
 pub struct EventData<'a> {
     pub raw_duration: f32,
@@ -16,14 +14,14 @@ pub struct EventData<'a> {
     pub start_time: f32,
 
     pub property: EventType<'a>,
-    pub track: &'a mut Track<'a>,
-    pub point_data: Option<&'a base_point_definition::BasePointDefinition>,
+    pub track_key: TrackKey,
+    pub point_data: Option<base_point_definition::BasePointDefinition>,
 }
 
 #[derive(Debug)]
 pub enum EventType<'a> {
     AnimateTrack(&'a mut ValueProperty),
-    AssignPathAnimation(&'a mut PathProperty<'a>),
+    AssignPathAnimation(&'a mut PathProperty),
 }
 
 impl PartialEq for EventType<'_> {

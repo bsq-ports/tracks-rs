@@ -14,7 +14,9 @@ pub struct StaticValues {
 
 impl StaticValues {
     pub fn new(values: &[f32]) -> Self {
-        Self { values: SmallVec::from_slice(values) }
+        Self {
+            values: SmallVec::from_slice(values),
+        }
     }
 }
 

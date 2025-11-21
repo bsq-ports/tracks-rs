@@ -41,6 +41,7 @@ pub const V2_FOG_OFFSET: &str = "_fogOffset";
 pub const V2_HEIGHT_FOG_START_Y: &str = "_heightFogStartY";
 pub const V2_HEIGHT_FOG_HEIGHT: &str = "_heightFogHeight";
 
+/// An enumeration of common property names used in Tracks.
 #[repr(u32)]
 pub enum PropertyNames {
     Position,
@@ -60,22 +61,26 @@ pub enum PropertyNames {
     HeightFogHeight,
 }
 
-#[derive(Clone)]
-pub struct PathPropertiesMap<'a> {
-    pub path_properties: ahash::AHashMap<String, PathProperty<'a>>,
+/// A PathPropertiesMap holds a collection of PathProperties associated with a Track.
+/// Fast access to common path properties is provided via dedicated fields.
+#[derive()]
+pub struct PathPropertiesMap {
+    pub path_properties: ahash::AHashMap<String, PathProperty>,
 
-    pub position: PathProperty<'a>,
-    pub rotation: PathProperty<'a>,
-    pub scale: PathProperty<'a>,
-    pub local_rotation: PathProperty<'a>,
-    pub local_position: PathProperty<'a>,
-    pub definite_position: PathProperty<'a>,
-    pub dissolve: PathProperty<'a>,
-    pub dissolve_arrow: PathProperty<'a>,
-    pub cuttable: PathProperty<'a>,
-    pub color: PathProperty<'a>,
+    pub position: PathProperty,
+    pub rotation: PathProperty,
+    pub scale: PathProperty,
+    pub local_rotation: PathProperty,
+    pub local_position: PathProperty,
+    pub definite_position: PathProperty,
+    pub dissolve: PathProperty,
+    pub dissolve_arrow: PathProperty,
+    pub cuttable: PathProperty,
+    pub color: PathProperty,
 }
 
+/// A PropertiesMap holds a collection of ValueProperties associated with a Track.
+/// Fast access to common properties is provided via dedicated fields.
 #[derive(Clone)]
 pub struct PropertiesMap {
     pub properties: ahash::AHashMap<String, ValueProperty>,
@@ -101,12 +106,15 @@ pub struct PropertiesMap {
     pub height_fog_height: ValueProperty,  // PropertyType::linear
 }
 
+/// A GameObjectCallback is a function that gets called when a game object is added or removed from a Track.
 pub trait GameObjectCallback = Fn(GameObject, bool);
 
-#[derive(Clone)]
-pub struct Track<'a> {
+/// A Track represents a collection of properties and path properties associated with game objects.
+/// It allows registering, retrieving, and managing properties and game objects.
+#[derive()]
+pub struct Track {
     pub properties: PropertiesMap,
-    pub path_properties: PathPropertiesMap<'a>,
+    pub path_properties: PathPropertiesMap,
 
     pub name: String,
 
@@ -115,12 +123,12 @@ pub struct Track<'a> {
     pub game_object_callbacks: Vec<Rc<dyn GameObjectCallback>>,
 }
 
-impl<'a> Track<'a> {
+impl Track {
     pub fn register_property(&mut self, id: String, property: ValueProperty) {
         self.properties.insert(id, property);
     }
 
-    pub fn register_path_property(&mut self, id: String, property: PathProperty<'a>) {
+    pub fn register_path_property(&mut self, id: String, property: PathProperty) {
         self.path_properties.insert(id, property);
     }
 
@@ -146,7 +154,7 @@ impl<'a> Track<'a> {
     pub fn get_property(&self, id: &str) -> Option<&ValueProperty> {
         self.properties.get(id)
     }
-    pub fn get_path_property(&self, id: &str) -> Option<&PathProperty<'a>> {
+    pub fn get_path_property(&self, id: &str) -> Option<&PathProperty> {
         self.path_properties.get(id)
     }
 
@@ -154,7 +162,7 @@ impl<'a> Track<'a> {
         self.properties.get_mut(id)
     }
 
-    pub fn get_mut_path_property(&mut self, id: &str) -> Option<&mut PathProperty<'a>> {
+    pub fn get_mut_path_property(&mut self, id: &str) -> Option<&mut PathProperty> {
         self.path_properties.get_mut(id)
     }
 
@@ -206,7 +214,7 @@ impl Default for PropertiesMap {
     }
 }
 
-impl Default for PathPropertiesMap<'_> {
+impl Default for PathPropertiesMap {
     fn default() -> Self {
         Self {
             path_properties: Default::default(),
@@ -224,7 +232,7 @@ impl Default for PathPropertiesMap<'_> {
     }
 }
 
-impl Default for Track<'_> {
+impl Default for Track {
     fn default() -> Self {
         Self {
             properties: Default::default(),
@@ -301,8 +309,8 @@ impl PropertiesMap {
     }
 }
 
-impl<'a> PathPropertiesMap<'a> {
-    pub fn insert(&mut self, id: String, property: PathProperty<'a>) {
+impl PathPropertiesMap {
+    pub fn insert(&mut self, id: String, property: PathProperty) {
         match self.get_mut(&id) {
             Some(prop) => *prop = property,
             None => {
@@ -311,7 +319,7 @@ impl<'a> PathPropertiesMap<'a> {
         }
     }
 
-    pub fn get_property_by_name(&self, name: PropertyNames) -> Option<&PathProperty<'a>> {
+    pub fn get_property_by_name(&self, name: PropertyNames) -> Option<&PathProperty> {
         match name {
             PropertyNames::Position => Some(&self.position),
             PropertyNames::Rotation => Some(&self.rotation),
@@ -328,10 +336,7 @@ impl<'a> PathPropertiesMap<'a> {
         }
     }
 
-    pub fn get_property_by_name_mut(
-        &mut self,
-        name: PropertyNames,
-    ) -> Option<&mut PathProperty<'a>> {
+    pub fn get_property_by_name_mut(&mut self, name: PropertyNames) -> Option<&mut PathProperty> {
         match name {
             PropertyNames::Position => Some(&mut self.position),
             PropertyNames::Rotation => Some(&mut self.rotation),
@@ -347,14 +352,14 @@ impl<'a> PathPropertiesMap<'a> {
         }
     }
 
-    pub fn get(&self, id: &str) -> Option<&PathProperty<'a>> {
+    pub fn get(&self, id: &str) -> Option<&PathProperty> {
         match PropertyNames::from_str(id) {
             Ok(name) => self.get_property_by_name(name),
             _ => self.path_properties.get(id),
         }
     }
 
-    pub fn get_mut(&mut self, id: &str) -> Option<&mut PathProperty<'a>> {
+    pub fn get_mut(&mut self, id: &str) -> Option<&mut PathProperty> {
         match PropertyNames::from_str(id) {
             Ok(name) => self.get_property_by_name_mut(name),
             _ => self.path_properties.get_mut(id),
@@ -564,7 +569,8 @@ mod tests {
             "last_updated should be a valid SystemTime after setting value"
         );
         assert!(
-            props.dissolve.last_updated.duration_since(time).unwrap() > std::time::Duration::from_millis(0),
+            props.dissolve.last_updated.duration_since(time).unwrap()
+                > std::time::Duration::from_millis(0),
             "last_updated should be a valid SystemTime after setting value"
         );
 

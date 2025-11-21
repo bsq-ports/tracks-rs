@@ -5,17 +5,18 @@ use crate::{
 
 use super::{PointDefinition, base_point_definition::BasePointDefinition};
 
-#[derive(Default, Clone, Debug)]
-pub struct PointDefinitionInterpolation<'a> {
+/// A structure to manage interpolation between two point definitions over time.
+#[derive(Default, Debug)]
+pub struct PointDefinitionInterpolation {
     pub time: f32,
     // use refs here to avoid mass cloning
-    pub prev_point: Option<&'a BasePointDefinition>,
-    pub point: Option<&'a BasePointDefinition>,
+    pub prev_point: Option<BasePointDefinition>,
+    pub point: Option<BasePointDefinition>,
     ty: WrapBaseValueType,
 }
 
-impl<'a> PointDefinitionInterpolation<'a> {
-    pub fn new(point: Option<&'a BasePointDefinition>, ty: WrapBaseValueType) -> Self {
+impl PointDefinitionInterpolation {
+    pub fn new(point: Option<BasePointDefinition>, ty: WrapBaseValueType) -> Self {
         PointDefinitionInterpolation {
             time: 0.0,
             prev_point: None,
@@ -41,7 +42,7 @@ impl<'a> PointDefinitionInterpolation<'a> {
         self.prev_point = None;
     }
 
-    pub fn init(&mut self, new_point_data: Option<&'a BasePointDefinition>) {
+    pub fn init(&mut self, new_point_data: Option<BasePointDefinition>) {
         self.time = 0.0;
         self.prev_point = self.point.take();
         self.point = new_point_data;
@@ -56,6 +57,8 @@ impl<'a> PointDefinitionInterpolation<'a> {
         }
     }
 
+    /// Interpolate between the previous and current point definitions at the given time.
+    /// Returns None if there are no points to interpolate.
     pub fn interpolate(&self, time: f32, context: &BaseProviderContext) -> Option<BaseValue> {
         match (&self.prev_point, &self.point) {
             (Some(prev_point_data), Some(point_data)) => {
@@ -132,9 +135,8 @@ mod tests {
         let next_bp =
             crate::point_definition::base_point_definition::BasePointDefinition::Float(next);
 
-        let mut interp =
-            PointDefinitionInterpolation::new(Some(&next_bp), WrapBaseValueType::Float);
-        interp.prev_point = Some(&prev_bp);
+        let mut interp = PointDefinitionInterpolation::new(Some(next_bp), WrapBaseValueType::Float);
+        interp.prev_point = Some(prev_bp);
         interp.time = 0.5;
 
         let ctx = BaseProviderContext::new();
@@ -194,8 +196,8 @@ mod tests {
             crate::point_definition::base_point_definition::BasePointDefinition::Vector3(next_v3);
 
         let mut interp_v3 =
-            PointDefinitionInterpolation::new(Some(&next_bp_v3), WrapBaseValueType::Vec3);
-        interp_v3.prev_point = Some(&prev_bp_v3);
+            PointDefinitionInterpolation::new(Some(next_bp_v3), WrapBaseValueType::Vec3);
+        interp_v3.prev_point = Some(prev_bp_v3);
         interp_v3.time = 0.5;
 
         let ctx = BaseProviderContext::new();
@@ -251,8 +253,8 @@ mod tests {
             crate::point_definition::base_point_definition::BasePointDefinition::Vector4(next_v4);
 
         let mut interp_v4 =
-            PointDefinitionInterpolation::new(Some(&next_bp_v4), WrapBaseValueType::Vec4);
-        interp_v4.prev_point = Some(&prev_bp_v4);
+            PointDefinitionInterpolation::new(Some(next_bp_v4), WrapBaseValueType::Vec4);
+        interp_v4.prev_point = Some(prev_bp_v4);
         interp_v4.time = 0.5;
 
         let result_v4 = interp_v4.interpolate(0.25, &ctx).unwrap();
@@ -292,8 +294,8 @@ mod tests {
             crate::point_definition::base_point_definition::BasePointDefinition::Quaternion(next_q);
 
         let mut interp_q =
-            PointDefinitionInterpolation::new(Some(&next_bp_q), WrapBaseValueType::Quat);
-        interp_q.prev_point = Some(&prev_bp_q);
+            PointDefinitionInterpolation::new(Some(next_bp_q), WrapBaseValueType::Quat);
+        interp_q.prev_point = Some(prev_bp_q);
         interp_q.time = 0.25;
 
         let ctx = BaseProviderContext::new();

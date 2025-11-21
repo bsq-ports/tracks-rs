@@ -1,8 +1,8 @@
 use core::panic;
-use std::{cell::RefCell, rc::Rc};
+use std::rc::Rc;
 
 use crate::{
-    animation::{coroutine_manager::CoroutineManager, tracks::Track},
+    animation::{coroutine_manager::CoroutineManager, tracks_holder::TracksHolder},
     base_provider_context::BaseProviderContext,
     ffi::types::WrapBaseValueType,
     point_definition::{PointDefinition, base_point_definition::BasePointDefinition},
@@ -12,8 +12,9 @@ pub struct TracksContext<'a> {
     // we use an Rc here so vec reallocs don't break the track pointers
     // though we could also use a linkedlist
 
-    // TODO: Removable tracks
-    tracks: Vec<Rc<RefCell<Track<'a>>>>,
+    // Using SlotMap as it provides stable keys and efficient storage
+    // very fast lookups vs HashMap and avoids fragmentation issues of Vec
+    pub tracks: TracksHolder,
     // TODO: Removable point definitions?
     point_definitions: ahash::AHashMap<(String, WrapBaseValueType), Rc<BasePointDefinition>>,
     pub coroutine_manager: CoroutineManager<'a>,
@@ -21,20 +22,6 @@ pub struct TracksContext<'a> {
 }
 
 impl<'a> TracksContext<'a> {
-    pub fn add_track(&mut self, track: Rc<RefCell<Track<'a>>>) {
-        if self
-            .tracks
-            .iter()
-            .any(|t| t.borrow().name == track.borrow().name)
-        {
-            // If the track already exists, we can just return it
-            // This avoids unnecessary duplication of tracks
-            panic!("Track with name '{}' already exists.", track.borrow().name);
-        }
-
-        self.tracks.push(track);
-    }
-
     pub fn add_point_definition(&mut self, id: String, point_definition: Rc<BasePointDefinition>) {
         if self
             .point_definitions
@@ -63,17 +50,6 @@ impl<'a> TracksContext<'a> {
             .cloned()
     }
 
-    pub fn get_track(&mut self, index: usize) -> Option<Rc<RefCell<Track<'a>>>> {
-        self.tracks.get_mut(index).cloned()
-    }
-
-    pub fn get_track_by_name(&mut self, name: &str) -> Option<Rc<RefCell<Track<'a>>>> {
-        self.tracks
-            .iter_mut()
-            .find(|track: &&mut Rc<RefCell<Track<'a>>>| track.borrow().name == name)
-            .cloned()
-    }
-
     pub fn get_base_provider_context(&self) -> &BaseProviderContext {
         &self.base_providers
     }
@@ -85,7 +61,7 @@ impl<'a> TracksContext<'a> {
 impl<'a> Default for TracksContext<'a> {
     fn default() -> Self {
         TracksContext {
-            tracks: Vec::new(),
+            tracks: Default::default(),
             point_definitions: Default::default(),
             coroutine_manager: CoroutineManager::default(),
             base_providers: BaseProviderContext::new(),

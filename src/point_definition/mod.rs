@@ -27,6 +27,10 @@ pub enum GroupType {
 }
 
 // The combined PointDefinition trait (acting as both BasePointDefinition and the templated PointDefinition<T>)
+
+/// Point definitions are used to describe what happens over the course of an animation,
+/// they are used slightly differently for different properties.
+/// They consist of a collection of points over time.
 pub trait PointDefinition {
     type Value: Default + Clone;
 

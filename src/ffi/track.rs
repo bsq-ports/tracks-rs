@@ -1,7 +1,10 @@
+use slotmap::{Key, KeyData};
+
 use crate::animation::{
     game_object::GameObject,
     property::{PathProperty, ValueProperty},
-    tracks::{GameObjectCallback, PropertyNames, Track},
+    track::{PropertyNames, Track},
+    tracks_holder::TrackKey,
 };
 use std::{
     ffi::{CStr, CString, c_char},
@@ -12,6 +15,28 @@ use std::{
 // C-compatible callback function type for game object modifications
 // Parameters: game_object, was_added (true for added, false for removed), user_data
 pub type CGameObjectCallback = extern "C" fn(GameObject, bool, *mut std::ffi::c_void);
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct TrackKeyFFI(u64);
+
+impl TrackKeyFFI {
+    pub fn null() -> Self {
+        TrackKey::null().into()
+    }
+}
+
+impl From<TrackKeyFFI> for TrackKey {
+    fn from(ffi_key: TrackKeyFFI) -> Self {
+        TrackKey::from(KeyData::from_ffi(ffi_key.0))
+    }
+}
+
+impl From<TrackKey> for TrackKeyFFI {
+    fn from(key: TrackKey) -> Self {
+        TrackKeyFFI(key.data().as_ffi())
+    }
+}
 
 #[repr(C)]
 pub struct CPropertiesMap {
@@ -38,17 +63,17 @@ pub struct CPropertiesMap {
 }
 
 #[repr(C)]
-pub struct CPathPropertiesMap<'a> {
-    pub position: *mut PathProperty<'a>,
-    pub rotation: *mut PathProperty<'a>,
-    pub scale: *mut PathProperty<'a>,
-    pub local_rotation: *mut PathProperty<'a>,
-    pub local_position: *mut PathProperty<'a>,
-    pub definite_position: *mut PathProperty<'a>,
-    pub dissolve: *mut PathProperty<'a>,
-    pub dissolve_arrow: *mut PathProperty<'a>,
-    pub cuttable: *mut PathProperty<'a>,
-    pub color: *mut PathProperty<'a>,
+pub struct CPathPropertiesMap {
+    pub position: *mut PathProperty,
+    pub rotation: *mut PathProperty,
+    pub scale: *mut PathProperty,
+    pub local_rotation: *mut PathProperty,
+    pub local_position: *mut PathProperty,
+    pub definite_position: *mut PathProperty,
+    pub dissolve: *mut PathProperty,
+    pub dissolve_arrow: *mut PathProperty,
+    pub cuttable: *mut PathProperty,
+    pub color: *mut PathProperty,
 }
 
 impl Default for CPropertiesMap {
@@ -72,7 +97,7 @@ impl Default for CPropertiesMap {
     }
 }
 
-impl Default for CPathPropertiesMap<'_> {
+impl Default for CPathPropertiesMap {
     fn default() -> Self {
         CPathPropertiesMap {
             position: ptr::null_mut(),
@@ -90,7 +115,7 @@ impl Default for CPathPropertiesMap<'_> {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn track_create() -> *mut Track<'static> {
+pub extern "C" fn track_create() -> *mut Track {
     let track = Track::default();
     Box::into_raw(Box::new(track))
 }
@@ -115,7 +140,6 @@ pub unsafe extern "C" fn track_reset(track: *mut Track) {
         track_ref.reset();
     }
 }
-
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn track_set_name(track: *mut Track, name: *const c_char) {
@@ -263,9 +287,9 @@ pub unsafe extern "C" fn track_get_path_property_by_name(
 // register path property
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn track_register_path_property<'a>(
-    track: *mut Track<'a>,
+    track: *mut Track,
     id: *const c_char,
-    property: *mut PathProperty<'a>,
+    property: *mut PathProperty,
 ) {
     if track.is_null() || id.is_null() || property.is_null() {
         return;
@@ -274,7 +298,8 @@ pub unsafe extern "C" fn track_register_path_property<'a>(
     unsafe {
         let c_str = CStr::from_ptr(id);
         if let Ok(str_id) = c_str.to_str() {
-            let property_clone = (*property).clone();
+            let property_clone = std::mem::take(&mut *property);
+
             (*track).register_path_property(str_id.to_string(), property_clone);
         }
     }
@@ -327,9 +352,7 @@ pub unsafe extern "C" fn track_get_properties_map(track: *mut Track) -> CPropert
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn track_get_path_properties_map(
-    track: *mut Track<'_>,
-) -> CPathPropertiesMap<'_> {
+pub unsafe extern "C" fn track_get_path_properties_map(track: *mut Track) -> CPathPropertiesMap {
     if track.is_null() {
         return Default::default();
     }

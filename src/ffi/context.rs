@@ -1,11 +1,12 @@
+use slotmap::Key;
+
 use crate::animation::coroutine_manager::CoroutineManager;
-use crate::animation::tracks::Track;
+use crate::animation::track::Track;
 use crate::base_provider_context::BaseProviderContext;
 use crate::context::TracksContext;
+use crate::ffi::track::TrackKeyFFI;
 use crate::point_definition::base_point_definition::{self};
-use std::cell::RefCell;
 use std::ffi::CStr;
-use std::ops::{Deref, DerefMut};
 use std::os::raw::c_char;
 use std::ptr;
 use std::rc::Rc;
@@ -32,21 +33,17 @@ pub unsafe extern "C" fn tracks_context_destroy(context: *mut TracksContext) {
 /// Consumes the track and moves
 /// it into the context. Returns a const pointer to the track.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn tracks_context_add_track<'a>(
-    context: *mut TracksContext<'a>,
-    track: *mut Track<'a>,
-) -> *const Track<'a> {
+pub unsafe extern "C" fn tracks_context_add_track(
+    context: *mut TracksContext,
+    track: *mut Track,
+) -> TrackKeyFFI {
     if context.is_null() || track.is_null() {
-        return ptr::null();
+        return TrackKeyFFI::null();
     }
 
     unsafe {
         let track_obj = Box::from_raw(track);
-        let rc = Rc::new(RefCell::new(*track_obj));
-        (*context).add_track(rc.clone());
-        // Don't drop the Box here, ownership is transferred to the context
-
-        rc.borrow().deref()
+        (*context).tracks.add_track(*track_obj).into()
     }
 }
 
@@ -107,19 +104,19 @@ pub unsafe extern "C" fn tracks_context_get_point_definition(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn tracks_context_get_track_by_name(
+pub unsafe extern "C" fn tracks_context_get_track_key(
     context: *mut TracksContext<'_>,
     name: *const c_char,
-) -> *mut Track<'_> {
+) -> TrackKeyFFI {
     if context.is_null() || name.is_null() {
-        return ptr::null_mut();
+        return TrackKeyFFI::null();
     }
 
     unsafe {
         let name_str = CStr::from_ptr(name).to_str().unwrap_or_default();
-        match (*context).get_track_by_name(name_str) {
-            Some(track) => track.borrow_mut().deref_mut() as *mut _,
-            None => ptr::null_mut(),
+        match (*context).tracks.get_track_key(name_str) {
+            Some(key) => key.into(),
+            None => TrackKeyFFI::null(),
         }
     }
 }
@@ -127,15 +124,15 @@ pub unsafe extern "C" fn tracks_context_get_track_by_name(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_context_get_track(
     context: *mut TracksContext<'_>,
-    index: usize,
-) -> *mut Track<'_> {
+    index: TrackKeyFFI,
+) -> *mut Track {
     if context.is_null() {
         return ptr::null_mut();
     }
 
     unsafe {
-        match (*context).get_track(index) {
-            Some(track) => track.borrow_mut().deref_mut() as *mut _,
+        match (*context).tracks.get_track_mut(index.into()) {
+            Some(track) => track as *mut _,
             None => ptr::null_mut(),
         }
     }

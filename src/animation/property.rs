@@ -19,7 +19,7 @@ pub struct ValueProperty {
     pub last_updated: SystemTime,
 }
 
-pub type PathProperty<'a> = PointDefinitionInterpolation<'a>;
+pub type PathProperty = PointDefinitionInterpolation;
 
 impl ValueProperty {
     pub fn new(value: Option<BaseValue>, ty: WrapBaseValueType) -> Self {
