@@ -44,6 +44,7 @@ itertools = "0.14"
 ahash = "0.8" # for hashmaps
 uuid = {version = "1", features = ["v4"] }
 log = "0.4"
+smallvec = "1.15"
 
 
 [build-dependencies]

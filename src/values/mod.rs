@@ -70,7 +70,7 @@ pub enum JsonPointValues {
 impl JsonPointValues {
     pub fn to_provider(self) -> ValueProvider {
         match self {
-            JsonPointValues::Static(v) => ValueProvider::Static(r#static::StaticValues::new(v)),
+            JsonPointValues::Static(v) => ValueProvider::Static(r#static::StaticValues::new(&v)),
             JsonPointValues::BaseProvider(v) => ValueProvider::BaseProvider(v),
         }
     }
@@ -127,5 +127,5 @@ fn close(result: &mut Vec<ValueProvider>, raw_values: Vec<&JsonValue>, open: usi
         .iter()
         .filter_map(|v| v.as_f64().map(|i| i as f32))
         .collect();
-    result.push(ValueProvider::Static(StaticValues { values }));
+    result.push(ValueProvider::Static(StaticValues::new(&values)));
 }
