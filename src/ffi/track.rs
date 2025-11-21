@@ -114,6 +114,12 @@ impl Default for CPathPropertiesMap {
     }
 }
 
+/// Create a new `Track` and return a raw pointer to it.
+///
+/// # Safety
+/// - The returned pointer is owned by the caller and must be freed with `track_destroy`.
+/// - The caller must not free the pointer by other means or use it after calling `track_destroy`.
+/// - This function is FFI-safe but the returned pointer is not thread-safe; use from the same thread unless synchronized.
 #[unsafe(no_mangle)]
 pub extern "C" fn track_create() -> *mut Track {
     let track = Track::default();
@@ -121,6 +127,11 @@ pub extern "C" fn track_create() -> *mut Track {
 }
 
 /// Consumes the track and frees its memory.
+/// Destroy a `Track` previously returned by `track_create`.
+///
+/// # Safety
+/// - `track` must be a pointer previously returned by `track_create` and not already freed.
+/// - Passing a null pointer is a no-op.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn track_destroy(track: *mut Track) {
     if !track.is_null() {
@@ -129,6 +140,11 @@ pub unsafe extern "C" fn track_destroy(track: *mut Track) {
         }
     }
 }
+/// Reset a track to its default state.
+///
+/// # Safety
+/// - `track` must be a valid, non-null pointer to a `Track`.
+/// - This function mutates the pointed-to `Track`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn track_reset(track: *mut Track) {
     if track.is_null() {
@@ -141,6 +157,12 @@ pub unsafe extern "C" fn track_reset(track: *mut Track) {
     }
 }
 
+/// Set the name of a track from a C string.
+///
+/// # Safety
+/// - `track` must be a valid, non-null pointer to a `Track`.
+/// - `name` must be a valid null-terminated C string pointer.
+/// - The function copies the string contents; the caller retains ownership of `name`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn track_set_name(track: *mut Track, name: *const c_char) {
     if track.is_null() || name.is_null() {
@@ -155,8 +177,11 @@ pub unsafe extern "C" fn track_set_name(track: *mut Track, name: *const c_char) 
     }
 }
 
-/// Returns the name of the track as a C string.
-/// This leaks memory
+/// Return the name of the track as a newly allocated C string.
+///
+/// # Safety
+/// - The returned pointer is owned by the caller and MUST be freed using `CString::from_raw` on the caller side when no longer needed.
+/// - The function may return null on error or if `track` is null.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn track_get_name(track: *const Track) -> *const c_char {
     if track.is_null() {
@@ -172,6 +197,11 @@ pub unsafe extern "C" fn track_get_name(track: *const Track) -> *const c_char {
     }
 }
 
+/// Register a `GameObject` with the track.
+///
+/// # Safety
+/// - `track` must be a valid, non-null pointer to a `Track`.
+/// - `game_object` is passed by value; ensure it is valid according to the `GameObject` ABI.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn track_register_game_object(track: *mut Track, game_object: GameObject) {
     if track.is_null() {
@@ -183,6 +213,11 @@ pub unsafe extern "C" fn track_register_game_object(track: *mut Track, game_obje
     }
 }
 
+/// Unregister a `GameObject` from the track.
+///
+/// # Safety
+/// - `track` must be a valid, non-null pointer to a `Track`.
+/// - `game_object` must be a `GameObject` compatible with the track's internal representation.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn track_unregister_game_object(track: *mut Track, game_object: GameObject) {
     if track.is_null() {
@@ -194,6 +229,12 @@ pub unsafe extern "C" fn track_unregister_game_object(track: *mut Track, game_ob
     }
 }
 
+/// Get a pointer to the track's `GameObject` array and write its length to `size`.
+///
+/// # Safety
+/// - `track` must be a valid, non-null pointer to a `Track`.
+/// - `size` must be a valid, non-null pointer to `usize` and will be written to.
+/// - The returned pointer is valid while the `Track` is alive and not mutated; do not hold it across mutations that can reallocate.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn track_get_game_objects(
     track: *const Track,
@@ -212,6 +253,12 @@ pub unsafe extern "C" fn track_get_game_objects(
     }
 }
 
+/// Register a value property with the given id on the track.
+///
+/// # Safety
+/// - `track` must be a valid, non-null pointer to a `Track`.
+/// - `id` must be a valid null-terminated C string.
+/// - `property` must be a valid pointer to a `ValueProperty`; the function clones the value.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn track_register_property(
     track: *mut Track,
@@ -231,6 +278,12 @@ pub unsafe extern "C" fn track_register_property(
     }
 }
 
+/// Get a mutable pointer to a registered `ValueProperty` by id.
+///
+/// # Safety
+/// - `track` must be a valid, non-null pointer to a `Track`.
+/// - `id` must be a valid null-terminated C string.
+/// - The returned pointer is valid while the property remains registered and the `Track` is not mutated in a way that invalidates it.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn track_get_property(
     track: *mut Track,
@@ -251,6 +304,11 @@ pub unsafe extern "C" fn track_get_property(
         }
     }
 }
+/// Get a mutable pointer to a predefined property by `PropertyNames`.
+///
+/// # Safety
+/// - `track` must be a valid, non-null pointer to a `Track`.
+/// - The returned pointer is valid while the property remains registered; do not hold it across mutating operations.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn track_get_property_by_name(
     track: *mut Track,
@@ -267,6 +325,10 @@ pub unsafe extern "C" fn track_get_property_by_name(
         None => ptr::null_mut(),
     }
 }
+/// Get a mutable pointer to a predefined path property by `PropertyNames`.
+///
+/// # Safety
+/// - `track` must be a valid, non-null pointer to a `Track`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn track_get_path_property_by_name(
     track: *mut Track,
@@ -285,6 +347,12 @@ pub unsafe extern "C" fn track_get_path_property_by_name(
 }
 
 // register path property
+/// Register a path property on the track.
+///
+/// # Safety
+/// - `track` must be a valid pointer to a `Track`.
+/// - `id` must be a valid C string.
+/// - `property` must be a valid pointer to a `PathProperty`; the property value is moved from the pointer.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn track_register_path_property<'a>(
     track: *mut Track,
@@ -305,6 +373,11 @@ pub unsafe extern "C" fn track_register_path_property<'a>(
     }
 }
 
+/// Get a mutable pointer to a path property by id.
+///
+/// # Safety
+/// - `track` must be a valid pointer to a `Track`.
+/// - `id` must be a valid C string.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn track_get_path_property(
     track: *mut Track,
@@ -326,6 +399,12 @@ pub unsafe extern "C" fn track_get_path_property(
     }
 }
 
+/// Return a `CPropertiesMap` with pointers into the track's registered properties.
+///
+/// Safety:
+/// - `track` must be a valid, non-null pointer to a `Track`.
+/// - The returned pointers are valid only while the `Track` is alive and not mutated in a way that moves or removes the properties.
+/// - Do not retain these pointers across calls that might mutate the track.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn track_get_properties_map(track: *mut Track) -> CPropertiesMap {
     if track.is_null() {
@@ -351,6 +430,11 @@ pub unsafe extern "C" fn track_get_properties_map(track: *mut Track) -> CPropert
     }
 }
 
+/// Return a `CPathPropertiesMap` with pointers into the track's path properties.
+///
+/// Safety:
+/// - `track` must be a valid, non-null pointer to a `Track`.
+/// - Returned pointers are valid only while the track's path properties remain in-place.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn track_get_path_properties_map(track: *mut Track) -> CPathPropertiesMap {
     if track.is_null() {
@@ -373,6 +457,13 @@ pub unsafe extern "C" fn track_get_path_properties_map(track: *mut Track) -> CPa
 }
 
 // FFI functions for per-track game object modification callbacks
+/// Register a C callback to be invoked when a game object is added/removed.
+///
+/// Safety:
+/// - `track` must be a valid pointer to a `Track`.
+/// - `callback` and `user_data` must remain valid for as long as the callback may be invoked.
+/// - The returned pointer is an opaque handle to the stored Rust closure; it must be removed with `track_remove_game_object_callback`.
+/// - The callback is invoked on the Rust side; ensure `callback` is safe to call from Rust execution context.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn track_register_game_object_callback(
     track: *mut Track,
@@ -398,6 +489,12 @@ pub unsafe extern "C" fn track_register_game_object_callback(
     }
 }
 
+/// Remove a previously registered game object callback.
+///
+/// Safety:
+/// - `track` must be a valid pointer to a `Track`.
+/// - `callback` must be a pointer previously returned by `track_register_game_object_callback`.
+/// - After calling this function the `callback` pointer must not be used again.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn track_remove_game_object_callback(
     track: *mut Track,

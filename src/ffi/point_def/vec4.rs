@@ -13,7 +13,11 @@ pub struct Vector4InterpolationResult {
     pub is_last: bool,
 }
 
-///VECTOR4 POINT DEFINITION
+/// VECTOR4 POINT DEFINITION
+///
+/// # Safety
+/// - `json` may be null; if non-null it must point to a valid `FFIJsonValue`.
+/// - `context` must be a valid pointer to a `BaseProviderContext`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_make_vector4_point_definition(
     json: *const FFIJsonValue,
@@ -25,6 +29,11 @@ pub unsafe extern "C" fn tracks_make_vector4_point_definition(
     (Box::leak(point_definition)) as _
 }
 
+/// Interpolate a Vector4 point definition at `time`.
+///
+/// # Safety
+/// - `point_definition` must be a valid pointer to a `Vector4PointDefinition`.
+/// - `context` must be a valid pointer to a `BaseProviderContext`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_interpolate_vector4(
     point_definition: *const Vector4PointDefinition,
@@ -44,6 +53,8 @@ pub unsafe extern "C" fn tracks_interpolate_vector4(
     }
 }
 
+/// # Safety
+/// - `point_definition` must be a valid pointer to a `Vector4PointDefinition`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_vector4_count(
     point_definition: *const Vector4PointDefinition,
@@ -52,6 +63,8 @@ pub unsafe extern "C" fn tracks_vector4_count(
     point_definition.get_count()
 }
 
+/// # Safety
+/// - `point_definition` must be a valid pointer to a `Vector4PointDefinition`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_vector4_has_base_provider(
     point_definition: *const Vector4PointDefinition,

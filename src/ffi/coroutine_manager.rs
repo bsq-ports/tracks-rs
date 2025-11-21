@@ -13,7 +13,11 @@ pub extern "C" fn create_coroutine_manager() -> *mut CoroutineManager {
     Box::into_raw(manager)
 }
 
-/// Destroys a CoroutineManager instance, freeing its memory.
+/// Destroys a `CoroutineManager` instance, freeing its memory.
+///
+/// # Safety
+/// - `manager` must be a pointer previously returned by `create_coroutine_manager` and not already freed.
+/// - Passing a null pointer is a no-op.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn destroy_coroutine_manager(manager: *mut CoroutineManager) {
     unsafe {
@@ -24,7 +28,13 @@ pub unsafe extern "C" fn destroy_coroutine_manager(manager: *mut CoroutineManage
     }
 }
 
-/// Starts an event coroutine in the manager. Consumes event_data
+/// Starts an event coroutine in the manager. Consumes `event_data`.
+///
+/// # Safety
+/// - `manager` must be a valid pointer to a `CoroutineManager`.
+/// - `context` must be a valid pointer to a `BaseProviderContext` for the duration of the call.
+/// - `tracks_holder` must be a valid pointer to a `TracksHolder`.
+/// - `event_data` must be a pointer returned by `event_data_to_rust`; ownership is transferred and it will be freed.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn start_event_coroutine(
     manager: *mut CoroutineManager,
@@ -48,6 +58,11 @@ pub unsafe extern "C" fn start_event_coroutine(
 }
 
 /// Polls all events in the manager, updating their state based on the current song time.
+///
+/// # Safety
+/// - `manager` must be a valid pointer to a `CoroutineManager`.
+/// - `context` must be a valid pointer to a `BaseProviderContext`.
+/// - `tracks_holder` must be a valid pointer to a `TracksHolder`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn poll_events(
     manager: *mut CoroutineManager,

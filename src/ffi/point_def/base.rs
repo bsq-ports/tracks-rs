@@ -12,7 +12,13 @@ use crate::{
     },
 };
 
-///BASE POINT DEFINITION
+/// BASE POINT DEFINITION
+///
+/// # Safety
+/// - `json` must be a valid pointer to an `FFIJsonValue` or null if not used by the specific constructor.
+/// - `context` must be a valid, non-null pointer to a live `BaseProviderContext` for the duration of this call.
+/// - The returned pointer is owned by the caller and must be freed by calling `base_point_definition_free`.
+/// - This function may panic on invalid input; unwinding across the FFI boundary is undefined behaviour.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_make_base_point_definition(
     json: *const FFIJsonValue,
@@ -37,7 +43,12 @@ pub unsafe extern "C" fn tracks_make_base_point_definition(
     (Box::leak(point_definition)) as _
 }
 
-///BASE POINT DEFINITION
+/// BASE POINT DEFINITION FREE
+///
+/// # Safety
+/// - `point_definition` must be a pointer previously returned by `tracks_make_base_point_definition`.
+/// - After calling this function the pointer is invalid and must not be used again.
+/// - Passing a null pointer is allowed and is a no-op.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn base_point_definition_free(
     point_definition: *mut base_point_definition::BasePointDefinition,
@@ -51,6 +62,14 @@ pub unsafe extern "C" fn base_point_definition_free(
     };
 }
 
+/// Interpolate a base point definition at a given time.
+///
+/// # Safety
+/// - `point_definition` must be a valid, non-null pointer to a `BasePointDefinition`.
+/// - `is_last_out` must be a valid, non-null pointer to a `bool` to receive the `is_last` flag.
+/// - `context` must be a valid pointer to `BaseProviderContext` for the duration of the call.
+/// - This function does not take ownership of any pointers passed in.
+/// - Do not rely on the returned `WrapBaseValue` containing any borrowed references; it is an owned value.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_interpolate_base_point_definition(
     point_definition: *const base_point_definition::BasePointDefinition,
@@ -65,6 +84,10 @@ pub unsafe extern "C" fn tracks_interpolate_base_point_definition(
     WrapBaseValue::from(value)
 }
 
+/// Return number of points in the point definition.
+///
+/// Safety:
+/// - `point_definition` must be a valid, non-null pointer to a `BasePointDefinition`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_base_point_definition_count(
     point_definition: *const base_point_definition::BasePointDefinition,
@@ -73,6 +96,10 @@ pub unsafe extern "C" fn tracks_base_point_definition_count(
     point_definition.get_count()
 }
 
+/// Check whether the point definition references a base provider.
+///
+/// Safety:
+/// - `point_definition` must be a valid, non-null pointer to a `BasePointDefinition`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_base_point_definition_has_base_provider(
     point_definition: *const base_point_definition::BasePointDefinition,

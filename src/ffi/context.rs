@@ -22,6 +22,10 @@ pub extern "C" fn tracks_context_create() -> *mut TracksContext {
 }
 
 /// Consumes the context and frees its memory.
+///
+/// # Safety
+/// - `context` must be a pointer previously returned by `tracks_context_create` and not already freed.
+/// - Passing a null pointer is a no-op.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_context_destroy(context: *mut TracksContext) {
     if !context.is_null() {
@@ -31,8 +35,12 @@ pub unsafe extern "C" fn tracks_context_destroy(context: *mut TracksContext) {
     }
 }
 
-/// Consumes the track and moves
-/// it into the context. Returns a const pointer to the track.
+/// Consumes the track and moves it into the context. Returns a `TrackKeyFFI` handle.
+///
+/// # Safety
+/// - `context` must be a valid pointer to a `TracksContext`.
+/// - `track` must be a pointer returned by `track_create` and not already freed; the function takes ownership of the track.
+/// - On failure this function returns a null-equivalent `TrackKeyFFI`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_context_add_track(
     context: *mut TracksContext,
@@ -52,6 +60,11 @@ pub unsafe extern "C" fn tracks_context_add_track(
 /// Returns a const pointer to the point definition.
 ///
 /// If id is null/empty, generates a uuid for the point definition.
+///
+/// # Safety
+/// - `context` must be a valid pointer to a `TracksContext`.
+/// - `point_def` must be a pointer returned by a point-definition creator and not yet freed; ownership is transferred to the context.
+/// - `id` may be null; when non-null it must be a valid C string.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_context_add_point_definition(
     context: *mut TracksContext,
@@ -85,6 +98,11 @@ pub unsafe extern "C" fn tracks_context_add_point_definition(
     }
 }
 
+/// Get a previously-registered point definition by name and type.
+///
+/// # Safety
+/// - `context` must be a valid pointer to a `TracksContext`.
+/// - `name` must be a valid C string pointer.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_context_get_point_definition(
     context: *mut TracksContext,
@@ -104,6 +122,11 @@ pub unsafe extern "C" fn tracks_context_get_point_definition(
     }
 }
 
+/// Lookup a track key (handle) by name.
+///
+/// # Safety
+/// - `context` must be a valid pointer to a `TracksContext`.
+/// - `name` must be a valid C string pointer.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_context_get_track_key(
     context: *mut TracksContext,
@@ -122,6 +145,11 @@ pub unsafe extern "C" fn tracks_context_get_track_key(
     }
 }
 
+/// Get a mutable pointer to a track by `TrackKeyFFI`.
+///
+/// # Safety
+/// - `context` must be a valid pointer to a `TracksContext`.
+/// - The returned pointer is valid while the track remains registered in the context and has not been removed.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_context_get_track(
     context: *mut TracksContext,
@@ -138,6 +166,11 @@ pub unsafe extern "C" fn tracks_context_get_track(
         }
     }
 }
+/// Get a mutable pointer to the context's `CoroutineManager`.
+///
+/// # Safety
+/// - `context` must be a valid pointer to a `TracksContext`.
+/// - The returned pointer is valid while the context is alive; do not hold it while mutating the context in ways that could invalidate internal state.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_context_get_coroutine_manager(
     context: *mut TracksContext,
@@ -151,6 +184,11 @@ pub unsafe extern "C" fn tracks_context_get_coroutine_manager(
         &mut (*context).coroutine_manager as *mut _
     }
 }
+/// Get a mutable pointer to the context's `BaseProviderContext`.
+///
+/// # Safety
+/// - `context` must be a valid pointer to a `TracksContext`.
+/// - The returned pointer is valid while the context is alive; do not retain it across mutations of the context.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_context_get_base_provider_context(
     context: *mut TracksContext,
@@ -165,6 +203,11 @@ pub unsafe extern "C" fn tracks_context_get_base_provider_context(
     }
 }
 
+/// Get a mutable pointer to the internal `TracksHolder`.
+///
+/// # Safety
+/// - `context` must be a valid pointer to a `TracksContext`.
+/// - The returned pointer should not be used after the context is freed.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_context_get_tracks_holder(
     context: *mut TracksContext,

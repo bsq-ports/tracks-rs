@@ -23,6 +23,7 @@ pub struct CoroutineManager {
     coroutines: Vec<CoroutineTask>,
 }
 
+/// Represents a single coroutine task for an event.
 struct CoroutineTask {
     event_type: EventType,
     repeat: u32,

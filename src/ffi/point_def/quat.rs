@@ -13,7 +13,11 @@ pub struct QuaternionInterpolationResult {
     pub is_last: bool,
 }
 
-///QUATERNION POINT DEFINITION
+/// QUATERNION POINT DEFINITION
+///
+/// # Safety
+/// - `json` may be null; if non-null it must point to a valid `FFIJsonValue`.
+/// - `context` must be a valid pointer to a `BaseProviderContext`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_make_quat_point_definition(
     json: *const FFIJsonValue,
@@ -25,6 +29,11 @@ pub unsafe extern "C" fn tracks_make_quat_point_definition(
     (Box::leak(point_definition)) as _
 }
 
+/// Interpolate a Quaternion point definition at `time`.
+///
+/// # Safety
+/// - `point_definition` must be a valid pointer to a `QuaternionPointDefinition`.
+/// - `context` must be a valid pointer to a `BaseProviderContext`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_interpolate_quat(
     point_definition: *const QuaternionPointDefinition,
@@ -44,6 +53,8 @@ pub unsafe extern "C" fn tracks_interpolate_quat(
     }
 }
 
+/// # Safety
+/// - `point_definition` must be a valid pointer to a `QuaternionPointDefinition`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_quat_count(
     point_definition: *const QuaternionPointDefinition,
@@ -52,6 +63,8 @@ pub unsafe extern "C" fn tracks_quat_count(
     point_definition.get_count()
 }
 
+/// # Safety
+/// - `point_definition` must be a valid pointer to a `QuaternionPointDefinition`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_quat_has_base_provider(
     point_definition: *const QuaternionPointDefinition,

@@ -68,6 +68,9 @@ pub unsafe extern "C" fn path_property_finish(ptr: *mut PathProperty) {
         }
     }
 }
+/// # Safety
+/// - `ptr` must be a valid pointer to a `PathProperty` created by `path_property_create`.
+/// - After calling this function the `PathProperty` remains owned by the caller; this function only performs finalization.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn path_property_init(
     ptr: *mut PathProperty,
@@ -88,6 +91,9 @@ pub unsafe extern "C" fn path_property_init(
         inner.init(point_data);
     }
 }
+/// # Safety
+/// - `ptr` must be a valid pointer to a `PathProperty`.
+/// - `new_point_data`, if non-null, must point to a valid `BasePointDefinition` and ownership of its contents may be moved.
 
 /// Consumes the path property and frees its memory.
 #[unsafe(no_mangle)]
@@ -98,6 +104,9 @@ pub unsafe extern "C" fn path_property_free(ptr: *mut PathProperty) {
         }
     }
 }
+/// # Safety
+/// - `ptr` must be a pointer previously returned by `path_property_create` and not already freed.
+/// - Passing null is a no-op.
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn path_property_get_time(ptr: *const PathProperty) -> f32 {
@@ -109,6 +118,8 @@ pub unsafe extern "C" fn path_property_get_time(ptr: *const PathProperty) -> f32
         inner.time
     }
 }
+/// # Safety
+/// - `ptr` must be a valid pointer to a `PathProperty`.
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn path_property_set_time(ptr: *mut PathProperty, time: f32) {
@@ -119,6 +130,8 @@ pub unsafe extern "C" fn path_property_set_time(ptr: *mut PathProperty, time: f3
         }
     }
 }
+/// # Safety
+/// - `ptr` must be a valid, non-null pointer to a `PathProperty`.
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn path_property_interpolate(
@@ -135,6 +148,9 @@ pub unsafe extern "C" fn path_property_interpolate(
         inner.interpolate(time, context).into()
     }
 }
+/// # Safety
+/// - `ptr` must be a valid pointer to a `PathProperty`.
+/// - `context` must be a valid pointer to a `BaseProviderContext` for the duration of the call.
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn path_property_get_type(ptr: *const PathProperty) -> WrapBaseValueType {
@@ -148,6 +164,8 @@ pub unsafe extern "C" fn path_property_get_type(ptr: *const PathProperty) -> Wra
         inner.get_type()
     }
 }
+/// # Safety
+/// - `ptr` may be null; if non-null it must point to a valid `PathProperty`.
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn property_get_type(ptr: *const ValueProperty) -> WrapBaseValueType {
@@ -159,6 +177,8 @@ pub unsafe extern "C" fn property_get_type(ptr: *const ValueProperty) -> WrapBas
 
     inner.get_type()
 }
+/// # Safety
+/// - `ptr` may be null; if non-null it must point to a valid `ValueProperty`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn property_get_value(ptr: *const ValueProperty) -> CValueProperty {
     if ptr.is_null() {
@@ -168,6 +188,8 @@ pub unsafe extern "C" fn property_get_value(ptr: *const ValueProperty) -> CValue
     let inner = unsafe { &*ptr };
     inner.clone().into()
 }
+/// # Safety
+/// - `ptr` may be null; if non-null it must point to a valid `ValueProperty`.
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn property_get_last_updated(ptr: *const ValueProperty) -> CTimeUnit {

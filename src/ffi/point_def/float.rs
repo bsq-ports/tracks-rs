@@ -10,7 +10,11 @@ pub struct FloatInterpolationResult {
     pub is_last: bool,
 }
 
-///FLOAT POINT DEFINITION
+/// FLOAT POINT DEFINITION
+///
+/// # Safety
+/// - `json` may be null; if non-null it must point to a valid `FFIJsonValue`.
+/// - `context` must be a valid pointer to a `BaseProviderContext`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_make_float_point_definition(
     json: *const FFIJsonValue,
@@ -22,6 +26,11 @@ pub unsafe extern "C" fn tracks_make_float_point_definition(
     (Box::leak(point_definition)) as _
 }
 
+/// Interpolate a float point definition at `time`.
+///
+/// # Safety
+/// - `point_definition` must be a valid pointer to a `FloatPointDefinition`.
+/// - `context` must be a valid pointer to a `BaseProviderContext`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_interpolate_float(
     point_definition: *const FloatPointDefinition,
@@ -33,6 +42,8 @@ pub unsafe extern "C" fn tracks_interpolate_float(
     FloatInterpolationResult { value, is_last }
 }
 
+/// # Safety
+/// - `point_definition` must be a valid pointer to a `FloatPointDefinition`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_float_count(
     point_definition: *const FloatPointDefinition,
@@ -41,6 +52,8 @@ pub unsafe extern "C" fn tracks_float_count(
     point_definition.get_count()
 }
 
+/// # Safety
+/// - `point_definition` must be a valid pointer to a `FloatPointDefinition`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_float_has_base_provider(
     point_definition: *const FloatPointDefinition,

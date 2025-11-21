@@ -33,9 +33,13 @@ pub struct CEventType {
     pub property: *const c_char,
 }
 
-/// Converts a CEventData into a Rust EventData
-/// Does not consume the CEventData
-/// Returns a raw pointer to the Rust EventData
+/// Converts a `CEventData` into a Rust `EventData`.
+/// Does not consume the input struct; returns an owned pointer to a newly allocated `EventData`.
+///
+/// # Safety
+/// - `c_event_data` must be a valid, non-null pointer to a `CEventData`.
+/// - Any C strings referenced inside `c_event_data` must be valid null-terminated pointers.
+/// - The returned pointer is owned by the caller and must be freed by calling `event_data_dispose`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn event_data_to_rust(c_event_data: *const CEventData) -> *mut EventData {
     if c_event_data.is_null() {
@@ -79,6 +83,11 @@ pub unsafe extern "C" fn event_data_to_rust(c_event_data: *const CEventData) -> 
     }
 }
 
+/// Dispose of an `EventData` previously returned by `event_data_to_rust`.
+///
+/// # Safety
+/// - `event_data` must be a pointer previously returned by `event_data_to_rust` and not already freed.
+/// - Passing a null pointer is a no-op.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn event_data_dispose(event_data: *mut EventData) {
     if event_data.is_null() {

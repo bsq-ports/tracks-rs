@@ -13,7 +13,11 @@ pub struct Vector3InterpolationResult {
     pub is_last: bool,
 }
 
-///VECTOR3 POINT DEFINITION
+/// VECTOR3 POINT DEFINITION
+///
+/// # Safety
+/// - `json` may be null; if non-null it must point to a valid `FFIJsonValue`.
+/// - `context` must be a valid pointer to a `BaseProviderContext`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_make_vector3_point_definition(
     json: *const FFIJsonValue,
@@ -25,6 +29,11 @@ pub unsafe extern "C" fn tracks_make_vector3_point_definition(
     (Box::leak(point_definition)) as _
 }
 
+/// Interpolate a Vector3 point definition at `time`.
+///
+/// # Safety
+/// - `point_definition` must be a valid pointer to a `Vector3PointDefinition`.
+/// - `context` must be a valid pointer to a `BaseProviderContext`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_interpolate_vector3(
     point_definition: *const Vector3PointDefinition,
@@ -43,6 +52,8 @@ pub unsafe extern "C" fn tracks_interpolate_vector3(
     }
 }
 
+/// # Safety
+/// - `point_definition` must be a valid pointer to a `Vector3PointDefinition`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_vector3_count(
     point_definition: *const Vector3PointDefinition,
@@ -51,6 +62,8 @@ pub unsafe extern "C" fn tracks_vector3_count(
     point_definition.get_count()
 }
 
+/// # Safety
+/// - `point_definition` must be a valid pointer to a `Vector3PointDefinition`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_vector3_has_base_provider(
     point_definition: *const Vector3PointDefinition,

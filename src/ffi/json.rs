@@ -33,6 +33,10 @@ pub struct JsonArray {
 }
 
 #[unsafe(no_mangle)]
+/// Create a JSON number value.
+///
+/// # Safety
+/// - This function is FFI-safe and returns an owned `FFIJsonValue` by value.
 pub unsafe extern "C" fn tracks_create_json_number(value: f64) -> FFIJsonValue {
     FFIJsonValue {
         value_type: JsonValueType::Number,
@@ -43,6 +47,11 @@ pub unsafe extern "C" fn tracks_create_json_number(value: f64) -> FFIJsonValue {
 }
 
 #[unsafe(no_mangle)]
+/// Create a JSON string value referencing a C string pointer.
+///
+/// # Safety
+/// - `value` must be a valid null-terminated C string pointer for the duration of use on the consumer side.
+/// - The returned `FFIJsonValue` stores the pointer as-is; ownership of the string remains with the caller.
 pub unsafe extern "C" fn tracks_create_json_string(value: *const c_char) -> FFIJsonValue {
     FFIJsonValue {
         value_type: JsonValueType::String,
@@ -53,6 +62,11 @@ pub unsafe extern "C" fn tracks_create_json_string(value: *const c_char) -> FFIJ
 }
 
 #[unsafe(no_mangle)]
+/// Create a JSON array value by allocating a `JsonArray` that wraps the elements pointer.
+///
+/// # Safety
+/// - `elements` must point to an array of `FFIJsonValue` of length `length` and remain valid until the caller frees the `FFIJsonValue`.
+/// - The caller is responsible for calling `tracks_free_json_value` to free the leaked `JsonArray`.
 pub unsafe extern "C" fn tracks_create_json_array(
     elements: *const FFIJsonValue,
     length: usize,
@@ -124,6 +138,11 @@ pub(crate) unsafe fn convert_json_value_to_serde(
 }
 
 #[unsafe(no_mangle)]
+/// Free an `FFIJsonValue` previously produced that may contain heap allocations.
+///
+/// # Safety
+/// - `json_value` must point to an `FFIJsonValue` produced by the corresponding create functions and not already freed.
+/// - This implementation only frees the top-level `JsonArray` if present; nested structures are not recursively freed.
 pub unsafe extern "C" fn tracks_free_json_value(json_value: *mut FFIJsonValue) {
     // Free the memory allocated for the JsonValue
     // This is a simple implementation that doesn't handle nested structures
