@@ -1,7 +1,10 @@
 use log::debug;
 
 use crate::{
-    animation::tracks_holder::TrackKey,
+    animation::{
+        track::Track,
+        tracks_holder::{TrackKey, TracksHolder},
+    },
     base_provider_context::BaseProviderContext,
     easings::functions::Functions,
     point_definition::{
@@ -16,13 +19,12 @@ use super::{
 };
 
 #[derive(Default)]
-pub struct CoroutineManager<'a> {
-    coroutines: Vec<CoroutineTask<'a>>,
-    _marker: std::marker::PhantomData<&'a ()>,
+pub struct CoroutineManager {
+    coroutines: Vec<CoroutineTask>,
 }
 
-struct CoroutineTask<'a> {
-    event_type: EventType<'a>,
+struct CoroutineTask {
+    event_type: EventType,
     repeat: u32,
     duration_song_time: f32,
     easing: Functions,
@@ -37,24 +39,35 @@ pub enum CoroutineResult {
     Break,
 }
 
-impl EventType<'_> {
-    pub(crate) fn set_null(&mut self) {
+impl EventType {
+    pub(crate) fn set_null(&self, track: &mut Track) {
         match self {
-            EventType::AnimateTrack(property) => {
+            EventType::AnimateTrack(property_handle) => {
+                let property = track
+                    .properties
+                    .get_by_handle_mut(property_handle)
+                    .expect("Property not found");
                 property.set_value(None);
             }
-            EventType::AssignPathAnimation(path_property) => path_property.init(None),
+            EventType::AssignPathAnimation(path_property_handle) => {
+                let path_property = track
+                    .path_properties
+                    .get_by_handle_mut(path_property_handle)
+                    .expect("Path property not found");
+                path_property.init(None)
+            }
         }
     }
 }
 
-impl<'a> CoroutineManager<'a> {
+impl CoroutineManager {
     pub fn start_event_coroutine(
         &mut self,
         bpm: f32,
         song_time: f32,
-        context: &'a BaseProviderContext,
-        event_group_data: EventData<'a>,
+        provider_context: &BaseProviderContext,
+        tracks_holder: &mut TracksHolder,
+        event_group_data: EventData,
     ) {
         let duration = (60.0 * event_group_data.raw_duration) / bpm;
 
@@ -73,7 +86,8 @@ impl<'a> CoroutineManager<'a> {
             easing,
             repeat,
             event_group_data,
-            context,
+            provider_context,
+            tracks_holder,
         );
         let Some(value) = value else {
             debug!("CoroutineTask has 0 duration or no points, skipping");
@@ -102,9 +116,10 @@ impl<'a> CoroutineManager<'a> {
 
         easing: Functions,
         repeat: u32,
-        data: EventData<'a>,
-        provider_context: &'a BaseProviderContext,
-    ) -> Option<CoroutineTask<'a>> {
+        data: EventData,
+        provider_context: &BaseProviderContext,
+        tracks_holder: &mut TracksHolder,
+    ) -> Option<CoroutineTask> {
         let mut repeat = repeat;
         let no_duration =
             duration == 0.0 || start_time + (duration * (repeat as f32 + 1.0)) < song_time;
@@ -113,13 +128,21 @@ impl<'a> CoroutineManager<'a> {
 
         // use an optional point data to move it into the coroutine task
         let mut point_data = data.point_data;
+        let track = tracks_holder
+            .get_track_mut(track_key)
+            .expect("Track not found for CoroutineTask");
         if point_data.is_none() {
-            property.set_null();
+            property.set_null(track);
             return None;
         };
 
         match &mut property {
-            EventType::AnimateTrack(property) => {
+            EventType::AnimateTrack(property_handle) => {
+                let property = track
+                    .properties
+                    .get_by_handle_mut(property_handle)
+                    .expect("Property not found");
+
                 let point_data = point_data.as_ref().unwrap();
 
                 let has_base = point_data.has_base_provider();
@@ -146,7 +169,12 @@ impl<'a> CoroutineManager<'a> {
                     return None;
                 }
             }
-            EventType::AssignPathAnimation(path_property) => {
+            EventType::AssignPathAnimation(path_property_handle) => {
+                let path_property = track
+                    .path_properties
+                    .get_by_handle_mut(path_property_handle)
+                    .expect("Path property not found");
+
                 path_property.init(point_data.take());
 
                 if no_duration {
@@ -173,10 +201,15 @@ impl<'a> CoroutineManager<'a> {
         })
     }
 
-    pub fn poll_events(&mut self, song_time: f32, context: &BaseProviderContext) {
+    pub fn poll_events(
+        &mut self,
+        song_time: f32,
+        context: &BaseProviderContext,
+        tracks_holder: &mut TracksHolder,
+    ) {
         // Yield and remove coroutines that are finished
         self.coroutines.retain_mut(|event| {
-            Self::poll_event(song_time, context, event) == CoroutineResult::Yield
+            Self::poll_event(song_time, context, event, tracks_holder) == CoroutineResult::Yield
         });
     }
 
@@ -184,11 +217,15 @@ impl<'a> CoroutineManager<'a> {
         song_time: f32,
         context: &BaseProviderContext,
         event_data: &mut CoroutineTask,
+        tracks_holder: &mut TracksHolder,
     ) -> CoroutineResult {
         let duration = event_data.duration_song_time;
+        let track = tracks_holder
+            .get_track_mut(event_data.track_key)
+            .expect("Track not found for CoroutineTask");
 
         match &mut event_data.event_type {
-            EventType::AnimateTrack(value_property) => {
+            EventType::AnimateTrack(value_property_handle) => {
                 let point_def = match &event_data.point_definition {
                     Some(def) => def,
                     None => {
@@ -197,6 +234,10 @@ impl<'a> CoroutineManager<'a> {
                     }
                 };
                 let has_base = point_def.has_base_provider();
+                let value_property = track
+                    .properties
+                    .get_by_handle_mut(value_property_handle)
+                    .expect("Property not found");
 
                 let mut result = animate_track(
                     point_def,
@@ -218,13 +259,20 @@ impl<'a> CoroutineManager<'a> {
 
                 result
             }
-            EventType::AssignPathAnimation(path_property) => assign_path_animation(
-                path_property,
-                duration,
-                event_data.start_time,
-                event_data.easing,
-                song_time,
-            ),
+            EventType::AssignPathAnimation(path_property_handle) => {
+                let path_property = track
+                    .path_properties
+                    .get_by_handle_mut(path_property_handle)
+                    .expect("Path property not found");
+
+                assign_path_animation(
+                    path_property,
+                    duration,
+                    event_data.start_time,
+                    event_data.easing,
+                    song_time,
+                )
+            }
         }
     }
 }

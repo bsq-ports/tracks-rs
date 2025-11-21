@@ -146,6 +146,8 @@ typedef struct Track Track;
  */
 typedef struct TracksContext TracksContext;
 
+typedef struct TracksHolder TracksHolder;
+
 typedef struct ValueProperty ValueProperty;
 
 typedef struct Vector3PointDefinition Vector3PointDefinition;
@@ -156,22 +158,9 @@ typedef struct TrackKeyFFI {
   uint64_t _0;
 } TrackKeyFFI;
 
-typedef struct PointDefinitionInterpolation PathProperty;
-
-typedef union CEventTypeData {
-  /**
-   * AnimateTrack(ValueProperty)
-   */
-  struct ValueProperty *property;
-  /**
-   * AssignPathAnimation(PathProperty)
-   */
-  PathProperty *path_property;
-} CEventTypeData;
-
 typedef struct CEventType {
   CEventTypeEnum ty;
-  union CEventTypeData data;
+  const char *property;
 } CEventType;
 
 typedef struct CEventData {
@@ -244,6 +233,11 @@ typedef struct FloatInterpolationResult {
   bool is_last;
 } FloatInterpolationResult;
 
+typedef struct QuaternionInterpolationResult {
+  struct WrapQuat value;
+  bool is_last;
+} QuaternionInterpolationResult;
+
 typedef struct Vector3InterpolationResult {
   struct WrapVec3 value;
   bool is_last;
@@ -254,10 +248,7 @@ typedef struct Vector4InterpolationResult {
   bool is_last;
 } Vector4InterpolationResult;
 
-typedef struct QuaternionInterpolationResult {
-  struct WrapQuat value;
-  bool is_last;
-} QuaternionInterpolationResult;
+typedef struct PointDefinitionInterpolation PathProperty;
 
 typedef struct CValueNullable {
   bool has_value;
@@ -351,6 +342,8 @@ struct CoroutineManager *tracks_context_get_coroutine_manager(struct TracksConte
 
 struct BaseProviderContext *tracks_context_get_base_provider_context(struct TracksContext *context);
 
+struct TracksHolder *tracks_context_get_tracks_holder(struct TracksContext *context);
+
 /**
  * Creates a new CoroutineManager instance and returns a raw pointer to it.
  * The caller is responsible for freeing the memory using destroy_coroutine_manager.
@@ -369,6 +362,7 @@ void start_event_coroutine(struct CoroutineManager *manager,
                            float bpm,
                            float song_time,
                            const struct BaseProviderContext *context,
+                           struct TracksHolder *tracks_holder,
                            struct EventData *event_data);
 
 /**
@@ -376,7 +370,8 @@ void start_event_coroutine(struct CoroutineManager *manager,
  */
 void poll_events(struct CoroutineManager *manager,
                  float song_time,
-                 const struct BaseProviderContext *context);
+                 const struct BaseProviderContext *context,
+                 struct TracksHolder *tracks_holder);
 
 /**
  * C-compatible wrapper for easing functions
@@ -466,6 +461,20 @@ uintptr_t tracks_float_count(const struct FloatPointDefinition *point_definition
 bool tracks_float_has_base_provider(const struct FloatPointDefinition *point_definition);
 
 /**
+ *QUATERNION POINT DEFINITION
+ */
+const struct QuaternionPointDefinition *tracks_make_quat_point_definition(const struct FFIJsonValue *json,
+                                                                          struct BaseProviderContext *context);
+
+struct QuaternionInterpolationResult tracks_interpolate_quat(const struct QuaternionPointDefinition *point_definition,
+                                                             float time,
+                                                             struct BaseProviderContext *context);
+
+uintptr_t tracks_quat_count(const struct QuaternionPointDefinition *point_definition);
+
+bool tracks_quat_has_base_provider(const struct QuaternionPointDefinition *point_definition);
+
+/**
  *VECTOR3 POINT DEFINITION
  */
 const struct Vector3PointDefinition *tracks_make_vector3_point_definition(const struct FFIJsonValue *json,
@@ -492,20 +501,6 @@ struct Vector4InterpolationResult tracks_interpolate_vector4(const struct Vector
 uintptr_t tracks_vector4_count(const struct Vector4PointDefinition *point_definition);
 
 bool tracks_vector4_has_base_provider(const struct Vector4PointDefinition *point_definition);
-
-/**
- *QUATERNION POINT DEFINITION
- */
-const struct QuaternionPointDefinition *tracks_make_quat_point_definition(const struct FFIJsonValue *json,
-                                                                          struct BaseProviderContext *context);
-
-struct QuaternionInterpolationResult tracks_interpolate_quat(const struct QuaternionPointDefinition *point_definition,
-                                                             float time,
-                                                             struct BaseProviderContext *context);
-
-uintptr_t tracks_quat_count(const struct QuaternionPointDefinition *point_definition);
-
-bool tracks_quat_has_base_provider(const struct QuaternionPointDefinition *point_definition);
 
 PathProperty *path_property_create(void);
 

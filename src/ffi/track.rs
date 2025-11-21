@@ -245,7 +245,7 @@ pub unsafe extern "C" fn track_get_property(
         let Ok(str_id) = c_str.to_str() else {
             return ptr::null_mut();
         };
-        match (*track).get_mut_property(str_id) {
+        match (*track).properties.get_mut(str_id) {
             Some(property) => property,
             None => ptr::null_mut(),
         }
@@ -319,7 +319,7 @@ pub unsafe extern "C" fn track_get_path_property(
         let Ok(str_id) = c_str.to_str() else {
             return ptr::null_mut();
         };
-        match (*track).get_mut_path_property(str_id) {
+        match (*track).path_properties.get_mut(str_id) {
             Some(property) => property,
             None => ptr::null_mut(),
         }

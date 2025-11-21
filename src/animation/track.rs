@@ -41,8 +41,39 @@ pub const V2_FOG_OFFSET: &str = "_fogOffset";
 pub const V2_HEIGHT_FOG_START_Y: &str = "_heightFogStartY";
 pub const V2_HEIGHT_FOG_HEIGHT: &str = "_heightFogHeight";
 
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
+pub enum ValuePropertyHandle {
+    ByName(String),
+    ById(PropertyNames),
+}
+
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
+pub enum PathPropertyHandle {
+    ByName(String),
+    ById(PropertyNames),
+}
+
+impl ValuePropertyHandle {
+    pub fn new(id: &str) -> Self {
+        match PropertyNames::from_str(id) {
+            Ok(name) => ValuePropertyHandle::ById(name),
+            _ => ValuePropertyHandle::ByName(id.to_string()),
+        }
+    }
+}
+
+impl PathPropertyHandle {
+    pub fn new(id: &str) -> Self {
+        match PropertyNames::from_str(id) {
+            Ok(name) => PathPropertyHandle::ById(name),
+            _ => PathPropertyHandle::ByName(id.to_string()),
+        }
+    }
+}
+
 /// An enumeration of common property names used in Tracks.
 #[repr(u32)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum PropertyNames {
     Position,
     Rotation,
@@ -151,20 +182,20 @@ impl Track {
         self.game_object_callbacks.push(callback);
     }
 
-    pub fn get_property(&self, id: &str) -> Option<&ValueProperty> {
-        self.properties.get(id)
-    }
-    pub fn get_path_property(&self, id: &str) -> Option<&PathProperty> {
-        self.path_properties.get(id)
-    }
+    // pub fn get_property(&self, id: &str) -> Option<&ValueProperty> {
+    //     self.properties.get(id)
+    // }
+    // pub fn get_path_property(&self, id: &str) -> Option<&PathProperty> {
+    //     self.path_properties.get(id)
+    // }
 
-    pub fn get_mut_property(&mut self, id: &str) -> Option<&mut ValueProperty> {
-        self.properties.get_mut(id)
-    }
+    // pub fn get_property_mut(&mut self, id: &str) -> Option<&mut ValueProperty> {
+    //     self.properties.get_mut(id)
+    // }
 
-    pub fn get_mut_path_property(&mut self, id: &str) -> Option<&mut PathProperty> {
-        self.path_properties.get_mut(id)
-    }
+    // pub fn get_path_property_mut(&mut self, id: &str) -> Option<&mut PathProperty> {
+    //     self.path_properties.get_mut(id)
+    // }
 
     pub fn remove_game_object(&mut self, game_object: &GameObject) {
         self.game_objects.retain(|go| go != game_object);
@@ -307,6 +338,24 @@ impl PropertiesMap {
             _ => self.properties.get_mut(id),
         }
     }
+
+    // faster access via handle
+    pub fn get_by_handle(&self, handle: &ValuePropertyHandle) -> Option<&ValueProperty> {
+        match handle {
+            ValuePropertyHandle::ByName(id) => self.properties.get(id),
+            ValuePropertyHandle::ById(name) => self.get_property_by_name(*name),
+        }
+    }
+
+    pub fn get_by_handle_mut(
+        &mut self,
+        handle: &ValuePropertyHandle,
+    ) -> Option<&mut ValueProperty> {
+        match handle {
+            ValuePropertyHandle::ByName(id) => self.properties.get_mut(id),
+            ValuePropertyHandle::ById(name) => self.get_property_by_name_mut(*name),
+        }
+    }
 }
 
 impl PathPropertiesMap {
@@ -363,6 +412,21 @@ impl PathPropertiesMap {
         match PropertyNames::from_str(id) {
             Ok(name) => self.get_property_by_name_mut(name),
             _ => self.path_properties.get_mut(id),
+        }
+    }
+
+    // faster access via handle
+    pub fn get_by_handle(&self, handle: &PathPropertyHandle) -> Option<&PathProperty> {
+        match handle {
+            PathPropertyHandle::ByName(id) => self.path_properties.get(id),
+            PathPropertyHandle::ById(name) => self.get_property_by_name(*name),
+        }
+    }
+
+    pub fn get_by_handle_mut(&mut self, handle: &PathPropertyHandle) -> Option<&mut PathProperty> {
+        match handle {
+            PathPropertyHandle::ByName(id) => self.path_properties.get_mut(id),
+            PathPropertyHandle::ById(name) => self.get_property_by_name_mut(*name),
         }
     }
 }

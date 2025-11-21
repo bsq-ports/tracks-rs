@@ -2,6 +2,7 @@ use slotmap::Key;
 
 use crate::animation::coroutine_manager::CoroutineManager;
 use crate::animation::track::Track;
+use crate::animation::tracks_holder::TracksHolder;
 use crate::base_provider_context::BaseProviderContext;
 use crate::context::TracksContext;
 use crate::ffi::track::TrackKeyFFI;
@@ -14,7 +15,7 @@ use std::rc::Rc;
 use super::types::WrapBaseValueType;
 
 #[unsafe(no_mangle)]
-pub extern "C" fn tracks_context_create<'a>() -> *mut TracksContext<'a> {
+pub extern "C" fn tracks_context_create() -> *mut TracksContext {
     let context = TracksContext::default();
 
     Box::into_raw(Box::new(context))
@@ -105,7 +106,7 @@ pub unsafe extern "C" fn tracks_context_get_point_definition(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_context_get_track_key(
-    context: *mut TracksContext<'_>,
+    context: *mut TracksContext,
     name: *const c_char,
 ) -> TrackKeyFFI {
     if context.is_null() || name.is_null() {
@@ -123,7 +124,7 @@ pub unsafe extern "C" fn tracks_context_get_track_key(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_context_get_track(
-    context: *mut TracksContext<'_>,
+    context: *mut TracksContext,
     index: TrackKeyFFI,
 ) -> *mut Track {
     if context.is_null() {
@@ -139,8 +140,8 @@ pub unsafe extern "C" fn tracks_context_get_track(
 }
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_context_get_coroutine_manager(
-    context: *mut TracksContext<'_>,
-) -> *mut CoroutineManager<'_> {
+    context: *mut TracksContext,
+) -> *mut CoroutineManager {
     if context.is_null() {
         return ptr::null_mut();
     }
@@ -152,7 +153,7 @@ pub unsafe extern "C" fn tracks_context_get_coroutine_manager(
 }
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_context_get_base_provider_context(
-    context: *mut TracksContext<'_>,
+    context: *mut TracksContext,
 ) -> *mut BaseProviderContext {
     if context.is_null() {
         return ptr::null_mut();
@@ -161,5 +162,19 @@ pub unsafe extern "C" fn tracks_context_get_base_provider_context(
     unsafe {
         // Return a const pointer to the base provider context
         (*context).get_mut_base_provider_context() as *mut _
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn tracks_context_get_tracks_holder(
+    context: *mut TracksContext,
+) -> *mut TracksHolder {
+    if context.is_null() {
+        return ptr::null_mut();
+    }
+
+    unsafe {
+        // Return a mutable pointer to the tracks holder
+        &mut (*context).tracks as *mut _
     }
 }

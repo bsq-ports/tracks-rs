@@ -1,5 +1,6 @@
 use crate::animation::coroutine_manager::CoroutineManager;
 use crate::animation::events::EventData;
+use crate::animation::tracks_holder::TracksHolder;
 use crate::base_provider_context::BaseProviderContext;
 
 // filepath: /Users/fern/Developer/tracks-rs/src/ffi/coroutine_manager.rs
@@ -7,7 +8,7 @@ use crate::base_provider_context::BaseProviderContext;
 /// Creates a new CoroutineManager instance and returns a raw pointer to it.
 /// The caller is responsible for freeing the memory using destroy_coroutine_manager.
 #[unsafe(no_mangle)]
-pub extern "C" fn create_coroutine_manager<'a>() -> *mut CoroutineManager<'a> {
+pub extern "C" fn create_coroutine_manager() -> *mut CoroutineManager {
     let manager = Box::new(CoroutineManager::default());
     Box::into_raw(manager)
 }
@@ -25,14 +26,15 @@ pub unsafe extern "C" fn destroy_coroutine_manager(manager: *mut CoroutineManage
 
 /// Starts an event coroutine in the manager. Consumes event_data
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn start_event_coroutine<'a>(
-    manager: *mut CoroutineManager<'a>,
+pub unsafe extern "C" fn start_event_coroutine(
+    manager: *mut CoroutineManager,
     bpm: f32,
     song_time: f32,
     context: *const BaseProviderContext,
-    event_data: *mut EventData<'a>,
+    tracks_holder: *mut TracksHolder,
+    event_data: *mut EventData,
 ) {
-    if manager.is_null() || context.is_null() || event_data.is_null() {
+    if manager.is_null() || context.is_null() || event_data.is_null() || tracks_holder.is_null() {
         return;
     }
 
@@ -41,7 +43,7 @@ pub unsafe extern "C" fn start_event_coroutine<'a>(
         let context = &*context;
         let event_data = Box::from_raw(event_data);
 
-        manager.start_event_coroutine(bpm, song_time, context, *event_data);
+        manager.start_event_coroutine(bpm, song_time, context, &mut *tracks_holder, *event_data);
     }
 }
 
@@ -51,8 +53,9 @@ pub unsafe extern "C" fn poll_events(
     manager: *mut CoroutineManager,
     song_time: f32,
     context: *const BaseProviderContext,
+    tracks_holder: *mut TracksHolder,
 ) {
-    if manager.is_null() || context.is_null() {
+    if manager.is_null() || context.is_null() || tracks_holder.is_null() {
         return;
     }
 
@@ -60,6 +63,6 @@ pub unsafe extern "C" fn poll_events(
         let manager = &mut *manager;
         let context = &*context;
 
-        manager.poll_events(song_time, context);
+        manager.poll_events(song_time, context, &mut *tracks_holder);
     }
 }

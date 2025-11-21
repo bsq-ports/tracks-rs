@@ -9,7 +9,7 @@ use crate::{
 };
 
 /// Context that holds tracks, point definitions, and coroutine manager.
-pub struct TracksContext<'a> {
+pub struct TracksContext {
     // we use an Rc here so vec reallocs don't break the track pointers
     // though we could also use a linkedlist
 
@@ -18,11 +18,11 @@ pub struct TracksContext<'a> {
     pub tracks: TracksHolder,
     // TODO: Removable point definitions?
     point_definitions: ahash::AHashMap<(String, WrapBaseValueType), Rc<BasePointDefinition>>,
-    pub coroutine_manager: CoroutineManager<'a>,
+    pub coroutine_manager: CoroutineManager,
     pub base_providers: BaseProviderContext,
 }
 
-impl<'a> TracksContext<'a> {
+impl TracksContext {
     pub fn add_point_definition(&mut self, id: String, point_definition: Rc<BasePointDefinition>) {
         if self
             .point_definitions
@@ -59,7 +59,7 @@ impl<'a> TracksContext<'a> {
     }
 }
 
-impl<'a> Default for TracksContext<'a> {
+impl Default for TracksContext {
     fn default() -> Self {
         TracksContext {
             tracks: Default::default(),

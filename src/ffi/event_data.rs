@@ -1,7 +1,8 @@
+use std::ffi::{CStr, c_char};
 use std::ptr;
 
 use crate::animation::events::{EventData, EventType};
-use crate::animation::property::{PathProperty, ValueProperty};
+use crate::animation::track::{PathPropertyHandle, ValuePropertyHandle};
 use crate::easings::functions::Functions;
 use crate::ffi::track::TrackKeyFFI;
 use crate::point_definition::base_point_definition::BasePointDefinition;
@@ -25,26 +26,18 @@ pub enum CEventTypeEnum {
     AnimateTrack = 0,
     AssignPathAnimation = 1,
 }
-#[repr(C)]
-pub union CEventTypeData {
-    /// AnimateTrack(ValueProperty)
-    pub property: *mut ValueProperty,
-    /// AssignPathAnimation(PathProperty)
-    pub path_property: *mut PathProperty,
-}
+
 #[repr(C)]
 pub struct CEventType {
     pub ty: CEventTypeEnum,
-    pub data: CEventTypeData,
+    pub property: *const c_char,
 }
 
 /// Converts a CEventData into a Rust EventData
 /// Does not consume the CEventData
 /// Returns a raw pointer to the Rust EventData
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn event_data_to_rust<'a>(
-    c_event_data: *const CEventData,
-) -> *mut EventData<'a> {
+pub unsafe extern "C" fn event_data_to_rust(c_event_data: *const CEventData) -> *mut EventData {
     if c_event_data.is_null() {
         return ptr::null_mut();
     }
@@ -53,12 +46,17 @@ pub unsafe extern "C" fn event_data_to_rust<'a>(
 
         let event_type = match c_event_data.event_type.ty {
             CEventTypeEnum::AnimateTrack => {
-                let value_property = &mut *(c_event_data.event_type.data.property);
-                EventType::AnimateTrack(value_property)
+                let value_property = CStr::from_ptr(c_event_data.event_type.property);
+                let value_property_handle =
+                    ValuePropertyHandle::new(value_property.to_str().unwrap());
+
+                EventType::AnimateTrack(value_property_handle)
             }
             CEventTypeEnum::AssignPathAnimation => {
-                let path_property = &mut *(c_event_data.event_type.data.path_property);
-                EventType::AssignPathAnimation(path_property)
+                let path_property = CStr::from_ptr(c_event_data.event_type.property);
+                let path_property_handle = PathPropertyHandle::new(path_property.to_str().unwrap());
+
+                EventType::AssignPathAnimation(path_property_handle)
             }
         };
         let track_key = c_event_data.track_key;
@@ -82,7 +80,7 @@ pub unsafe extern "C" fn event_data_to_rust<'a>(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn event_data_dispose(event_data: *mut EventData<'_>) {
+pub unsafe extern "C" fn event_data_dispose(event_data: *mut EventData) {
     if event_data.is_null() {
         return;
     }
