@@ -1,5 +1,16 @@
-use crate::{base_provider_context::BaseProviderContext, ffi::{json::{self, FFIJsonValue}, types::{WrapBaseValue, WrapBaseValueType}}, point_definition::{PointDefinition, base_point_definition, float_point_definition::FloatPointDefinition, quaternion_point_definition::QuaternionPointDefinition, vector3_point_definition::Vector3PointDefinition, vector4_point_definition::Vector4PointDefinition}};
-
+use crate::{
+    base_provider_context::BaseProviderContext,
+    ffi::{
+        json::{self, FFIJsonValue},
+        types::{WrapBaseValue, WrapBaseValueType},
+    },
+    point_definition::{
+        PointDefinition, base_point_definition, float_point_definition::FloatPointDefinition,
+        quaternion_point_definition::QuaternionPointDefinition,
+        vector3_point_definition::Vector3PointDefinition,
+        vector4_point_definition::Vector4PointDefinition,
+    },
+};
 
 ///BASE POINT DEFINITION
 #[unsafe(no_mangle)]

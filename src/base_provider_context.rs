@@ -12,7 +12,7 @@ use crate::values::{
 /// Context for base value providers
 /// Holds all the base values that can be accessed
 /// by base value providers
-/// 
+///
 /// This context is passed to the value providers
 /// to get the current base values
 #[derive(Default, Clone)]

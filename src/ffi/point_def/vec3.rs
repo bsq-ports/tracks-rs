@@ -1,12 +1,17 @@
-use crate::{base_provider_context::BaseProviderContext, ffi::{json::{self, FFIJsonValue}, types::WrapVec3}, point_definition::{PointDefinition, vector3_point_definition::Vector3PointDefinition}};
-
+use crate::{
+    base_provider_context::BaseProviderContext,
+    ffi::{
+        json::{self, FFIJsonValue},
+        types::WrapVec3,
+    },
+    point_definition::{PointDefinition, vector3_point_definition::Vector3PointDefinition},
+};
 
 #[repr(C)]
 pub struct Vector3InterpolationResult {
     pub value: WrapVec3,
     pub is_last: bool,
 }
-
 
 ///VECTOR3 POINT DEFINITION
 #[unsafe(no_mangle)]

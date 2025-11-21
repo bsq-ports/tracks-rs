@@ -1,15 +1,17 @@
-use crate::{base_provider_context::BaseProviderContext, ffi::{json::{self, FFIJsonValue}, types::WrapVec4}, point_definition::{PointDefinition, vector4_point_definition::Vector4PointDefinition}};
-
-
-
+use crate::{
+    base_provider_context::BaseProviderContext,
+    ffi::{
+        json::{self, FFIJsonValue},
+        types::WrapVec4,
+    },
+    point_definition::{PointDefinition, vector4_point_definition::Vector4PointDefinition},
+};
 
 #[repr(C)]
 pub struct Vector4InterpolationResult {
     pub value: WrapVec4,
     pub is_last: bool,
 }
-
-
 
 ///VECTOR4 POINT DEFINITION
 #[unsafe(no_mangle)]

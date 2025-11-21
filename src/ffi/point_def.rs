@@ -1,13 +1,3 @@
-use crate::point_definition::base_point_definition;
-use crate::point_definition::quaternion_point_definition::QuaternionPointDefinition;
-
-use crate::point_definition::vector4_point_definition::Vector4PointDefinition;
-
-use crate::point_definition::vector3_point_definition::Vector3PointDefinition;
-
-use crate::point_definition::float_point_definition::FloatPointDefinition;
-
-use crate::point_definition::PointDefinition;
 use crate::values::value::BaseValue;
 
 use std::ffi::CStr;
@@ -21,19 +11,11 @@ use crate::values::base_ffi::BaseFFIProviderValues;
 
 use crate::values::base_ffi::BaseFFIProvider;
 
-use super::json;
-use super::json::FFIJsonValue;
-use super::types::WrapBaseValue;
-use super::types::WrapBaseValueType;
-use super::types::WrapQuat;
-use super::types::WrapVec3;
-use super::types::WrapVec4;
-
 mod base;
 mod float;
+mod quat;
 mod vec3;
 mod vec4;
-mod quat;
 
 #[repr(C)]
 pub enum PointDefinitionType {
@@ -42,9 +24,6 @@ pub enum PointDefinitionType {
     Vector4 = 2,
     Quaternion = 3,
 }
-
-
-
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_make_base_ffi_provider(

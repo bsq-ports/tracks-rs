@@ -1,7 +1,8 @@
 use crate::{
     base_provider_context::BaseProviderContext,
     ffi::{
-        json::{self, FFIJsonValue}, types::WrapQuat,
+        json::{self, FFIJsonValue},
+        types::WrapQuat,
     },
     point_definition::{PointDefinition, quaternion_point_definition::QuaternionPointDefinition},
 };
