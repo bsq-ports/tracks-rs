@@ -18,7 +18,7 @@ use super::{
     property::{PathProperty, ValueProperty},
 };
 
-#[derive(Default, Clone)]
+#[derive(Clone)]
 pub struct CoroutineManager {
     coroutines: Vec<CoroutineTask>,
 }
@@ -39,6 +39,14 @@ struct CoroutineTask {
 pub enum CoroutineResult {
     Yield,
     Break,
+}
+
+impl Default for CoroutineManager {
+    fn default() -> Self {
+        CoroutineManager {
+            coroutines: Vec::with_capacity(1000),
+        }
+    }
 }
 
 impl EventType {
@@ -370,6 +378,7 @@ mod tests {
     use crate::point_data::PointData;
     use crate::point_data::float_point_data::FloatPointData;
     use crate::point_definition::float_point_definition::FloatPointDefinition;
+    use glam::Vec4;
 
     #[test]
     fn tracks_holder_add_get() {
@@ -448,5 +457,354 @@ mod tests {
         let val = track.properties.dissolve.get_value().expect("value set");
         let f = val.as_float().unwrap();
         assert!((f - 5.0).abs() < 1e-3, "expected ~5.0 got {}", f);
+    }
+
+    #[test]
+    fn cancel_previous_coroutine_on_same_track_only() {
+        let mut cm = CoroutineManager::default();
+        let ctx = BaseProviderContext::new();
+
+        let mut holder = TracksHolder::new();
+
+        // track A
+        let mut ta = Track::default();
+        ta.name = "track_a".to_string();
+        let key_a = holder.add_track(ta);
+
+        // track B
+        let mut tb = Track::default();
+        tb.name = "track_b".to_string();
+        let key_b = holder.add_track(tb);
+
+        // initial coroutine on track A (should be cancelled later)
+        let pd_a1 = FloatPointDefinition::new(vec![
+            PointData::Float(FloatPointData::new(
+                FloatValues::Static(0.0),
+                0.0,
+                vec![],
+                Functions::EaseLinear,
+            )),
+            PointData::Float(FloatPointData::new(
+                FloatValues::Static(10.0),
+                1.0,
+                vec![],
+                Functions::EaseLinear,
+            )),
+        ]);
+
+        let ev_a1 = EventData {
+            raw_duration: 1.0,
+            easing: Functions::EaseLinear,
+            repeat: 0,
+            start_song_time: 0.0,
+            property: EventType::AnimateTrack(ValuePropertyHandle::new("dissolve")),
+            track_key: key_a,
+            point_data: Some(pd_a1.into()),
+        };
+
+        cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev_a1);
+
+        // start a coroutine on track B same property - should NOT be cancelled by later A
+        let pd_b = FloatPointDefinition::new(vec![
+            PointData::Float(FloatPointData::new(
+                FloatValues::Static(5.0),
+                0.0,
+                vec![],
+                Functions::EaseLinear,
+            )),
+            PointData::Float(FloatPointData::new(
+                FloatValues::Static(15.0),
+                1.0,
+                vec![],
+                Functions::EaseLinear,
+            )),
+        ]);
+
+        let ev_b = EventData {
+            raw_duration: 1.0,
+            easing: Functions::EaseLinear,
+            repeat: 0,
+            start_song_time: 0.0,
+            property: EventType::AnimateTrack(ValuePropertyHandle::new("dissolve")),
+            track_key: key_b,
+            point_data: Some(pd_b.into()),
+        };
+
+        cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev_b);
+
+        // start a different-property coroutine on track A - should NOT cancel dissolve on A
+        // use color (vec4)
+        let pd_color =
+            crate::point_definition::vector4_point_definition::Vector4PointDefinition::new(vec![
+                PointData::Vector4(
+                    crate::point_data::vector4_point_data::Vector4PointData::new(
+                        crate::modifiers::vector4_modifier::Vector4Values::Static(Vec4::new(
+                            0.0, 0.0, 0.0, 0.0,
+                        )),
+                        false,
+                        0.0,
+                        vec![],
+                        Functions::EaseLinear,
+                    ),
+                ),
+                PointData::Vector4(
+                    crate::point_data::vector4_point_data::Vector4PointData::new(
+                        crate::modifiers::vector4_modifier::Vector4Values::Static(Vec4::new(
+                            4.0, 4.0, 4.0, 4.0,
+                        )),
+                        false,
+                        1.0,
+                        vec![],
+                        Functions::EaseLinear,
+                    ),
+                ),
+            ]);
+
+        let ev_a_color = EventData {
+            raw_duration: 1.0,
+            easing: Functions::EaseLinear,
+            repeat: 0,
+            start_song_time: 0.0,
+            property: EventType::AnimateTrack(ValuePropertyHandle::new("color")),
+            track_key: key_a,
+            point_data: Some(pd_color.into()),
+        };
+
+        cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev_a_color);
+
+        // Now start a NEW coroutine on track A for same property (dissolve) which should cancel the first one
+        let pd_a2 = FloatPointDefinition::new(vec![
+            PointData::Float(FloatPointData::new(
+                FloatValues::Static(0.0),
+                0.0,
+                vec![],
+                Functions::EaseLinear,
+            )),
+            PointData::Float(FloatPointData::new(
+                FloatValues::Static(20.0),
+                1.0,
+                vec![],
+                Functions::EaseLinear,
+            )),
+        ]);
+
+        let ev_a2 = EventData {
+            raw_duration: 1.0,
+            easing: Functions::EaseLinear,
+            repeat: 0,
+            start_song_time: 0.0,
+            property: EventType::AnimateTrack(ValuePropertyHandle::new("dissolve")),
+            track_key: key_a,
+            point_data: Some(pd_a2.into()),
+        };
+
+        cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev_a2);
+
+        // poll halfway through (0.5)
+        cm.poll_events(0.5, &ctx, &mut holder);
+
+        // track A dissolve should reflect pd_a2 (0->20 => 10 at t=0.5)
+        let ta = holder.get_track(key_a).unwrap();
+        let da = ta
+            .properties
+            .dissolve
+            .get_value()
+            .unwrap()
+            .as_float()
+            .unwrap();
+        assert!(
+            (da - 10.0).abs() < 1e-3,
+            "track A dissolve expected ~10 got {}",
+            da
+        );
+
+        // track B dissolve should reflect its own pd_b (5->15 => 10 at t=0.5)
+        let tb = holder.get_track(key_b).unwrap();
+        let db = tb
+            .properties
+            .dissolve
+            .get_value()
+            .unwrap()
+            .as_float()
+            .unwrap();
+        assert!(
+            (db - 10.0).abs() < 1e-3,
+            "track B dissolve expected ~10 got {}",
+            db
+        );
+
+        // track A color should reflect pd_color (0->4 => 2.0 per component at t=0.5)
+        let ta_color = ta.properties.color.get_value().unwrap().as_vec4().unwrap();
+        assert!(
+            (ta_color.x - 2.0).abs() < 1e-3,
+            "track A color.x expected ~2 got {}",
+            ta_color.x
+        );
+    }
+
+    #[test]
+    fn zero_duration_event_sets_final_value() {
+        let mut cm = CoroutineManager::default();
+        let ctx = BaseProviderContext::new();
+
+        let mut holder = TracksHolder::new();
+        let mut t = Track::default();
+        t.name = "z_track".to_string();
+        let key = holder.add_track(t);
+
+        let pd = FloatPointDefinition::new(vec![
+            PointData::Float(FloatPointData::new(
+                FloatValues::Static(0.0),
+                0.0,
+                vec![],
+                Functions::EaseLinear,
+            )),
+            PointData::Float(FloatPointData::new(
+                FloatValues::Static(10.0),
+                1.0,
+                vec![],
+                Functions::EaseLinear,
+            )),
+        ]);
+
+        // raw_duration 0 -> duration calculation leads to 0 and should immediately set final value
+        let ev = EventData {
+            raw_duration: 0.0,
+            easing: Functions::EaseLinear,
+            repeat: 0,
+            start_song_time: 0.0,
+            property: EventType::AnimateTrack(ValuePropertyHandle::new("dissolve")),
+            track_key: key,
+            point_data: Some(pd.into()),
+        };
+
+        cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev);
+
+        // 0-duration events should not leave coroutines enqueued
+        assert!(
+            cm.coroutines.is_empty(),
+            "0-duration coroutine should not be retained"
+        );
+
+        let track = holder.get_track(key).unwrap();
+        let v = track
+            .properties
+            .dissolve
+            .get_value()
+            .unwrap()
+            .as_float()
+            .unwrap();
+        // should be final value 10.0
+        assert!(
+            (v - 10.0).abs() < 1e-6,
+            "expected final value 10.0, got {}",
+            v
+        );
+    }
+
+    #[test]
+    fn missing_point_data_sets_property_to_none() {
+        let mut cm = CoroutineManager::default();
+        let ctx = BaseProviderContext::new();
+
+        let mut holder = TracksHolder::new();
+        let mut t = Track::default();
+        t.name = "n_track".to_string();
+        let key = holder.add_track(t);
+
+        // Event with no point_data should call set_null and leave property None
+        let ev = EventData {
+            raw_duration: 1.0,
+            easing: Functions::EaseLinear,
+            repeat: 0,
+            start_song_time: 0.0,
+            property: EventType::AnimateTrack(ValuePropertyHandle::new("dissolve")),
+            track_key: key,
+            point_data: None,
+        };
+
+        cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev);
+
+        let track = holder.get_track(key).unwrap();
+        assert!(
+            track.properties.dissolve.get_value().is_none(),
+            "dissolve should be None"
+        );
+    }
+
+    #[test]
+    fn repeat_event_restarts_once() {
+        let mut cm = CoroutineManager::default();
+        let ctx = BaseProviderContext::new();
+
+        let mut holder = TracksHolder::new();
+        let mut t = Track::default();
+        t.name = "r_track".to_string();
+        let key = holder.add_track(t);
+
+        // repeat = 1 -> should run twice
+        let pd = FloatPointDefinition::new(vec![
+            PointData::Float(FloatPointData::new(
+                FloatValues::Static(0.0),
+                0.0,
+                vec![],
+                Functions::EaseLinear,
+            )),
+            PointData::Float(FloatPointData::new(
+                FloatValues::Static(10.0),
+                1.0,
+                vec![],
+                Functions::EaseLinear,
+            )),
+        ]);
+
+        let ev = EventData {
+            raw_duration: 1.0,
+            easing: Functions::EaseLinear,
+            repeat: 1,
+            start_song_time: 0.0,
+            property: EventType::AnimateTrack(ValuePropertyHandle::new("dissolve")),
+            track_key: key,
+            point_data: Some(pd.into()),
+        };
+
+        cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev);
+
+        // halfway through first iteration
+        cm.poll_events(0.5, &ctx, &mut holder);
+        let v1 = holder
+            .get_track(key)
+            .unwrap()
+            .properties
+            .dissolve
+            .get_value()
+            .unwrap()
+            .as_float()
+            .unwrap();
+        assert!(
+            (v1 - 5.0).abs() < 1e-3,
+            "expected ~5.0 during first iteration, got {}",
+            v1
+        );
+
+        // after first completes (slightly after 1.0) it should restart for second iteration
+        cm.poll_events(1.01, &ctx, &mut holder);
+
+        // during second iteration at 1.5 (0.5 into second), value should again be ~5.0
+        cm.poll_events(1.5, &ctx, &mut holder);
+        let v2 = holder
+            .get_track(key)
+            .unwrap()
+            .properties
+            .dissolve
+            .get_value()
+            .unwrap()
+            .as_float()
+            .unwrap();
+        assert!(
+            (v2 - 5.0).abs() < 1e-2,
+            "expected ~5.0 during second iteration, got {}",
+            v2
+        );
     }
 }
