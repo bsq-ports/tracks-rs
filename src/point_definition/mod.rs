@@ -31,7 +31,7 @@ pub enum GroupType {
 /// Point definitions are used to describe what happens over the course of an animation,
 /// they are used slightly differently for different properties.
 /// They consist of a collection of points over time.
-pub trait PointDefinition {
+pub trait PointDefinition: std::default::Default {
     type Value: Default + Clone;
 
     // Required methods common to all definitions
@@ -46,27 +46,28 @@ pub trait PointDefinition {
         context: &BaseProviderContext,
     ) -> Self::Value;
     fn create_modifier(
-        &self,
         values: Vec<ValueProvider>,
         modifiers: Vec<Modifier>,
         operation: Operation,
         context: &BaseProviderContext,
     ) -> Modifier;
     fn create_point_data(
-        &self,
         values: Vec<ValueProvider>,
         flags: Vec<String>,
         modifiers: Vec<Modifier>,
         easing: Functions,
         context: &BaseProviderContext,
     ) -> PointData;
-    fn get_points_mut(&mut self) -> &mut Vec<PointData>;
-    fn get_points(&self) -> &Vec<PointData>;
+    // fn get_points_mut(&mut self) -> &mut Vec<PointData>;
+    fn get_points(&self) -> &[PointData];
+
     fn get_point(&self, point: &PointData, context: &BaseProviderContext) -> Self::Value;
     fn get_type(&self) -> WrapBaseValueType;
 
+    fn new(points: Vec<PointData>) -> Self;
+
     #[cfg(feature = "json")]
-    fn deserialize_modifier(&self, list: &JsonValue, context: &BaseProviderContext) -> Modifier {
+    fn deserialize_modifier(list: &JsonValue, context: &BaseProviderContext) -> Modifier {
         let mut modifiers: Option<Vec<Modifier>> = None;
         let mut operation: Option<Operation> = None;
         let mut values: Option<Vec<ValueProvider>> = None;
@@ -82,7 +83,7 @@ pub trait PointDefinition {
                         group
                             .1
                             .iter()
-                            .map(|m| self.deserialize_modifier(m, context))
+                            .map(|m| Self::deserialize_modifier(m, context))
                             .collect(),
                     );
                 }
@@ -97,7 +98,7 @@ pub trait PointDefinition {
         //let operation = operation.expect("No operation found.");
 
         // Create modifier with collected values
-        self.create_modifier(
+        Self::create_modifier(
             values.unwrap(),
             modifiers.unwrap_or_default(),
             operation.unwrap(),
@@ -107,7 +108,10 @@ pub trait PointDefinition {
 
     // Shared parse implementation
     #[cfg(feature = "json")]
-    fn parse(&mut self, value: JsonValue, context: &BaseProviderContext) {
+    fn parse(value: JsonValue, context: &BaseProviderContext) -> Self
+    where
+        Self: Sized,
+    {
         let root: JsonValue = match value.as_array().unwrap()[0] {
             JsonValue::Array(_) => value,
             _ => {
@@ -117,8 +121,11 @@ pub trait PointDefinition {
             }
         };
 
-        let Some(array) = root.as_array() else { return };
+        let Some(array) = root.as_array() else {
+            return Self::default();
+        };
 
+        let mut points = vec![];
         for raw_point in array {
             if raw_point.is_null() {
                 continue;
@@ -140,7 +147,7 @@ pub trait PointDefinition {
                             group
                                 .1
                                 .iter()
-                                .map(|m| self.deserialize_modifier(m, context))
+                                .map(|m| Self::deserialize_modifier(m, context))
                                 .collect(),
                         );
                     }
@@ -170,15 +177,17 @@ pub trait PointDefinition {
             // Create point data only if we have values
             let Some(vs) = vals else { continue };
 
-            let point_data = self.create_point_data(
+            let point_data = Self::create_point_data(
                 vs,
                 flags.unwrap_or_default(),
                 modifiers.unwrap_or_default(),
                 easing,
                 context,
             );
-            self.get_points_mut().push(point_data);
+            points.push(point_data);
         }
+
+        Self::new(points)
     }
 
     // Binary search algorithm to find the relevant interval

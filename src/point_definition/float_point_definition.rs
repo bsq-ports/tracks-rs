@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use glam::FloatExt;
 
 use crate::{
@@ -14,9 +16,9 @@ use crate::{
 
 use super::PointDefinition;
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct FloatPointDefinition {
-    points: Vec<PointData>,
+    points: Rc<[PointData]>,
 }
 
 impl PointDefinition for FloatPointDefinition {
@@ -30,12 +32,13 @@ impl PointDefinition for FloatPointDefinition {
         self.points.iter().any(|p| p.has_base_provider())
     }
 
-    fn get_points_mut(&mut self) -> &mut Vec<PointData> {
-        &mut self.points
+    fn new(points: Vec<PointData>) -> Self {
+        Self {
+            points: Rc::from(points),
+        }
     }
 
     fn create_modifier(
-        &self,
         values: Vec<ValueProvider>,
         modifiers: Vec<Modifier>,
         operation: Operation,
@@ -57,7 +60,6 @@ impl PointDefinition for FloatPointDefinition {
     }
 
     fn create_point_data(
-        &self,
         values: Vec<ValueProvider>,
         _flags: Vec<String>,
         modifiers: Vec<Modifier>,
@@ -108,7 +110,7 @@ impl PointDefinition for FloatPointDefinition {
         f32::lerp(point_l, point_r, time)
     }
 
-    fn get_points(&self) -> &Vec<PointData> {
+    fn get_points(&self) -> &[PointData] {
         &self.points
     }
 
@@ -118,15 +120,5 @@ impl PointDefinition for FloatPointDefinition {
 
     fn get_type(&self) -> crate::ffi::types::WrapBaseValueType {
         crate::ffi::types::WrapBaseValueType::Float
-    }
-}
-
-impl FloatPointDefinition {
-    /// Constructor equivalent – parses the provided JSON immediately.
-    #[cfg(feature = "json")]
-    pub fn new(value: serde_json::Value, context: &BaseProviderContext) -> Self {
-        let mut instance = Self { points: Vec::new() };
-        instance.parse(value, context);
-        instance
     }
 }

@@ -56,6 +56,3 @@ json = ["dep:serde_json"]
 ffi = ["dep:cbindgen"]
 compare_old = []
 default = ["json", "ffi"]
-
-[patch.crates-io]
-pathfinder_simd = { git = "https://github.com/theoparis/pathfinder.git" }

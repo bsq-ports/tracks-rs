@@ -357,7 +357,7 @@ pub unsafe extern "C" fn track_get_path_property_by_name(
 pub unsafe extern "C" fn track_register_path_property<'a>(
     track: *mut Track,
     id: *const c_char,
-    property: *mut PathProperty,
+    property: *const PathProperty,
 ) {
     if track.is_null() || id.is_null() || property.is_null() {
         return;
@@ -366,7 +366,7 @@ pub unsafe extern "C" fn track_register_path_property<'a>(
     unsafe {
         let c_str = CStr::from_ptr(id);
         if let Ok(str_id) = c_str.to_str() {
-            let property_clone = std::mem::take(&mut *property);
+            let property_clone = (*property).clone();
 
             (*track).register_path_property(str_id.to_string(), property_clone);
         }

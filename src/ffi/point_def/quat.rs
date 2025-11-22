@@ -24,7 +24,9 @@ pub unsafe extern "C" fn tracks_make_quat_point_definition(
     context: *mut BaseProviderContext,
 ) -> *const QuaternionPointDefinition {
     let value = unsafe { json::convert_json_value_to_serde(json) };
-    let point_definition = Box::new(QuaternionPointDefinition::new(value, unsafe { &*context }));
+    let point_definition = Box::new(QuaternionPointDefinition::parse(value, unsafe {
+        &*context
+    }));
 
     (Box::leak(point_definition)) as _
 }

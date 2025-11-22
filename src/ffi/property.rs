@@ -82,11 +82,7 @@ pub unsafe extern "C" fn path_property_init(
     }
     unsafe {
         let inner = &mut *ptr;
-        let point_data = if new_point_data.is_null() {
-            None
-        } else {
-            Some(std::mem::take(&mut *new_point_data))
-        };
+        let point_data = new_point_data.as_ref().cloned();
 
         inner.init(point_data);
     }

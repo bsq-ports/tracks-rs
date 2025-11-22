@@ -1917,8 +1917,3 @@ dependencies = [
  "quote",
  "syn",
 ]
-
-[[patch.unused]]
-name = "pathfinder_simd"
-version = "0.5.4"
-source = "git+https://github.com/theoparis/pathfinder.git#05f19143e21a96027de7cf2d60fa47ecd8899d21"

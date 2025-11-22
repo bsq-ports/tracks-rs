@@ -29,10 +29,10 @@ pub unsafe extern "C" fn tracks_make_base_point_definition(
     let context = unsafe { &*context };
 
     let point_definition: base_point_definition::BasePointDefinition = match ty {
-        WrapBaseValueType::Vec3 => Vector3PointDefinition::new(value, context).into(),
-        WrapBaseValueType::Quat => QuaternionPointDefinition::new(value, context).into(),
-        WrapBaseValueType::Vec4 => Vector4PointDefinition::new(value, context).into(),
-        WrapBaseValueType::Float => FloatPointDefinition::new(value, context).into(),
+        WrapBaseValueType::Vec3 => Vector3PointDefinition::parse(value, context).into(),
+        WrapBaseValueType::Quat => QuaternionPointDefinition::parse(value, context).into(),
+        WrapBaseValueType::Vec4 => Vector4PointDefinition::parse(value, context).into(),
+        WrapBaseValueType::Float => FloatPointDefinition::parse(value, context).into(),
         WrapBaseValueType::Unknown => {
             panic!("Cannot create BasePointDefinition with Unknown type");
         }

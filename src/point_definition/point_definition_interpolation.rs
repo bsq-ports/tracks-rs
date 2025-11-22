@@ -6,7 +6,7 @@ use crate::{
 use super::{PointDefinition, base_point_definition::BasePointDefinition};
 
 /// A structure to manage interpolation between two point definitions over time.
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct PointDefinitionInterpolation {
     pub time: f32,
     // use refs here to avoid mass cloning
@@ -98,37 +98,35 @@ mod tests {
 
     #[test]
     fn test_float_interpolation_midpoint() {
-        let mut prev = FloatPointDefinition::default();
-        prev.get_points_mut()
-            .push(PointData::Float(FloatPointData::new(
+        let prev = FloatPointDefinition::new(vec![
+            PointData::Float(FloatPointData::new(
                 FloatValues::Static(0.0),
                 0.0,
                 vec![],
                 Functions::EaseLinear,
-            )));
-        prev.get_points_mut()
-            .push(PointData::Float(FloatPointData::new(
+            )),
+            PointData::Float(FloatPointData::new(
                 FloatValues::Static(10.0),
                 1.0,
                 vec![],
                 Functions::EaseLinear,
-            )));
+            )),
+        ]);
 
-        let mut next = FloatPointDefinition::default();
-        next.get_points_mut()
-            .push(PointData::Float(FloatPointData::new(
+        let next = FloatPointDefinition::new(vec![
+            PointData::Float(FloatPointData::new(
                 FloatValues::Static(10.0),
                 0.0,
                 vec![],
                 Functions::EaseLinear,
-            )));
-        next.get_points_mut()
-            .push(PointData::Float(FloatPointData::new(
+            )),
+            PointData::Float(FloatPointData::new(
                 FloatValues::Static(20.0),
                 1.0,
                 vec![],
                 Functions::EaseLinear,
-            )));
+            )),
+        ]);
 
         let prev_bp =
             crate::point_definition::base_point_definition::BasePointDefinition::Float(prev);
@@ -150,45 +148,39 @@ mod tests {
     #[test]
     fn test_vector3_and_vector4_interpolation() {
         // Vector3
-        let mut prev_v3 = Vector3PointDefinition::default();
-        prev_v3
-            .get_points_mut()
-            .push(PointData::Vector3(Vector3PointData::new(
+        let prev_v3 = Vector3PointDefinition::new(vec![
+            PointData::Vector3(Vector3PointData::new(
                 Vector3Values::Static(Vec3::new(0.0, 0.0, 0.0)),
                 false,
                 0.0,
                 vec![],
                 Functions::EaseLinear,
-            )));
-        prev_v3
-            .get_points_mut()
-            .push(PointData::Vector3(Vector3PointData::new(
+            )),
+            PointData::Vector3(Vector3PointData::new(
                 Vector3Values::Static(Vec3::new(3.0, 3.0, 3.0)),
                 false,
                 1.0,
                 vec![],
                 Functions::EaseLinear,
-            )));
+            )),
+        ]);
 
-        let mut next_v3 = Vector3PointDefinition::default();
-        next_v3
-            .get_points_mut()
-            .push(PointData::Vector3(Vector3PointData::new(
+        let next_v3 = Vector3PointDefinition::new(vec![
+            PointData::Vector3(Vector3PointData::new(
                 Vector3Values::Static(Vec3::new(3.0, 3.0, 3.0)),
                 false,
                 0.0,
                 vec![],
                 Functions::EaseLinear,
-            )));
-        next_v3
-            .get_points_mut()
-            .push(PointData::Vector3(Vector3PointData::new(
+            )),
+            PointData::Vector3(Vector3PointData::new(
                 Vector3Values::Static(Vec3::new(6.0, 6.0, 6.0)),
                 false,
                 1.0,
                 vec![],
                 Functions::EaseLinear,
-            )));
+            )),
+        ]);
 
         let prev_bp_v3 =
             crate::point_definition::base_point_definition::BasePointDefinition::Vector3(prev_v3);
@@ -207,45 +199,39 @@ mod tests {
         assert!((v3.x - 2.25).abs() < 1e-6);
 
         // Vector4
-        let mut prev_v4 = Vector4PointDefinition::default();
-        prev_v4
-            .get_points_mut()
-            .push(PointData::Vector4(Vector4PointData::new(
+        let prev_v4 = Vector4PointDefinition::new(vec![
+            PointData::Vector4(Vector4PointData::new(
                 Vector4Values::Static(Vec4::new(0.0, 0.0, 0.0, 0.0)),
                 false,
                 0.0,
                 vec![],
                 Functions::EaseLinear,
-            )));
-        prev_v4
-            .get_points_mut()
-            .push(PointData::Vector4(Vector4PointData::new(
+            )),
+            PointData::Vector4(Vector4PointData::new(
                 Vector4Values::Static(Vec4::new(4.0, 4.0, 4.0, 4.0)),
                 false,
                 1.0,
                 vec![],
                 Functions::EaseLinear,
-            )));
+            )),
+        ]);
 
-        let mut next_v4 = Vector4PointDefinition::default();
-        next_v4
-            .get_points_mut()
-            .push(PointData::Vector4(Vector4PointData::new(
+        let next_v4 = Vector4PointDefinition::new(vec![
+            PointData::Vector4(Vector4PointData::new(
                 Vector4Values::Static(Vec4::new(4.0, 4.0, 4.0, 4.0)),
                 false,
                 0.0,
                 vec![],
                 Functions::EaseLinear,
-            )));
-        next_v4
-            .get_points_mut()
-            .push(PointData::Vector4(Vector4PointData::new(
+            )),
+            PointData::Vector4(Vector4PointData::new(
                 Vector4Values::Static(Vec4::new(8.0, 8.0, 8.0, 8.0)),
                 false,
                 1.0,
                 vec![],
                 Functions::EaseLinear,
-            )));
+            )),
+        ]);
 
         let prev_bp_v4 =
             crate::point_definition::base_point_definition::BasePointDefinition::Vector4(prev_v4);
@@ -268,25 +254,21 @@ mod tests {
         let q1 = Quat::from_array([0.0, 0.0, 0.0, 1.0]);
         let q2 = Quat::from_array([0.0, 0.0, 1.0, 0.0]);
 
-        let mut prev_q = QuaternionPointDefinition::default();
-        prev_q
-            .get_points_mut()
-            .push(PointData::Quaternion(QuaternionPointData::new(
+        let prev_q =
+            QuaternionPointDefinition::new(vec![PointData::Quaternion(QuaternionPointData::new(
                 QuaternionValues::Static(Vec3::ZERO, q1),
                 0.0,
                 vec![],
                 Functions::EaseLinear,
-            )));
+            ))]);
 
-        let mut next_q = QuaternionPointDefinition::default();
-        next_q
-            .get_points_mut()
-            .push(PointData::Quaternion(QuaternionPointData::new(
+        let next_q =
+            QuaternionPointDefinition::new(vec![PointData::Quaternion(QuaternionPointData::new(
                 QuaternionValues::Static(Vec3::ZERO, q2),
                 0.0,
                 vec![],
                 Functions::EaseLinear,
-            )));
+            ))]);
 
         let prev_bp_q =
             crate::point_definition::base_point_definition::BasePointDefinition::Quaternion(prev_q);

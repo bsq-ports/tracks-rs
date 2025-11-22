@@ -18,7 +18,7 @@ pub struct CEventData {
 
     pub event_type: CEventType,
     pub track_key: TrackKeyFFI,
-    pub point_data_ptr: *mut BasePointDefinition,
+    pub point_data_ptr: *const BasePointDefinition,
 }
 
 #[repr(u32)]
@@ -64,11 +64,7 @@ pub unsafe extern "C" fn event_data_to_rust(c_event_data: *const CEventData) -> 
             }
         };
         let track_key = c_event_data.track_key;
-        let point_data = if c_event_data.point_data_ptr.is_null() {
-            None
-        } else {
-            Some(std::mem::take(&mut *c_event_data.point_data_ptr))
-        };
+        let point_data = c_event_data.point_data_ptr.as_ref().cloned();
 
         let event_data = EventData {
             raw_duration: c_event_data.raw_duration,
