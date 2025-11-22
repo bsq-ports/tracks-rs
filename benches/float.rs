@@ -9,7 +9,7 @@ use tracks_rs::{
 fn point_step(n: u64) {
     let context = BaseProviderContext::new();
     let definition =
-        FloatPointDefinition::new(json!([[0.0, 0.0], [1.0, 1.0, "easeInOutSine"]]), &context);
+        FloatPointDefinition::parse(json!([[0.0, 0.0], [1.0, 1.0, "easeInOutSine"]]), &context);
 
     // let step = 1.0 / n as f32;
 

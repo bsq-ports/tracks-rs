@@ -27,7 +27,7 @@ pub struct Vec3Context {
 impl Vec3Context {
     pub fn new() -> Self {
         let context = BaseProviderContext::new();
-        let definition = Vector3PointDefinition::new(json!(["baseLeftHandPosition"]), &context);
+        let definition = Vector3PointDefinition::parse(json!(["baseLeftHandPosition"]), &context);
         Self {
             definition,
             context: RefCell::new(context),

@@ -8,7 +8,7 @@ use tracks_rs::{
 
 fn point_step(n: u64) {
     let context = BaseProviderContext::new();
-    let definition = Vector3PointDefinition::new(
+    let definition = Vector3PointDefinition::parse(
         json!([[0.0, 0.0, 0.0, 1.0], [1.0, 1.0, 1.0, 1.0, "easeInOutSine"]]),
         &context,
     );

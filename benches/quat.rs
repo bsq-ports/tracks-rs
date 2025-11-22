@@ -8,7 +8,7 @@ use tracks_rs::{
 
 fn point_step(n: u64) {
     let context = BaseProviderContext::new();
-    let definition = QuaternionPointDefinition::new(
+    let definition = QuaternionPointDefinition::parse(
         json!([[0.0, 0.0, 0.0, 0.0], [1.0, 1.0, 1.0, 1.0, "easeInOutSine"]]),
         &context,
     );

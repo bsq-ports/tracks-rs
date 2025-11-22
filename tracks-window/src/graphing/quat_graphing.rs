@@ -25,7 +25,7 @@ pub struct QuatContext {
 impl QuatContext {
     pub fn new() -> Self {
         let context = BaseProviderContext::new();
-        let definition = QuaternionPointDefinition::new(json!([0, "baseCombo", 0]), &context);
+        let definition = QuaternionPointDefinition::parse(json!([0, "baseCombo", 0]), &context);
         Self {
             definition,
             context: RefCell::new(context),

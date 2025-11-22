@@ -25,7 +25,7 @@ impl ColorContext {
         let mut context = BaseProviderContext::new();
 
         context.set_values("baseNote0Color", vec4(1.0, 0.0, 0.0, 1.0).into());
-        let definition = Vector4PointDefinition::new(
+        let definition = Vector4PointDefinition::parse(
             json!(["baseNote0Color", [0.4, 0.4, 0.4, 1, "opMul"]]),
             &context,
         );

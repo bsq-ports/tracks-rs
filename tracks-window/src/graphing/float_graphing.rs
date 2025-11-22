@@ -24,7 +24,7 @@ impl FloatContext {
     pub fn new() -> Self {
         let context = BaseProviderContext::new();
         let definition =
-            FloatPointDefinition::new(json!([[0.0, 0.0], [1.0, 1.0, "easeInOutSine"]]), &context);
+            FloatPointDefinition::parse(json!([[0.0, 0.0], [1.0, 1.0, "easeInOutSine"]]), &context);
         Self {
             definition,
             context: RefCell::new(context),
