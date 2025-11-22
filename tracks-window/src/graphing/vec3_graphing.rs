@@ -10,7 +10,7 @@ use plotters::{
         BitMapBackend, Circle, DiscreteRanged, DrawingArea, EmptyElement, IntoLinspace, Text,
     },
     series::LineSeries,
-    style::{BLACK, BLUE, Color, IntoFont, RED, RGBColor, ShapeStyle, WHITE},
+    style::{BLACK, Color, IntoFont, RED, ShapeStyle, WHITE},
 };
 use serde_json::json;
 
@@ -21,9 +21,7 @@ use tracks_rs::{
 
 pub struct Vec3Context {
     pub definition: Vector3PointDefinition,
-    pub definition2: Vector3PointDefinition,
     pub context: RefCell<BaseProviderContext>,
-    pub last_epoch: RefCell<f64>,
 }
 
 impl Vec3Context {
@@ -32,9 +30,7 @@ impl Vec3Context {
         let definition = Vector3PointDefinition::parse(json!(["baseLeftHandPosition"]), &context);
         Self {
             definition,
-            definition2,
             context: RefCell::new(context),
-            last_epoch: RefCell::new(0.0),
         }
     }
 }
@@ -98,8 +94,18 @@ pub fn draw_vec3(
             .draw()
             .unwrap();
 
-        let delta = epoch - context.last_epoch.borrow().clone();
-        context.last_epoch.replace(epoch);
+        chart
+            .draw_series(LineSeries::new(
+                (0.0..1.0).step(0.0001).values().map(|x| {
+                    let point = context
+                        .definition
+                        .interpolate(x as f32, &context.context.borrow())
+                        .0;
+                    (point.x as f64, point.y as f64, point.z as f64)
+                }),
+                &RED,
+            ))
+            .unwrap();
 
         let dot_and_label = |x: f64, y: f64, z: f64| {
             EmptyElement::<(f64, f64, f64), BitMapBackend<BGRXPixel>>::at((x, y, z))
@@ -116,24 +122,11 @@ pub fn draw_vec3(
                 .definition
                 .interpolate(x, &context.context.borrow())
                 .0;
-            let point2 = context
-                .definition2
-                .interpolate(x as f32, &context.context.borrow())
-                .0;
             chart
                 .draw_series(std::iter::once(dot_and_label(
                     point.x as f64,
                     point.y as f64,
                     point.z as f64,
-                    RED,
-                )))
-                .unwrap();
-            chart
-                .draw_series(std::iter::once(dot_and_label(
-                    point2.x as f64,
-                    point2.y as f64,
-                    point2.z as f64,
-                    BLUE,
                 )))
                 .unwrap();
         };

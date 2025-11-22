@@ -1,8 +1,4 @@
-use std::{
-    borrow::Borrow,
-    cell::{Ref, RefCell, RefMut},
-    ops::{Deref, DerefMut},
-};
+use std::borrow::Borrow;
 
 use glam::{Quat, Vec3, Vec4};
 
@@ -10,7 +6,6 @@ use crate::values::{
     ValueProvider,
     base::BaseProviderValues,
     quat::QuaternionProviderValues,
-    smooth::SmoothProvidersValues,
     value::{BaseValue, BaseValueRef},
 };
 
@@ -22,9 +17,6 @@ use crate::values::{
 /// to get the current base values
 #[derive(Default, Clone)]
 pub struct BaseProviderContext {
-    // TODO: Rc? LinkedList?
-    providers: Vec<RefCell<ValueProvider>>,
-
     //Score
     base_combo: f32,
     multiplied_score: f32,
@@ -237,30 +229,7 @@ impl BaseProviderContext {
         }
     }
 
-    fn get_modified_provider(&mut self, provider: ValueProvider, split: &str) -> ValueProvider {
-        match split.chars().nth(0) {
-            Some('s') => {
-                let smooth_mult_str = split[1..split.len()].replace("_", ".");
-                println!("smooth_mult_str: {}", smooth_mult_str);
-                let smooth_mult = smooth_mult_str.parse::<f32>().unwrap();
-                println!("smooth_mult: {}", smooth_mult);
-                let smooth = SmoothProvidersValues::new(Box::new(provider), smooth_mult);
-                let smooth_ref = RefCell::new(smooth);
-                ValueProvider::SmoothProviders(smooth_ref)
-            }
-            Some(_) => {
-                //let partial = PartialProviderValues::new(provider, split);
-                //ValueProvider::PartialProvider(partial)
-                provider
-            }
-            None => {
-                eprintln!("Invalid split: {}", split);
-                provider
-            }
-        }
-    }
-
-    pub fn get_value_provider(&mut self, base: &str) -> RefMut<ValueProvider> {
+    pub fn get_value_provider(&self, base: &str) -> ValueProvider {
         let split_base = base.split(".").collect::<Vec<&str>>();
         let base_name = split_base[0];
 
@@ -271,27 +240,6 @@ impl BaseProviderContext {
             }
             _ => base_value,
         };
-
-        let mut result = base_value;
-
-        if split_base.len() > 1 {
-            for i in 1..split_base.len() {
-                result = self.get_modified_provider(result, split_base[i]);
-            }
-        }
-
-        self.providers.push(result.into());
-        self.providers.last().unwrap().borrow_mut()
-    }
-
-    pub fn update(&mut self, delta: f32, context: &mut BaseProviderContext) {
-        for provider in self.providers.iter_mut() {
-            provider.borrow_mut().update(delta, context);
-        }
-    }
-
-    pub fn add_provider(&mut self, provider: RefCell<ValueProvider>) -> RefCell<ValueProvider> {
-        self.providers.push(provider);
-        self.providers.last().unwrap().clone()
+        base_value
     }
 }

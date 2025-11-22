@@ -1,10 +1,7 @@
 use crate::base_provider_context::BaseProviderContext;
 use base::BaseProviderValues;
 use serde_json::Value as JsonValue;
-use std::{
-    borrow::Cow,
-    cell::{RefCell, RefMut},
-};
+use std::borrow::Cow;
 
 pub mod base;
 #[cfg(feature = "ffi")]
@@ -13,6 +10,7 @@ pub mod quat;
 pub mod smooth;
 pub mod smooth_rot;
 pub mod r#static;
+pub mod updatable;
 pub mod value;
 
 /// Abstract value provider
@@ -30,7 +28,7 @@ pub trait AbstractValueProvider {
 pub trait UpdateableValues: AbstractValueProvider {
     /// Update the values from the source
     /// delta is the amount to progress from the source to target
-    fn update(&mut self, delta: f32, context: &BaseProviderContext);
+    fn update(&mut self, delta: f32);
 }
 
 /// Value provider
@@ -40,24 +38,9 @@ pub enum ValueProvider {
     Static(r#static::StaticValues),
     BaseProvider(base::BaseProviderValues),
     QuaternionProvider(quat::QuaternionProviderValues),
-    PartialProvider(partial::PartialProviderValues),
-    SmoothProviders(RefCell<smooth::SmoothProvidersValues>),
-    SmoothRotationProviders(RefCell<smooth_rot::SmoothRotationProvidersValues>),
-}
-
-#[derive(Clone, Debug)]
-pub enum UpdatableValueProvider {
-    SmoothProviders(RefCell<smooth::SmoothProvidersValues>),
-    SmoothRotationProviders(RefCell<smooth_rot::SmoothRotationProvidersValues>),
-}
-
-impl ValueProvider {
-    fn update(&mut self, delta: f32, context: &BaseProviderContext) {
-        match self {
-            ValueProvider::SmoothProviders(v) => v.borrow_mut().update(delta, context),
-            _ => {}
-        }
-    }
+    PartialProvider(updatable::PartialProviderValues),
+    SmoothProviders(smooth::SmoothProvidersValues),
+    SmoothRotationProviders(smooth_rot::SmoothRotationProvidersValues),
 }
 
 impl AbstractValueProvider for ValueProvider {
@@ -113,7 +96,7 @@ impl JsonPointValues {
 #[cfg(feature = "json")]
 pub fn deserialize_values(
     value: &[&JsonValue],
-    context: &mut BaseProviderContext,
+    context: &BaseProviderContext,
 ) -> Vec<ValueProvider> {
     let mut result = Vec::new();
     let mut start = 0;
