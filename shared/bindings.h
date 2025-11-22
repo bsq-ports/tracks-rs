@@ -10,6 +10,11 @@ namespace Tracks {
 namespace ffi {
 #endif  // __cplusplus
 
+typedef enum CEventPropertyIdType {
+  CString = 0,
+  PropertyName = 1,
+} CEventPropertyIdType;
+
 enum CEventTypeEnum
 #ifdef __cplusplus
   : uint32_t
@@ -158,9 +163,15 @@ typedef struct TrackKeyFFI {
   uint64_t _0;
 } TrackKeyFFI;
 
+typedef union CEventPropertyId {
+  const char *property_str;
+  PropertyNames property_name;
+} CEventPropertyId;
+
 typedef struct CEventType {
   CEventTypeEnum ty;
-  const char *property;
+  union CEventPropertyId property_id;
+  enum CEventPropertyIdType property_id_type;
 } CEventType;
 
 typedef struct CEventData {

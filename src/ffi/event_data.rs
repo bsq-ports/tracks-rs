@@ -2,7 +2,7 @@ use std::ffi::{CStr, c_char};
 use std::ptr;
 
 use crate::animation::events::{EventData, EventType};
-use crate::animation::track::{PathPropertyHandle, ValuePropertyHandle};
+use crate::animation::track::{PathPropertyHandle, PropertyNames, ValuePropertyHandle};
 use crate::easings::functions::Functions;
 use crate::ffi::track::TrackKeyFFI;
 use crate::point_definition::base_point_definition::BasePointDefinition;
@@ -30,7 +30,20 @@ pub enum CEventTypeEnum {
 #[repr(C)]
 pub struct CEventType {
     pub ty: CEventTypeEnum,
-    pub property: *const c_char,
+    pub property_id: CEventPropertyId,
+    pub property_id_type: CEventPropertyIdType,
+}
+
+#[repr(C)]
+pub union CEventPropertyId {
+    pub property_str: *const c_char,
+    pub property_name: PropertyNames,
+}
+
+#[repr(C)]
+pub enum CEventPropertyIdType {
+    CString = 0,
+    PropertyName = 1,
 }
 
 /// Converts a `CEventData` into a Rust `EventData`.
@@ -50,15 +63,33 @@ pub unsafe extern "C" fn event_data_to_rust(c_event_data: *const CEventData) -> 
 
         let event_type = match c_event_data.event_type.ty {
             CEventTypeEnum::AnimateTrack => {
-                let value_property = CStr::from_ptr(c_event_data.event_type.property);
-                let value_property_handle =
-                    ValuePropertyHandle::new(value_property.to_str().unwrap());
+                let value_property_handle: ValuePropertyHandle =
+                    match c_event_data.event_type.property_id_type {
+                        CEventPropertyIdType::CString => {
+                            let property_cstr =
+                                CStr::from_ptr(c_event_data.event_type.property_id.property_str);
+                            let property_str = property_cstr.to_str().unwrap_or_default();
+                            ValuePropertyHandle::new(property_str)
+                        }
+                        CEventPropertyIdType::PropertyName => ValuePropertyHandle::ById(
+                            c_event_data.event_type.property_id.property_name,
+                        ),
+                    };
 
                 EventType::AnimateTrack(value_property_handle)
             }
             CEventTypeEnum::AssignPathAnimation => {
-                let path_property = CStr::from_ptr(c_event_data.event_type.property);
-                let path_property_handle = PathPropertyHandle::new(path_property.to_str().unwrap());
+                let path_property_handle = match c_event_data.event_type.property_id_type {
+                    CEventPropertyIdType::CString => {
+                        let property_cstr =
+                            CStr::from_ptr(c_event_data.event_type.property_id.property_str);
+                        let property_str = property_cstr.to_str().unwrap_or_default();
+                        PathPropertyHandle::new(property_str)
+                    }
+                    CEventPropertyIdType::PropertyName => {
+                        PathPropertyHandle::ById(c_event_data.event_type.property_id.property_name)
+                    }
+                };
 
                 EventType::AssignPathAnimation(path_property_handle)
             }
