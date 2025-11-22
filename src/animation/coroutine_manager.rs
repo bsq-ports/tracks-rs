@@ -79,8 +79,19 @@ impl CoroutineManager {
 
         // cancel any existing coroutines for the same event type
         // that are on the same track
-        self.coroutines
-            .retain(|c| c.track_key != event_group_data.track_key || c.event_type != event_group_data.property);
+        // there's only ever one per track per event type
+        // so we find the first and remove it
+        if let Some(pos) = self.coroutines.iter().position(|x| {
+            x.track_key == event_group_data.track_key && x.event_type == event_group_data.property
+        }) {
+            self.coroutines.remove(pos);
+        }
+
+        // iterate entire list and remove all matching (in case of repeats)
+        // should not be necessary due to above, but just in case
+        // self.coroutines.retain(|c| {
+        //     c.track_key != event_group_data.track_key || c.event_type != event_group_data.property
+        // });
 
         let value = Self::make_event_task(
             song_time,
@@ -184,8 +195,13 @@ impl CoroutineManager {
                     path_property.finish();
                     return None;
                 }
-                let res =
-                    assign_path_animation(path_property, duration, start_song_time, easing, song_time);
+                let res = assign_path_animation(
+                    path_property,
+                    duration,
+                    start_song_time,
+                    easing,
+                    song_time,
+                );
                 if res == CoroutineResult::Break {
                     return None;
                 }
