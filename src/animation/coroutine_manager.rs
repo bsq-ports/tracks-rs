@@ -78,8 +78,9 @@ impl CoroutineManager {
         let repeat = event_group_data.repeat;
 
         // cancel any existing coroutines for the same event type
+        // that are on the same track
         self.coroutines
-            .retain(|c| c.event_type != event_group_data.property);
+            .retain(|c| c.track_key != event_group_data.track_key || c.event_type != event_group_data.property);
 
         let value = Self::make_event_task(
             song_time,
