@@ -1,3 +1,5 @@
+use std::ptr::null_mut;
+
 use crate::animation::coroutine_manager::CoroutineManager;
 use crate::animation::events::EventData;
 use crate::animation::tracks_holder::TracksHolder;
@@ -34,7 +36,7 @@ pub unsafe extern "C" fn destroy_coroutine_manager(manager: *mut CoroutineManage
 /// - `manager` must be a valid pointer to a `CoroutineManager`.
 /// - `context` must be a valid pointer to a `BaseProviderContext` for the duration of the call.
 /// - `tracks_holder` must be a valid pointer to a `TracksHolder`.
-/// - `event_data` must be a pointer returned by `event_data_to_rust`; ownership is transferred and it will be freed.
+/// - `event_data` must be a pointer returned by `event_data_to_rust`. The data is cloned, so the caller retains ownership.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn start_event_coroutine(
     manager: *mut CoroutineManager,
@@ -42,7 +44,7 @@ pub unsafe extern "C" fn start_event_coroutine(
     song_time: f32,
     context: *const BaseProviderContext,
     tracks_holder: *mut TracksHolder,
-    event_data: *mut EventData,
+    event_data: *const EventData,
 ) {
     if manager.is_null() || context.is_null() || event_data.is_null() || tracks_holder.is_null() {
         return;
@@ -51,9 +53,9 @@ pub unsafe extern "C" fn start_event_coroutine(
     unsafe {
         let manager = &mut *manager;
         let context = &*context;
-        let event_data = Box::from_raw(event_data);
+        let event_data = (*event_data).clone();
 
-        manager.start_event_coroutine(bpm, song_time, context, &mut *tracks_holder, *event_data);
+        manager.start_event_coroutine(bpm, song_time, context, &mut *tracks_holder, event_data);
     }
 }
 

@@ -7,6 +7,7 @@ use crate::{
     point_definition::base_point_definition::{self},
 };
 
+#[derive(Debug, Clone)]
 pub struct EventData {
     /// duration in beatmap time
     pub raw_duration: f32,

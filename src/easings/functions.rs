@@ -2,7 +2,7 @@ use std::{fmt, str::FromStr};
 
 use super::implementations::*;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[allow(dead_code, clippy::enum_variant_names)]
 #[repr(C)]
 pub enum Functions {
