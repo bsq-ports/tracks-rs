@@ -11,18 +11,18 @@ use super::game_object::GameObject;
 pub const POSITION: &str = "position";
 pub const ROTATION: &str = "rotation";
 pub const SCALE: &str = "scale";
-pub const LOCAL_ROTATION: &str = "local_rotation";
-pub const LOCAL_POSITION: &str = "local_position";
-pub const DEFINITE_POSITION: &str = "definite_position";
+pub const LOCAL_ROTATION: &str = "localRotation";
+pub const LOCAL_POSITION: &str = "localPosition";
+pub const DEFINITE_POSITION: &str = "definitePosition";
 pub const DISSOLVE: &str = "dissolve";
-pub const DISSOLVE_ARROW: &str = "dissolve_arrow";
+pub const DISSOLVE_ARROW: &str = "dissolveArrow";
 pub const TIME: &str = "time";
 pub const CUTTABLE: &str = "cuttable";
 pub const COLOR: &str = "color";
 pub const ATTENTUATION: &str = "attentuation";
-pub const FOG_OFFSET: &str = "fog_offset";
-pub const HEIGHT_FOG_START_Y: &str = "height_fog_start_y";
-pub const HEIGHT_FOG_HEIGHT: &str = "height_fog_height";
+pub const FOG_OFFSET: &str = "fogOffset";
+pub const HEIGHT_FOG_START_Y: &str = "heightFogStartY";
+pub const HEIGHT_FOG_HEIGHT: &str = "heightFogHeight";
 
 // v2 keys
 pub const V2_POSITION: &str = "_position";
