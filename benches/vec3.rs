@@ -2,13 +2,13 @@ use criterion::{Criterion, criterion_group, criterion_main};
 use serde_json::json;
 use std::hint::black_box;
 use tracks_rs::{
+    base_provider_context::BaseProviderContext,
     point_definition::{PointDefinition, vector3_point_definition::Vector3PointDefinition},
-    values::base_provider_context::BaseProviderContext,
 };
 
 fn point_step(n: u64) {
     let context = BaseProviderContext::new();
-    let definition = Vector3PointDefinition::new(
+    let definition = Vector3PointDefinition::parse(
         json!([[0.0, 0.0, 0.0, 1.0], [1.0, 1.0, 1.0, 1.0, "easeInOutSine"]]),
         &context,
     );
@@ -22,8 +22,9 @@ fn point_step(n: u64) {
     });
 }
 
+#[cfg(feature = "compare_old")]
 fn point_step_slow(n: u64) {
-    let context = track_rs_old::values::base_provider_context::BaseProviderContext::new();
+    let context = track_rs_old::base_provider_context::BaseProviderContext::new();
     let definition =
         track_rs_old::point_definition::vector3_point_definition::Vector3PointDefinition::new(
             &json!([[0.0, 0.0, 0.0, 1.0], [1.0, 1.0, 1.0, 1.0, "easeInOutSine"]]),
@@ -51,6 +52,8 @@ fn benchmark_both(n: u64, c: &mut Criterion) {
     group.bench_with_input(criterion::BenchmarkId::new("vec3", n), &n, |b, n| {
         b.iter(|| point_step(*n))
     });
+
+    #[cfg(feature = "compare_old")]
     group.bench_with_input(criterion::BenchmarkId::new("vec3_slow", n), &n, |b, n| {
         b.iter(|| point_step_slow(*n))
     });

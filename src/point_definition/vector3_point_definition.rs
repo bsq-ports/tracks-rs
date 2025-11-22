@@ -1,7 +1,10 @@
+use std::rc::Rc;
+
 use glam::Vec3;
-use tracing::error;
+use log::error;
 
 use crate::{
+    base_provider_context::BaseProviderContext,
     easings::functions::Functions,
     modifiers::{
         Modifier,
@@ -9,16 +12,14 @@ use crate::{
         vector3_modifier::{Vector3Modifier, Vector3Values},
     },
     point_data::{PointData, vector3_point_data::Vector3PointData},
-    values::{
-        AbstractValueProvider, ValueProvider,
-        base_provider_context::{BaseProviderContext},
-    },
+    values::{AbstractValueProvider, ValueProvider},
 };
 
 use super::PointDefinition;
 
+#[derive(Default, Debug, Clone)]
 pub struct Vector3PointDefinition {
-    points: Vec<PointData>,
+    points: Rc<[PointData]>,
 }
 
 impl Vector3PointDefinition {
@@ -60,20 +61,25 @@ impl Vector3PointDefinition {
 impl PointDefinition for Vector3PointDefinition {
     type Value = Vec3;
 
+    fn new(points: Vec<PointData>) -> Self {
+        Self {
+            points: Rc::from(points),
+        }
+    }
+
     fn get_count(&self) -> usize {
         self.points.len()
+    }
+
+    fn get_type(&self) -> crate::ffi::types::WrapBaseValueType {
+        crate::ffi::types::WrapBaseValueType::Vec3
     }
 
     fn has_base_provider(&self) -> bool {
         self.points.iter().any(|p| p.has_base_provider())
     }
 
-    fn get_points_mut(&mut self) -> &mut Vec<PointData> {
-        &mut self.points
-    }
-
     fn create_modifier(
-        &self,
         values: Vec<ValueProvider>,
         modifiers: Vec<Modifier>,
         operation: Operation,
@@ -98,7 +104,6 @@ impl PointDefinition for Vector3PointDefinition {
     }
 
     fn create_point_data(
-        &self,
         values: Vec<ValueProvider>,
         flags: Vec<String>,
         modifiers: Vec<Modifier>,
@@ -154,23 +159,11 @@ impl PointDefinition for Vector3PointDefinition {
         }
     }
 
-    fn get_points(&self) -> &Vec<PointData> {
+    fn get_points(&self) -> &[PointData] {
         &self.points
     }
 
     fn get_point(&self, point: &PointData, context: &BaseProviderContext) -> Vec3 {
         point.get_vector3(context)
-    }
-}
-
-impl Vector3PointDefinition {
-    #[cfg(feature = "json")]
-    pub fn new(
-        value: serde_json::Value,
-        context: &mut BaseProviderContext,
-    ) -> Self {
-        let mut instance = Self { points: Vec::new() };
-        instance.parse(value, context);
-        instance
     }
 }

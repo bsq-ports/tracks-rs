@@ -15,8 +15,8 @@ use plotters::{
 use serde_json::json;
 
 use tracks_rs::{
+    base_provider_context::BaseProviderContext,
     point_definition::{PointDefinition, vector3_point_definition::Vector3PointDefinition},
-    values::base_provider_context::{BaseProviderContext, UpdatableProviderContext},
 };
 
 pub struct Vec3Context {
@@ -28,15 +28,8 @@ pub struct Vec3Context {
 
 impl Vec3Context {
     pub fn new() -> Self {
-        let mut context = BaseProviderContext::new();
-        let definition = Vector3PointDefinition::new(
-            json!(["baseLeftHandPosition"]),
-            &mut context,
-        );
-        let definition2 = Vector3PointDefinition::new(
-            json!(["baseLeftHandPosition.s10", [0, 0.2, 0, "opAdd"]]),
-            &mut context,
-        );
+        let context = BaseProviderContext::new();
+        let definition = Vector3PointDefinition::parse(json!(["baseLeftHandPosition"]), &context);
         Self {
             definition,
             definition2,
@@ -89,7 +82,7 @@ pub fn draw_vec3(
             '_,
             BitMapBackend<'_, BGRXPixel>,
             Cartesian3d<RangedCoordf64, RangedCoordf64, RangedCoordf64>,
-        > = chart.clone().restore(&root);
+        > = chart.clone().restore(root);
         chart.plotting_area().fill(&WHITE).unwrap();
 
         chart.with_projection(|mut pb| {
@@ -108,22 +101,20 @@ pub fn draw_vec3(
         let delta = epoch - context.last_epoch.borrow().clone();
         context.last_epoch.replace(epoch);
 
-        context.updatable_provider.update(delta as f32, &mut context.context.borrow_mut());
-
-        let dot_and_label = |x: f64, y: f64, z: f64, color: RGBColor| {
-            return EmptyElement::<(f64, f64, f64), BitMapBackend<BGRXPixel>>::at((x, y, z))
-                + Circle::new((0, 0), 3, ShapeStyle::from(&color).filled())
+        let dot_and_label = |x: f64, y: f64, z: f64| {
+            EmptyElement::<(f64, f64, f64), BitMapBackend<BGRXPixel>>::at((x, y, z))
+                + Circle::new((0, 0), 3, ShapeStyle::from(&BLACK).filled())
                 + Text::new(
                     format!("({:.2},{:.2},{:.2})", x, y, z),
                     (10, 0),
                     ("sans-serif", 15.0).into_font(),
-                );
+                )
         };
 
         let mut draw_t = |x: f32| {
             let point = context
                 .definition
-                .interpolate(x as f32, &context.context.borrow())
+                .interpolate(x, &context.context.borrow())
                 .0;
             let point2 = context
                 .definition2

@@ -10,8 +10,8 @@ use quaternion_modifier::QuaternionModifier;
 use vector3_modifier::Vector3Modifier;
 use vector4_modifier::Vector4Modifier;
 
+use crate::base_provider_context::BaseProviderContext;
 use crate::modifiers::operation::Operation;
-use crate::values::base_provider_context::BaseProviderContext;
 use crate::values::{AbstractValueProvider, ValueProvider};
 
 #[derive(Clone, Debug)]
@@ -20,6 +20,9 @@ pub enum ModifierValues<T> {
     Dynamic(Vec<ValueProvider>),
 }
 
+/// Modifiers are added at the end of points to allow you to do basic arithmetic on points.
+///  How these modifiers interact can be defined using operations, all of which are done componentwise.
+#[derive(Debug)]
 pub enum Modifier {
     Float(FloatModifier),
     Vector3(Vector3Modifier),
@@ -125,7 +128,7 @@ pub trait ModifierBase {
     }
 }
 
-pub fn shared_has_base_provider(is_dynamic: bool, modifiers: &Vec<Modifier>) -> bool {
+pub fn shared_has_base_provider(is_dynamic: bool, modifiers: &[Modifier]) -> bool {
     match is_dynamic {
         true => true,
         false => modifiers.iter().any(|m| m.has_base_provider()),

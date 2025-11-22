@@ -1,16 +1,17 @@
 use crate::{
+    base_provider_context::BaseProviderContext,
     easings::functions::Functions,
     modifiers::{
         Modifier, ModifierBase,
         operation::Operation,
         quaternion_modifier::{QuaternionModifier, QuaternionValues},
     },
-    values::base_provider_context::BaseProviderContext,
 };
 use glam::Quat;
 
 use super::BasePointData;
 
+#[derive(Debug)]
 pub struct QuaternionPointData {
     base_modifier: QuaternionModifier,
     easing: Functions,
@@ -59,7 +60,7 @@ impl ModifierBase for QuaternionPointData {
 
 impl BasePointData<Quat> for QuaternionPointData {
     fn get_easing(&self) -> Functions {
-        self.easing.clone()
+        self.easing
     }
 
     fn get_time(&self) -> f32 {

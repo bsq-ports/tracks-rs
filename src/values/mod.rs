@@ -1,4 +1,4 @@
-use crate::values::base_provider_context::BaseProviderContext;
+use crate::base_provider_context::BaseProviderContext;
 use base::BaseProviderValues;
 use serde_json::Value as JsonValue;
 use std::{
@@ -9,8 +9,6 @@ use std::{
 pub mod base;
 #[cfg(feature = "ffi")]
 pub mod base_ffi;
-pub mod base_provider_context;
-pub mod partial;
 pub mod quat;
 pub mod smooth;
 pub mod smooth_rot;
@@ -69,14 +67,8 @@ impl AbstractValueProvider for ValueProvider {
             ValueProvider::BaseProvider(v) => v.values(context),
             ValueProvider::QuaternionProvider(v) => v.values(context),
             ValueProvider::PartialProvider(v) => v.values(context),
-            ValueProvider::SmoothProviders(v) => {
-                let borrowed = v.borrow();
-                Cow::Owned(borrowed.values(context).to_vec())
-            }
-            ValueProvider::SmoothRotationProviders(v) => {
-                let borrowed = v.borrow();
-                Cow::Owned(borrowed.values(context).to_vec())
-            }
+            ValueProvider::SmoothProviders(v) => v.values(context),
+            ValueProvider::SmoothRotationProviders(v) => v.values(context),
         }
     }
 }
@@ -95,7 +87,7 @@ pub enum JsonPointValues {
 impl JsonPointValues {
     pub fn to_provider(self) -> ValueProvider {
         match self {
-            JsonPointValues::Static(v) => ValueProvider::Static(r#static::StaticValues::new(v)),
+            JsonPointValues::Static(v) => ValueProvider::Static(r#static::StaticValues::new(&v)),
             JsonPointValues::BaseProvider(v) => ValueProvider::BaseProvider(v),
         }
     }
@@ -152,5 +144,5 @@ fn close(result: &mut Vec<ValueProvider>, raw_values: Vec<&JsonValue>, open: usi
         .iter()
         .filter_map(|v| v.as_f64().map(|i| i as f32))
         .collect();
-    result.push(ValueProvider::Static(StaticValues { values }));
+    result.push(ValueProvider::Static(StaticValues::new(&values)));
 }

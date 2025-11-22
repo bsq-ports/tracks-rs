@@ -11,8 +11,8 @@ use plotters::{
 };
 use serde_json::json;
 use tracks_rs::{
+    base_provider_context::BaseProviderContext,
     point_definition::{PointDefinition, vector4_point_definition::Vector4PointDefinition},
-    values::base_provider_context::{BaseProviderContext, UpdatableProviderContext},
 };
 
 pub struct ColorContext {
@@ -26,7 +26,7 @@ impl ColorContext {
         let mut updatable_provider = UpdatableProviderContext::new();
 
         context.set_values("baseNote0Color", vec4(1.0, 0.0, 0.0, 1.0).into());
-        let definition = Vector4PointDefinition::new(
+        let definition = Vector4PointDefinition::parse(
             json!(["baseNote0Color", [0.4, 0.4, 0.4, 1, "opMul"]]),
             &mut context,
             &mut updatable_provider,
@@ -66,7 +66,7 @@ pub fn draw_color(
     _window: &Window,
 ) {
     {
-        let mut chart = chart.clone().restore(&root);
+        let mut chart = chart.clone().restore(root);
         chart.plotting_area().fill(&WHITE).unwrap();
 
         chart

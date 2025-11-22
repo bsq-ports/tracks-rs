@@ -1,6 +1,9 @@
+use std::rc::Rc;
+
 use glam::{Quat, Vec3, vec3};
 
 use crate::{
+    base_provider_context::BaseProviderContext,
     easings::functions::Functions,
     modifiers::{
         Modifier,
@@ -8,13 +11,14 @@ use crate::{
         quaternion_modifier::{QuaternionModifier, QuaternionValues, TRACKS_EULER_ROT},
     },
     point_data::{PointData, quaternion_point_data::QuaternionPointData},
-    values::{AbstractValueProvider, ValueProvider, base_provider_context::BaseProviderContext},
+    values::{AbstractValueProvider, ValueProvider},
 };
 
 use super::PointDefinition;
 
+#[derive(Default, Debug, Clone)]
 pub struct QuaternionPointDefinition {
-    points: Vec<PointData>,
+    points: Rc<[PointData]>,
 }
 
 impl PointDefinition for QuaternionPointDefinition {
@@ -28,12 +32,11 @@ impl PointDefinition for QuaternionPointDefinition {
         self.points.iter().any(|p| p.has_base_provider())
     }
 
-    fn get_points_mut(&mut self) -> &mut Vec<PointData> {
-        &mut self.points
+    fn get_type(&self) -> crate::ffi::types::WrapBaseValueType {
+        crate::ffi::types::WrapBaseValueType::Quat
     }
 
     fn create_modifier(
-        &self,
         values: Vec<ValueProvider>,
         modifiers: Vec<Modifier>,
         operation: Operation,
@@ -62,7 +65,6 @@ impl PointDefinition for QuaternionPointDefinition {
     }
 
     fn create_point_data(
-        &self,
         values: Vec<ValueProvider>,
         _flags: Vec<String>,
         modifiers: Vec<Modifier>,
@@ -116,23 +118,17 @@ impl PointDefinition for QuaternionPointDefinition {
         point_l.slerp(point_r, time)
     }
 
-    fn get_points(&self) -> &Vec<PointData> {
+    fn get_points(&self) -> &[PointData] {
         &self.points
     }
 
     fn get_point(&self, point: &PointData, context: &BaseProviderContext) -> Quat {
         point.get_quaternion(context)
     }
-}
 
-impl QuaternionPointDefinition {
-    #[cfg(feature = "json")]
-    pub fn new(
-        value: serde_json::Value,
-        context: &mut BaseProviderContext,
-    ) -> Self {
-        let mut instance = Self { points: Vec::new() };
-        instance.parse(value, context);
-        instance
+    fn new(points: Vec<PointData>) -> Self {
+        Self {
+            points: Rc::from(points),
+        }
     }
 }

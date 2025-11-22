@@ -1,9 +1,10 @@
 use super::{Modifier, ModifierBase, operation::Operation};
 use super::{ModifierValues, shared_has_base_provider};
-use crate::values::base_provider_context::BaseProviderContext;
+use crate::base_provider_context::BaseProviderContext;
 
 pub type FloatValues = ModifierValues<f32>;
 
+#[derive(Debug)]
 pub struct FloatModifier {
     values: FloatValues,
     has_base_provider: bool,
@@ -31,7 +32,7 @@ impl ModifierBase for FloatModifier {
     fn get_point(&self, context: &BaseProviderContext) -> f32 {
         let original_point = match &self.values {
             FloatValues::Static(s) => *s,
-            FloatValues::Dynamic(value_providers) => self.convert(&value_providers, context),
+            FloatValues::Dynamic(value_providers) => self.convert(value_providers, context),
         };
         self.modifiers
             .iter()

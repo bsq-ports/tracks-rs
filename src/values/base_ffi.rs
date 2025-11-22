@@ -1,13 +1,6 @@
-use std::{
-    borrow::Cow,
-    ffi::{self, c_void},
-    slice,
-};
+use std::{borrow::Cow, ffi::c_void, slice};
 
-use crate::{
-    ffi::{WrapBaseValue, WrappedValues},
-    values::base_provider_context::BaseProviderContext,
-};
+use crate::{base_provider_context::BaseProviderContext, ffi::types::WrappedValues};
 
 use super::AbstractValueProvider;
 

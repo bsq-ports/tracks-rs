@@ -11,8 +11,8 @@ use plotters::{
 use serde_json::json;
 
 use tracks_rs::{
+    base_provider_context::BaseProviderContext,
     point_definition::{PointDefinition, float_point_definition::FloatPointDefinition},
-    values::base_provider_context::{BaseProviderContext, UpdatableProviderContext},
 };
 
 pub struct FloatContext {
@@ -22,13 +22,9 @@ pub struct FloatContext {
 
 impl FloatContext {
     pub fn new() -> Self {
-        let mut context = BaseProviderContext::new();
-        let mut updatable_provider = UpdatableProviderContext::new();
-        let definition = FloatPointDefinition::new(
-            json!([[0.0, 0.0], [1.0, 1.0, "easeInOutSine"]]),
-            &mut context,
-            &mut updatable_provider,
-        );
+        let context = BaseProviderContext::new();
+        let definition =
+            FloatPointDefinition::parse(json!([[0.0, 0.0], [1.0, 1.0, "easeInOutSine"]]), &context);
         Self {
             definition,
             context: RefCell::new(context),
@@ -65,7 +61,7 @@ pub fn draw_2d(
     _epoch: f64,
 ) {
     {
-        let mut chart = chart.clone().restore(&root);
+        let mut chart = chart.clone().restore(root);
         chart.plotting_area().fill(&BLACK).unwrap();
 
         chart

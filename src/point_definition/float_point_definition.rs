@@ -1,6 +1,9 @@
+use std::rc::Rc;
+
 use glam::FloatExt;
 
 use crate::{
+    base_provider_context::BaseProviderContext,
     easings::functions::Functions,
     modifiers::{
         Modifier,
@@ -8,16 +11,14 @@ use crate::{
         operation::Operation,
     },
     point_data::{PointData, float_point_data::FloatPointData},
-    values::{
-        AbstractValueProvider, ValueProvider,
-        base_provider_context::{BaseProviderContext},
-    },
+    values::{AbstractValueProvider, ValueProvider},
 };
 
 use super::PointDefinition;
 
+#[derive(Default, Debug, Clone)]
 pub struct FloatPointDefinition {
-    points: Vec<PointData>,
+    points: Rc<[PointData]>,
 }
 
 impl PointDefinition for FloatPointDefinition {
@@ -31,12 +32,13 @@ impl PointDefinition for FloatPointDefinition {
         self.points.iter().any(|p| p.has_base_provider())
     }
 
-    fn get_points_mut(&mut self) -> &mut Vec<PointData> {
-        &mut self.points
+    fn new(points: Vec<PointData>) -> Self {
+        Self {
+            points: Rc::from(points),
+        }
     }
 
     fn create_modifier(
-        &self,
         values: Vec<ValueProvider>,
         modifiers: Vec<Modifier>,
         operation: Operation,
@@ -58,7 +60,6 @@ impl PointDefinition for FloatPointDefinition {
     }
 
     fn create_point_data(
-        &self,
         values: Vec<ValueProvider>,
         _flags: Vec<String>,
         modifiers: Vec<Modifier>,
@@ -109,24 +110,15 @@ impl PointDefinition for FloatPointDefinition {
         f32::lerp(point_l, point_r, time)
     }
 
-    fn get_points(&self) -> &Vec<PointData> {
+    fn get_points(&self) -> &[PointData] {
         &self.points
     }
 
     fn get_point(&self, point: &PointData, context: &BaseProviderContext) -> f32 {
         point.get_float(context)
     }
-}
 
-impl FloatPointDefinition {
-    /// Constructor equivalent – parses the provided JSON immediately.
-    #[cfg(feature = "json")]
-    pub fn new(
-        value: serde_json::Value,
-        context: &mut BaseProviderContext,
-    ) -> Self {
-        let mut instance = Self { points: Vec::new() };
-        instance.parse(value, context);
-        instance
+    fn get_type(&self) -> crate::ffi::types::WrapBaseValueType {
+        crate::ffi::types::WrapBaseValueType::Float
     }
 }

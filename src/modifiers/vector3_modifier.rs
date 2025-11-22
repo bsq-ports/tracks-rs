@@ -1,10 +1,11 @@
 use super::{Modifier, ModifierBase, operation::Operation};
 use super::{ModifierValues, shared_has_base_provider};
-use crate::values::base_provider_context::BaseProviderContext;
+use crate::base_provider_context::BaseProviderContext;
 use glam::Vec3;
 
 pub type Vector3Values = ModifierValues<Vec3>;
 
+#[derive(Debug)]
 pub struct Vector3Modifier {
     values: Vector3Values,
     has_base_provider: bool,
@@ -32,7 +33,7 @@ impl ModifierBase for Vector3Modifier {
     fn get_point(&self, context: &BaseProviderContext) -> Vec3 {
         let original_point = match &self.values {
             Vector3Values::Static(s) => *s,
-            Vector3Values::Dynamic(value_providers) => self.convert(&value_providers, context),
+            Vector3Values::Dynamic(value_providers) => self.convert(value_providers, context),
         };
         self.modifiers
             .iter()

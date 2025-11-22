@@ -13,8 +13,8 @@ use plotters::{
 use serde_json::json;
 
 use tracks_rs::{
+    base_provider_context::BaseProviderContext,
     point_definition::{PointDefinition, quaternion_point_definition::QuaternionPointDefinition},
-    values::base_provider_context::{BaseProviderContext, UpdatableProviderContext},
 };
 
 pub struct QuatContext {
@@ -24,13 +24,8 @@ pub struct QuatContext {
 
 impl QuatContext {
     pub fn new() -> Self {
-        let mut context = BaseProviderContext::new();
-        let mut updatable_provider = UpdatableProviderContext::new();
-        let definition = QuaternionPointDefinition::new(
-            json!([0, "baseCombo", 0]),
-            &mut context,
-            &mut updatable_provider,
-        );
+        let context = BaseProviderContext::new();
+        let definition = QuaternionPointDefinition::parse(json!([0, "baseCombo", 0]), &context);
         Self {
             definition,
             context: RefCell::new(context),
@@ -76,7 +71,7 @@ pub fn draw_quat(
             "baseCombo",
             ((epoch.sin() as f32 + 1.0) * 0.5 * 45.0).into(),
         );
-        let mut chart = chart.clone().restore(&root);
+        let mut chart = chart.clone().restore(root);
         chart.plotting_area().fill(&WHITE).unwrap();
 
         chart.with_projection(|mut pb| {

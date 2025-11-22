@@ -2,13 +2,13 @@ use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use serde_json::json;
 use std::hint::black_box;
 use tracks_rs::{
+    base_provider_context::BaseProviderContext,
     point_definition::{PointDefinition, vector4_point_definition::Vector4PointDefinition},
-    values::base_provider_context::BaseProviderContext,
 };
 
 fn point_step(n: u64) {
     let context = BaseProviderContext::new();
-    let definition = Vector4PointDefinition::new(
+    let definition = Vector4PointDefinition::parse(
         json!([
             [0.0, 1.0, 0.0, 0.0, 0.0],
             [1.0, 0.0, 1.0, 1.0, 1.0, "easeInOutSine"]
@@ -24,8 +24,10 @@ fn point_step(n: u64) {
         black_box(definition.interpolate(x as f32, &context));
     });
 }
+
+#[cfg(feature = "compare_old")]
 fn point_step_slow(n: u64) {
-    let context = track_rs_old::values::base_provider_context::BaseProviderContext::new();
+    let context = track_rs_old::base_provider_context::BaseProviderContext::new();
     let definition =
         track_rs_old::point_definition::vector4_point_definition::Vector4PointDefinition::new(
             &json!([
@@ -56,6 +58,7 @@ fn benchmark_both(n: u64, c: &mut Criterion) {
     group.bench_with_input(BenchmarkId::new("vec4", n), &n, |b, n| {
         b.iter(|| point_step(*n))
     });
+    #[cfg(feature = "compare_old")]
     group.bench_with_input(BenchmarkId::new("vec4_slow", n), &n, |b, n| {
         b.iter(|| point_step_slow(*n))
     });

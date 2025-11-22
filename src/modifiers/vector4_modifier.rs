@@ -1,10 +1,11 @@
 use super::{Modifier, ModifierBase, operation::Operation};
 use super::{ModifierValues, shared_has_base_provider};
-use crate::values::base_provider_context::BaseProviderContext;
+use crate::base_provider_context::BaseProviderContext;
 use glam::Vec4;
 
 pub type Vector4Values = ModifierValues<Vec4>;
 
+#[derive(Debug)]
 pub struct Vector4Modifier {
     values: Vector4Values,
     has_base_provider: bool,
@@ -32,10 +33,10 @@ impl ModifierBase for Vector4Modifier {
     fn get_point(&self, context: &BaseProviderContext) -> Vec4 {
         let original_point = match &self.values {
             Vector4Values::Static(s) => *s,
-            Vector4Values::Dynamic(value_providers) => self.convert(&value_providers, context),
+            Vector4Values::Dynamic(value_providers) => self.convert(value_providers, context),
         };
-        let result = self
-            .modifiers
+
+        self.modifiers
             .iter()
             .fold(original_point, |acc, x| match x.get_operation() {
                 Operation::Add => acc + x.get_vector4(context),
@@ -43,8 +44,7 @@ impl ModifierBase for Vector4Modifier {
                 Operation::Mul => acc * x.get_vector4(context),
                 Operation::Div => acc / x.get_vector4(context),
                 Operation::None => x.get_vector4(context),
-            });
-        result
+            })
     }
 
     fn get_raw_point(&self) -> Vec4 {

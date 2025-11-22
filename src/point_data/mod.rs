@@ -9,9 +9,10 @@ use quaternion_point_data::QuaternionPointData;
 use vector3_point_data::Vector3PointData;
 use vector4_point_data::Vector4PointData;
 
+use crate::base_provider_context::BaseProviderContext;
 use crate::easings::functions::Functions;
-use crate::values::base_provider_context::BaseProviderContext;
 
+#[derive(Debug)]
 pub enum PointData {
     Float(FloatPointData),
     Vector3(Vector3PointData),

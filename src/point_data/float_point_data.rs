@@ -1,15 +1,16 @@
 use crate::{
+    base_provider_context::BaseProviderContext,
     easings::functions::Functions,
     modifiers::{
         Modifier, ModifierBase,
         float_modifier::{FloatModifier, FloatValues},
         operation::Operation,
     },
-    values::base_provider_context::BaseProviderContext,
 };
 
 use super::BasePointData;
 
+#[derive(Debug)]
 pub struct FloatPointData {
     base_modifier: FloatModifier,
     easing: Functions,
@@ -53,7 +54,7 @@ impl ModifierBase for FloatPointData {
 
 impl BasePointData<f32> for FloatPointData {
     fn get_easing(&self) -> Functions {
-        self.easing.clone()
+        self.easing
     }
 
     fn get_time(&self) -> f32 {

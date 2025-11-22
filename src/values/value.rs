@@ -1,3 +1,5 @@
+use glam::FloatExt;
+
 use std::ops::Div;
 use std::ops::Index;
 use std::ops::IndexMut;
@@ -8,6 +10,8 @@ use glam::Vec3;
 
 use glam::Vec4;
 
+use crate::ffi::types::WrapBaseValueType;
+
 ///
 /// Time based number
 ///
@@ -15,12 +19,18 @@ use glam::Vec4;
 #[derive(Clone, Debug, Copy)]
 pub struct TimeValue(f32);
 
-#[derive(Clone, Debug, Copy)]
+#[derive(Clone, Debug, Copy, PartialEq)]
 pub enum BaseValue {
     Float(f32),
     Vector3(Vec3),
     Vector4(Vec4),
     Quaternion(Quat),
+}
+
+impl Default for BaseValue {
+    fn default() -> Self {
+        BaseValue::Float(0.0)
+    }
 }
 
 #[derive(Clone, Debug, Copy)]
@@ -83,6 +93,10 @@ impl BaseValue {
         }
     }
 
+    pub fn is_empty(&self) -> bool {
+        false
+    }
+
     pub fn as_slice(&self) -> &[f32] {
         match self {
             BaseValue::Float(v) => std::slice::from_ref(v),
@@ -91,9 +105,32 @@ impl BaseValue {
             BaseValue::Quaternion(v) => v.as_ref(),
         }
     }
+
+    pub fn lerp(a: BaseValue, b: BaseValue, t: f32) -> BaseValue {
+        match (a, b) {
+            (BaseValue::Float(v1), BaseValue::Float(v2)) => f32::lerp(v1, v2, t).into(),
+            (BaseValue::Vector3(v1), BaseValue::Vector3(v2)) => Vec3::lerp(v1, v2, t).into(),
+            (BaseValue::Vector4(v1), BaseValue::Vector4(v2)) => Vec4::lerp(v1, v2, t).into(),
+            (BaseValue::Quaternion(v1), BaseValue::Quaternion(v2)) => {
+                // lerp or slerp?
+
+                Quat::slerp(v1, v2, t).into()
+            }
+            _ => panic!("Invalid interpolation"),
+        }
+    }
+
+    pub fn get_type(&self) -> WrapBaseValueType {
+        match self {
+            BaseValue::Float(_) => WrapBaseValueType::Float,
+            BaseValue::Vector3(_) => WrapBaseValueType::Vec3,
+            BaseValue::Vector4(_) => WrapBaseValueType::Vec4,
+            BaseValue::Quaternion(_) => WrapBaseValueType::Quat,
+        }
+    }
 }
 
-impl<'a> BaseValueRef<'a> {
+impl BaseValueRef<'_> {
     pub fn as_float(&self) -> Option<&f32> {
         match self {
             BaseValueRef::Float(v) => Some(v),
@@ -131,7 +168,11 @@ impl<'a> BaseValueRef<'a> {
         }
     }
 
-    pub fn as_slice<'b>(&'b self) -> &'b [f32] {
+    pub fn is_empty(&self) -> bool {
+        false
+    }
+
+    pub fn as_slice(&self) -> &[f32] {
         match self {
             BaseValueRef::Float(v) => std::slice::from_ref(v),
             BaseValueRef::Vector3(v) => v.as_ref(),

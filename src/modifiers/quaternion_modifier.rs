@@ -1,6 +1,7 @@
 use super::{Modifier, ModifierBase, operation::Operation, shared_has_base_provider};
-use crate::values::{
-    AbstractValueProvider, ValueProvider, base_provider_context::BaseProviderContext,
+use crate::{
+    base_provider_context::BaseProviderContext,
+    values::{AbstractValueProvider, ValueProvider},
 };
 use glam::{EulerRot, Quat, Vec3};
 
@@ -8,12 +9,14 @@ use glam::{EulerRot, Quat, Vec3};
 /// Is it just XYZ because it's the default?
 pub const TRACKS_EULER_ROT: EulerRot = EulerRot::XYZ;
 
+#[derive(Debug)]
 pub enum QuaternionValues {
     // equivalents but different repr
     Static(Vec3, Quat),
     Dynamic(Vec<ValueProvider>),
 }
 
+#[derive(Debug)]
 pub struct QuaternionModifier {
     values: QuaternionValues,
     has_base_provider: bool,
@@ -78,13 +81,13 @@ impl ModifierBase for QuaternionModifier {
         }
         // modifiers applied to the point
         let vector_point = self.get_vector_point(context);
-        let res = Quat::from_euler(
+
+        Quat::from_euler(
             TRACKS_EULER_ROT,
             vector_point.x.to_radians(),
             vector_point.y.to_radians(),
             vector_point.z.to_radians(),
-        );
-        res
+        )
     }
 
     fn get_raw_point(&self) -> Quat {

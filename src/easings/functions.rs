@@ -2,8 +2,9 @@ use std::{fmt, str::FromStr};
 
 use super::implementations::*;
 
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[allow(dead_code, clippy::enum_variant_names)]
+#[repr(C)]
 pub enum Functions {
     EaseLinear,
     EaseStep,
@@ -124,6 +125,6 @@ impl FromStr for Functions {
 
 impl fmt::Display for Functions {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }

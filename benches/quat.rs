@@ -2,13 +2,13 @@ use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use serde_json::json;
 use std::hint::black_box;
 use tracks_rs::{
+    base_provider_context::BaseProviderContext,
     point_definition::{PointDefinition, quaternion_point_definition::QuaternionPointDefinition},
-    values::base_provider_context::BaseProviderContext,
 };
 
 fn point_step(n: u64) {
     let context = BaseProviderContext::new();
-    let definition = QuaternionPointDefinition::new(
+    let definition = QuaternionPointDefinition::parse(
         json!([[0.0, 0.0, 0.0, 0.0], [1.0, 1.0, 1.0, 1.0, "easeInOutSine"]]),
         &context,
     );
@@ -22,8 +22,9 @@ fn point_step(n: u64) {
     });
 }
 
+#[cfg(feature = "compare_old")]
 fn point_step_slow(n: u64) {
-    let context = track_rs_old::values::base_provider_context::BaseProviderContext::new();
+    let context = track_rs_old::base_provider_context::BaseProviderContext::new();
     let definition =
         track_rs_old::point_definition::quaternion_point_definition::QuaternionPointDefinition::new(
             &json!([[0.0, 0.0, 0.0, 0.0], [1.0, 1.0, 1.0, 1.0, "easeInOutSine"]]),
@@ -51,6 +52,8 @@ fn benchmark_both(n: u64, c: &mut Criterion) {
     group.bench_with_input(BenchmarkId::new("quat", n), &n, |b, n| {
         b.iter(|| point_step(*n))
     });
+
+    #[cfg(feature = "compare_old")]
     group.bench_with_input(BenchmarkId::new("quat_slow", n), &n, |b, n| {
         b.iter(|| point_step_slow(*n))
     });
