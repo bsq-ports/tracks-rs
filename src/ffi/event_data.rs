@@ -101,7 +101,7 @@ pub unsafe extern "C" fn event_data_to_rust(c_event_data: *const CEventData) -> 
             raw_duration: c_event_data.raw_duration,
             easing: c_event_data.easing,
             repeat: c_event_data.repeat,
-            start_time: c_event_data.start_time,
+            start_song_time: c_event_data.start_time,
             track_key: track_key.into(),
             point_data,
             property: event_type,

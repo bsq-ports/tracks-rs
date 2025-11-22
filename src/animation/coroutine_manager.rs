@@ -29,7 +29,7 @@ struct CoroutineTask {
     repeat: u32,
     duration_song_time: f32,
     easing: Functions,
-    start_time: f32,
+    start_song_time: f32,
     track_key: TrackKey,
     point_definition: Option<base_point_definition::BasePointDefinition>,
 }
@@ -72,7 +72,7 @@ impl CoroutineManager {
     ) {
         let duration = (60.0 * event_group_data.raw_duration) / bpm;
 
-        let start_time = event_group_data.start_time;
+        let start_song_time = event_group_data.start_song_time;
         let easing = event_group_data.easing;
         let repeat = event_group_data.repeat;
 
@@ -83,7 +83,7 @@ impl CoroutineManager {
         let value = Self::make_event_task(
             song_time,
             duration,
-            start_time,
+            start_song_time,
             easing,
             repeat,
             event_group_data,
@@ -113,7 +113,7 @@ impl CoroutineManager {
     fn make_event_task(
         song_time: f32,
         duration: f32,
-        start_time: f32,
+        start_song_time: f32,
 
         easing: Functions,
         repeat: u32,
@@ -123,7 +123,7 @@ impl CoroutineManager {
     ) -> Option<CoroutineTask> {
         let mut repeat = repeat;
         let no_duration =
-            duration == 0.0 || start_time + (duration * (repeat as f32 + 1.0)) < song_time;
+            duration == 0.0 || start_song_time + (duration * (repeat as f32 + 1.0)) < song_time;
         let mut property = data.property;
         let track_key = data.track_key;
 
@@ -156,7 +156,7 @@ impl CoroutineManager {
                     point_data,
                     property,
                     duration,
-                    start_time,
+                    start_song_time,
                     song_time,
                     easing,
                     has_base,
@@ -183,7 +183,7 @@ impl CoroutineManager {
                     return None;
                 }
                 let res =
-                    assign_path_animation(path_property, duration, start_time, easing, song_time);
+                    assign_path_animation(path_property, duration, start_song_time, easing, song_time);
                 if res == CoroutineResult::Break {
                     return None;
                 }
@@ -198,7 +198,7 @@ impl CoroutineManager {
 
             repeat,
             duration_song_time: duration,
-            start_time,
+            start_song_time,
         })
     }
 
@@ -244,7 +244,7 @@ impl CoroutineManager {
                     point_def,
                     value_property,
                     duration,
-                    event_data.start_time,
+                    event_data.start_song_time,
                     song_time,
                     event_data.easing,
                     has_base,
@@ -254,7 +254,7 @@ impl CoroutineManager {
                 // when we repeat, we restart state
                 if result == CoroutineResult::Break && event_data.repeat > 0 {
                     event_data.repeat = event_data.repeat.saturating_sub(1);
-                    event_data.start_time += duration;
+                    event_data.start_song_time += duration;
                     result = CoroutineResult::Yield;
                 }
 
@@ -269,7 +269,7 @@ impl CoroutineManager {
                 assign_path_animation(
                     path_property,
                     duration,
-                    event_data.start_time,
+                    event_data.start_song_time,
                     event_data.easing,
                     song_time,
                 )
@@ -414,7 +414,7 @@ mod tests {
             raw_duration: 1.0,
             easing: Functions::EaseLinear,
             repeat: 0,
-            start_time: 0.0,
+            start_song_time: 0.0,
             property: EventType::AnimateTrack(ValuePropertyHandle::new("dissolve")),
             track_key: key,
             point_data: Some(pd.into()),

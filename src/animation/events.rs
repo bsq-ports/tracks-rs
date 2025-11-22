@@ -8,11 +8,12 @@ use crate::{
 };
 
 pub struct EventData {
+    /// duration in beatmap time
     pub raw_duration: f32,
     pub easing: Functions,
     pub repeat: u32,
-    // song time or beatmap time?
-    pub start_time: f32,
+    /// song adjusted time
+    pub start_song_time: f32,
 
     pub property: EventType,
     pub track_key: TrackKey,

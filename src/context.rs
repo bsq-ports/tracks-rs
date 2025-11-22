@@ -201,7 +201,7 @@ mod tests {
             raw_duration: 1.0,
             easing: Functions::EaseLinear,
             repeat: 0,
-            start_time: 0.0,
+            start_song_time: 0.0,
             property: EventType::AnimateTrack(ValuePropertyHandle::new("dissolve")),
             track_key: key,
             point_data: Some((*pd).clone()),
