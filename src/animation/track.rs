@@ -95,7 +95,7 @@ pub enum PropertyNames {
 
 /// A PathPropertiesMap holds a collection of PathProperties associated with a Track.
 /// Fast access to common path properties is provided via dedicated fields.
-#[derive()]
+#[derive(Clone)]
 pub struct PathPropertiesMap {
     pub path_properties: ahash::AHashMap<String, PathProperty>,
 
@@ -143,7 +143,7 @@ pub trait GameObjectCallback = Fn(GameObject, bool);
 
 /// A Track represents a collection of properties and path properties associated with game objects.
 /// It allows registering, retrieving, and managing properties and game objects.
-#[derive()]
+#[derive(Clone)]
 pub struct Track {
     pub properties: PropertiesMap,
     pub path_properties: PathPropertiesMap,

@@ -9,6 +9,7 @@ use crate::{
 };
 
 /// Context that holds tracks, point definitions, and coroutine manager.
+#[derive(Clone)]
 pub struct TracksContext {
     // we use an Rc here so vec reallocs don't break the track pointers
     // though we could also use a linkedlist

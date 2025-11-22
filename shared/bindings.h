@@ -321,6 +321,8 @@ extern "C" {
 
 struct TracksContext *tracks_context_create(void);
 
+struct TracksContext *tracks_context_clone(const struct TracksContext *context);
+
 /**
  * Consumes the context and frees its memory.
  *

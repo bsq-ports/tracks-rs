@@ -21,6 +21,21 @@ pub extern "C" fn tracks_context_create() -> *mut TracksContext {
     Box::into_raw(Box::new(context))
 }
 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn tracks_context_clone(
+    context: *const TracksContext,
+) -> *mut TracksContext {
+    if context.is_null() {
+        return ptr::null_mut();
+    }
+
+    unsafe {
+        let context_ref = &*context;
+        let cloned_context = context_ref.clone();
+        Box::into_raw(Box::new(cloned_context))
+    }
+}
+
 /// Consumes the context and frees its memory.
 ///
 /// # Safety

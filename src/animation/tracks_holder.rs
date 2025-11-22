@@ -17,7 +17,7 @@ new_key_type! { pub struct TrackKey; }
 //     }
 // }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct TracksHolder {
     // Using SlotMap as it provides stable keys and efficient storage
     // very fast lookups vs HashMap and avoids fragmentation issues of Vec
