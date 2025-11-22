@@ -1,4 +1,8 @@
+use std::ffi::c_char;
+use std::str::FromStr;
+
 use crate::animation::property::{PathProperty, ValueProperty};
+use crate::animation::track::PropertyNames;
 use crate::base_provider_context::BaseProviderContext;
 use crate::ffi::types::{WrapBaseValue, WrapBaseValueType};
 use crate::point_definition::base_point_definition::{self};
@@ -68,6 +72,23 @@ pub unsafe extern "C" fn path_property_finish(ptr: *mut PathProperty) {
         }
     }
 }
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn string_to_property_name(ptr: *const c_char) -> PropertyNames {
+    if ptr.is_null() {
+        return PropertyNames::UnknownPropertyName;
+    }
+    unsafe {
+        let c_str = std::ffi::CStr::from_ptr(ptr);
+        match c_str.to_str() {
+            Ok(str_slice) => {
+                PropertyNames::from_str(str_slice).unwrap_or(PropertyNames::UnknownPropertyName)
+            }
+            Err(_) => PropertyNames::UnknownPropertyName,
+        }
+    }
+}
+
 /// # Safety
 /// - `ptr` must be a valid pointer to a `PathProperty` created by `path_property_create`.
 /// - After calling this function the `PathProperty` remains owned by the caller; this function only performs finalization.

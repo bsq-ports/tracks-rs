@@ -95,6 +95,7 @@ enum PropertyNames
   FogOffset,
   HeightFogStartY,
   HeightFogHeight,
+  UnknownPropertyName,
 };
 #ifndef __cplusplus
 typedef uint32_t PropertyNames;
@@ -759,6 +760,8 @@ bool tracks_vector4_has_base_provider(const struct Vector4PointDefinition *point
 PathProperty *path_property_create(void);
 
 void path_property_finish(PathProperty *ptr);
+
+PropertyNames string_to_property_name(const char *ptr);
 
 /**
  * # Safety

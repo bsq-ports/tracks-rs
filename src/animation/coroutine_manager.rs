@@ -338,3 +338,97 @@ fn set_property_value(
     property.set_value(Some(value));
     finished
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::animation::events::{EventData, EventType};
+    use crate::animation::track::Track;
+    use crate::animation::track::ValuePropertyHandle;
+    use crate::animation::tracks_holder::TracksHolder;
+    use crate::base_provider_context::BaseProviderContext;
+    use crate::easings::functions::Functions;
+    use crate::modifiers::float_modifier::FloatValues;
+    use crate::point_data::PointData;
+    use crate::point_data::float_point_data::FloatPointData;
+    use crate::point_definition::float_point_definition::FloatPointDefinition;
+
+    #[test]
+    fn tracks_holder_add_get() {
+        let mut holder = TracksHolder::new();
+        let mut t = Track::default();
+        t.name = "track_a".to_string();
+        let key = holder.add_track(t);
+
+        let got = holder.get_track(key).expect("track should exist");
+        assert_eq!(got.name, "track_a");
+
+        let by_name = holder
+            .get_track_by_name("track_a")
+            .expect("by_name should work");
+        assert_eq!(by_name.name, "track_a");
+    }
+
+    #[test]
+    #[should_panic]
+    fn tracks_holder_duplicate_panics() {
+        let mut holder = TracksHolder::new();
+        let mut t1 = Track::default();
+        t1.name = "dup".to_string();
+        let t2 = Track::default();
+        // two distinct values with same name
+        let mut t2 = t2;
+        t2.name = "dup".to_string();
+        holder.add_track(t1);
+        // adding another with same name should panic
+        holder.add_track(t2);
+    }
+
+    #[test]
+    fn coroutine_start_and_poll_sets_property() {
+        let mut cm = CoroutineManager::default();
+        let ctx = BaseProviderContext::new();
+
+        let mut holder = TracksHolder::new();
+        let mut t = Track::default();
+        t.name = "c_track".to_string();
+        let key = holder.add_track(t);
+
+        // construct a simple float point definition with two points (0 -> 10 over time 0..1)
+        let pd = FloatPointDefinition::new(vec![
+            PointData::Float(FloatPointData::new(
+                FloatValues::Static(0.0),
+                0.0,
+                vec![],
+                Functions::EaseLinear,
+            )),
+            PointData::Float(FloatPointData::new(
+                FloatValues::Static(10.0),
+                1.0,
+                vec![],
+                Functions::EaseLinear,
+            )),
+        ]);
+
+        let ev = EventData {
+            raw_duration: 1.0,
+            easing: Functions::EaseLinear,
+            repeat: 0,
+            start_time: 0.0,
+            property: EventType::AnimateTrack(ValuePropertyHandle::new("dissolve")),
+            track_key: key,
+            point_data: Some(pd.into()),
+        };
+
+        // bpm 60 => duration = 1.0 for raw_duration 1.0
+        cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev);
+
+        // poll at halfway through duration (0.5) - should set dissolve ~5.0
+        cm.poll_events(0.5, &ctx, &mut holder);
+
+        let track = holder.get_track(key).unwrap();
+        let val = track.properties.dissolve.get_value().expect("value set");
+        let f = val.as_float().unwrap();
+        assert!((f - 5.0).abs() < 1e-3, "expected ~5.0 got {}", f);
+    }
+}

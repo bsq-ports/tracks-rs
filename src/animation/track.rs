@@ -90,6 +90,7 @@ pub enum PropertyNames {
     FogOffset,
     HeightFogStartY,
     HeightFogHeight,
+    UnknownPropertyName,
 }
 
 /// A PathPropertiesMap holds a collection of PathProperties associated with a Track.
@@ -491,6 +492,7 @@ impl Display for PropertyNames {
             PropertyNames::FogOffset => write!(f, "{FOG_OFFSET}"),
             PropertyNames::HeightFogStartY => write!(f, "{HEIGHT_FOG_START_Y}"),
             PropertyNames::HeightFogHeight => write!(f, "{HEIGHT_FOG_HEIGHT}"),
+            PropertyNames::UnknownPropertyName => write!(f, "Unknown"),
         }
     }
 }
