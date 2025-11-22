@@ -237,7 +237,7 @@ mod tests {
         let base_ctx = ctx.get_base_provider_context();
 
         // simple JSON for float: [[0,0],[10,1]] wrapped as array
-        let data = json!([[[0, 0], [10, 1]]]);
+        let data = json!([[0, 0], [10, 1]]);
         let parsed: FloatPointDefinition = FloatPointDefinition::parse(data, base_ctx);
         assert_eq!(parsed.get_count(), 2);
 

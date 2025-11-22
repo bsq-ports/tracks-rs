@@ -99,9 +99,9 @@ pub trait PointDefinition: std::default::Default {
 
         // Create modifier with collected values
         Self::create_modifier(
-            values.unwrap(),
+            values.expect("No values found."),
             modifiers.unwrap_or_default(),
-            operation.unwrap(),
+            operation.expect("No operation found."),
             context,
         )
     }
