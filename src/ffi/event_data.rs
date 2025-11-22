@@ -18,6 +18,8 @@ pub struct CEventData {
 
     pub event_type: CEventType,
     pub track_key: TrackKeyFFI,
+
+    /// nullable pointer to BasePointDefinition
     pub point_data_ptr: *const BasePointDefinition,
 }
 
