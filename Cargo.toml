@@ -27,7 +27,7 @@ name = "color"
 harness = false
 
 [dev-dependencies]
-criterion = { version = "0.5", features = ["html_reports"] }
+criterion = { version = "0.7", features = ["html_reports"] }
 
 # track_rs_old = { git = "https://github.com/Futuremappermydud/tracks-rs.git", branch = "old-benchmark", package = "tracks_rs", optional = true} # reference to the tracks-rs crate
 
@@ -49,7 +49,7 @@ smallvec = "1.15"
 
 
 [build-dependencies]
-cbindgen = { version = "0.28", optional = true, default-features = false}
+cbindgen = { version = "0.29", optional = true, default-features = false}
 
 [features]
 json = ["dep:serde_json"]

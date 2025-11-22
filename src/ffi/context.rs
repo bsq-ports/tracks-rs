@@ -22,9 +22,7 @@ pub extern "C" fn tracks_context_create() -> *mut TracksContext {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn tracks_context_clone(
-    context: *const TracksContext,
-) -> *mut TracksContext {
+pub unsafe extern "C" fn tracks_context_clone(context: *const TracksContext) -> *mut TracksContext {
     if context.is_null() {
         return ptr::null_mut();
     }

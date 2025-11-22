@@ -10,22 +10,13 @@ namespace Tracks {
 namespace ffi {
 #endif  // __cplusplus
 
-typedef enum CEventPropertyIdType {
-  CString = 0,
-  PropertyName = 1,
-} CEventPropertyIdType;
-
-enum CEventTypeEnum
-#ifdef __cplusplus
-  : uint32_t
-#endif // __cplusplus
- {
-  AnimateTrack = 0,
-  AssignPathAnimation = 1,
-};
-#ifndef __cplusplus
-typedef uint32_t CEventTypeEnum;
-#endif // __cplusplus
+typedef enum WrapBaseValueType {
+  Unknown = -1,
+  Vec3 = 0,
+  Quat = 1,
+  Vec4 = 2,
+  Float = 3,
+} WrapBaseValueType;
 
 typedef enum Functions {
   EaseLinear,
@@ -62,15 +53,17 @@ typedef enum Functions {
   EaseInOutBounce,
 } Functions;
 
-/**
- * JSON FFI
- */
-typedef enum JsonValueType {
-  Number,
-  Null,
-  String,
-  Array,
-} JsonValueType;
+enum CEventTypeEnum
+#ifdef __cplusplus
+  : uint32_t
+#endif // __cplusplus
+ {
+  AnimateTrack = 0,
+  AssignPathAnimation = 1,
+};
+#ifndef __cplusplus
+typedef uint32_t CEventTypeEnum;
+#endif // __cplusplus
 
 /**
  * An enumeration of common property names used in Tracks.
@@ -101,13 +94,20 @@ enum PropertyNames
 typedef uint32_t PropertyNames;
 #endif // __cplusplus
 
-typedef enum WrapBaseValueType {
-  Unknown = -1,
-  Vec3 = 0,
-  Quat = 1,
-  Vec4 = 2,
-  Float = 3,
-} WrapBaseValueType;
+typedef enum CEventPropertyIdType {
+  CString = 0,
+  PropertyName = 1,
+} CEventPropertyIdType;
+
+/**
+ * JSON FFI
+ */
+typedef enum JsonValueType {
+  Number,
+  Null,
+  String,
+  Array,
+} JsonValueType;
 
 typedef struct BaseFFIProviderValues BaseFFIProviderValues;
 
