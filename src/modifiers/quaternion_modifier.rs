@@ -3,6 +3,7 @@ use crate::{
     base_provider_context::BaseProviderContext,
     values::{AbstractValueProvider, ValueProvider},
 };
+use glam::Vec3A;
 use glam::{EulerRot, Quat, Vec3};
 
 /// Is it ZXY or XYZ???
@@ -56,18 +57,23 @@ impl QuaternionModifier {
                 Self::translate_euler(value_providers, context)
             }
         };
-        self.modifiers.iter().fold(original_point, |acc, x| {
-            let Modifier::Quaternion(quat_point) = x else {
+        // Use Vec3A for accumulation in hot inner loop then convert back
+        let mut acc_a = Vec3A::from(original_point);
+        for m in &self.modifiers {
+            let Modifier::Quaternion(quat_point) = m else {
                 panic!("Invalid modifier type");
             };
-            match x.get_operation() {
-                Operation::Add => acc + quat_point.get_vector_point(context),
-                Operation::Sub => acc - quat_point.get_vector_point(context),
-                Operation::Mul => acc * quat_point.get_vector_point(context),
-                Operation::Div => acc / quat_point.get_vector_point(context),
-                Operation::None => quat_point.get_vector_point(context),
-            }
-        })
+            let v_a = Vec3A::from(quat_point.get_vector_point(context));
+            acc_a = match m.get_operation() {
+                Operation::Add => acc_a + v_a,
+                Operation::Sub => acc_a - v_a,
+                Operation::Mul => acc_a * v_a,
+                Operation::Div => acc_a / v_a,
+                Operation::None => v_a,
+            };
+        }
+
+        Vec3::from(acc_a)
     }
 }
 

@@ -1,7 +1,7 @@
 use super::{Modifier, ModifierBase, operation::Operation};
 use super::{ModifierValues, shared_has_base_provider};
 use crate::base_provider_context::BaseProviderContext;
-use glam::Vec3;
+use glam::{Vec3, Vec3A};
 
 pub type Vector3Values = ModifierValues<Vec3>;
 
@@ -35,15 +35,21 @@ impl ModifierBase for Vector3Modifier {
             Vector3Values::Static(s) => *s,
             Vector3Values::Dynamic(value_providers) => self.convert(value_providers, context),
         };
-        self.modifiers
+        // Use Vec3A for SIMD-friendly arithmetic in the hot path, then convert back to Vec3
+        let result = self
+            .modifiers
             .iter()
-            .fold(original_point, |acc, x| match x.get_operation() {
-                Operation::Add => acc + x.get_vector3(context),
-                Operation::Sub => acc - x.get_vector3(context),
-                Operation::Mul => acc * x.get_vector3(context),
-                Operation::Div => acc / x.get_vector3(context),
-                Operation::None => x.get_vector3(context),
-            })
+            .fold(Vec3A::from(original_point), |acc, x| {
+                let op_vec = Vec3A::from(x.get_vector3(context));
+                match x.get_operation() {
+                    Operation::Add => acc + op_vec,
+                    Operation::Sub => acc - op_vec,
+                    Operation::Mul => acc * op_vec,
+                    Operation::Div => acc / op_vec,
+                    Operation::None => op_vec,
+                }
+            });
+        Vec3::from(result)
     }
 
     fn get_raw_point(&self) -> Vec3 {

@@ -31,19 +31,20 @@ impl Vector3PointDefinition {
         time: f32,
         context: &BaseProviderContext,
     ) -> Vec3 {
-        let point_a = points[l].get_vector3(context);
-        let point_b = points[r].get_vector3(context);
+        // Convert to Vec3A for SIMD-friendly spline interpolation, convert back at the end
+        let point_a_a = glam::Vec3A::from(points[l].get_vector3(context));
+        let point_b_a = glam::Vec3A::from(points[r].get_vector3(context));
 
         // Catmull-Rom Spline
-        let p0 = if l > 0 {
-            points[l - 1].get_vector3(context)
+        let p0_a = if l > 0 {
+            glam::Vec3A::from(points[l - 1].get_vector3(context))
         } else {
-            point_a
+            point_a_a
         };
-        let p3 = if r + 1 < points.len() {
-            points[r + 1].get_vector3(context)
+        let p3_a = if r + 1 < points.len() {
+            glam::Vec3A::from(points[r + 1].get_vector3(context))
         } else {
-            point_b
+            point_b_a
         };
 
         let tt = time * time;
@@ -54,7 +55,8 @@ impl Vector3PointDefinition {
         let q2 = (-3.0 * ttt) + (4.0 * tt) + time;
         let q3 = ttt - tt;
 
-        0.5 * ((p0 * q0) + (point_a * q1) + (point_b * q2) + (p3 * q3))
+        let res_a = 0.5 * ((p0_a * q0) + (point_a_a * q1) + (point_b_a * q2) + (p3_a * q3));
+        Vec3::from(res_a)
     }
 }
 
@@ -155,7 +157,8 @@ impl PointDefinition for Vector3PointDefinition {
         } else {
             let point_l = points[l].get_vector3(context);
             let point_r = points[r].get_vector3(context);
-            point_l.lerp(point_r, time)
+            // Use Vec3A lerp internally for better throughput
+            Vec3::from(glam::Vec3A::from(point_l).lerp(glam::Vec3A::from(point_r), time))
         }
     }
 
