@@ -22,18 +22,25 @@ pub struct TrackKeyFFI(u64);
 
 impl TrackKeyFFI {
     pub fn null() -> Self {
-        TrackKey::null().into()
+        TrackKeyFFI(u64::MAX)
     }
 }
 
 impl From<TrackKeyFFI> for TrackKey {
     fn from(ffi_key: TrackKeyFFI) -> Self {
+        if ffi_key.0 == u64::MAX {
+            return TrackKey::null();
+        }
+
         TrackKey::from(KeyData::from_ffi(ffi_key.0))
     }
 }
 
 impl From<TrackKey> for TrackKeyFFI {
     fn from(key: TrackKey) -> Self {
+        if key == TrackKey::null() {
+            return TrackKeyFFI::null();
+        }
         TrackKeyFFI(key.data().as_ffi())
     }
 }
