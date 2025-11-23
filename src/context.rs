@@ -24,7 +24,12 @@ pub struct TracksContext {
 }
 
 impl TracksContext {
-    pub fn add_point_definition(&mut self, id: String, point_definition: Rc<BasePointDefinition>) {
+    /// Adds a point definition to the context.
+    /// If `id` is `None`, a new UUID string will be generated as the identifier.
+    /// Panics if a point definition with the same `id` and type already exists
+    pub fn add_point_definition(&mut self, id: Option<String>, point_definition: Rc<BasePointDefinition>) {
+        let id = id.unwrap_or(uuid::Uuid::new_v4().to_string());
+
         if self
             .point_definitions
             .contains_key(&(id.clone(), point_definition.get_type()))
@@ -112,7 +117,7 @@ mod tests {
                 Functions::EaseLinear,
             )),
         ]);
-        ctx.add_point_definition("pf".to_string(), Rc::new(BasePointDefinition::Float(fp)));
+        ctx.add_point_definition(Some("pf".to_string()), Rc::new(BasePointDefinition::Float(fp)));
 
         // Vec3 definition
         let v3p = Vector3PointDefinition::new(vec![
@@ -132,7 +137,7 @@ mod tests {
             )),
         ]);
         ctx.add_point_definition(
-            "pv3".to_string(),
+            Some("pv3".to_string()),
             Rc::new(BasePointDefinition::Vector3(v3p)),
         );
 
@@ -154,7 +159,7 @@ mod tests {
             )),
         ]);
         ctx.add_point_definition(
-            "pv4".to_string(),
+            Some("pv4".to_string()),
             Rc::new(BasePointDefinition::Vector4(v4p)),
         );
 
@@ -167,7 +172,7 @@ mod tests {
                 Functions::EaseLinear,
             ))]);
         ctx.add_point_definition(
-            "pq".to_string(),
+            Some("pq".to_string()),
             Rc::new(BasePointDefinition::Quaternion(qp)),
         );
 
@@ -242,7 +247,7 @@ mod tests {
         assert_eq!(parsed.get_count(), 2);
 
         ctx.add_point_definition(
-            "jf".to_string(),
+            Some("jf".to_string()),
             Rc::new(BasePointDefinition::Float(parsed)),
         );
         assert!(

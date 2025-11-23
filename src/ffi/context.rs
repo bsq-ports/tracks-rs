@@ -95,13 +95,9 @@ pub unsafe extern "C" fn tracks_context_add_point_definition(
             CStr::from_ptr(id).to_str().ok()
         };
 
-        let id_str = if let Some(c_str) = c_str
-            && !c_str.is_empty()
-        {
-            c_str.to_string()
-        } else {
-            uuid::Uuid::new_v4().to_string()
-        };
+        let id_str = c_str
+            .map(|s| s.to_string())
+            .filter(|c| !c.is_empty());
 
         let point_def_obj = Box::from_raw(point_def);
         let rc = Rc::new(*point_def_obj);
