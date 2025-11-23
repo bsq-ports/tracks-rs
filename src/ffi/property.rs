@@ -132,7 +132,7 @@ pub unsafe extern "C" fn path_property_get_time(ptr: *const PathProperty) -> f32
     }
     unsafe {
         let inner = &*ptr;
-        inner.time
+        inner.interpolate_time
     }
 }
 /// # Safety
@@ -143,7 +143,7 @@ pub unsafe extern "C" fn path_property_set_time(ptr: *mut PathProperty, time: f3
     if !ptr.is_null() {
         unsafe {
             let inner = &mut *ptr;
-            inner.time = time;
+            inner.interpolate_time = time;
         }
     }
 }

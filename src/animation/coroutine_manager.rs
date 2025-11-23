@@ -79,11 +79,7 @@ impl CoroutineManager {
         tracks_holder: &mut TracksHolder,
         event_group_data: EventData,
     ) {
-        let duration = (60.0 * event_group_data.raw_duration) / bpm;
-
-        let start_song_time = event_group_data.start_song_time;
-        let easing = event_group_data.easing;
-        let repeat = event_group_data.repeat;
+        let duration_song_time = (60.0 * event_group_data.raw_duration) / bpm;
 
         // cancel any existing coroutines for the same event type
         // that are on the same track
@@ -103,10 +99,7 @@ impl CoroutineManager {
 
         let value = Self::make_event_task(
             song_time,
-            duration,
-            start_song_time,
-            easing,
-            repeat,
+            duration_song_time,
             event_group_data,
             provider_context,
             tracks_holder,
@@ -132,19 +125,17 @@ impl CoroutineManager {
     }
 
     fn make_event_task(
-        song_time: f32,
-        duration: f32,
-        start_song_time: f32,
-
-        easing: Functions,
-        repeat: u32,
+        current_song_time: f32,
+        duration_song_time: f32,
         data: EventData,
         provider_context: &BaseProviderContext,
         tracks_holder: &mut TracksHolder,
     ) -> Option<CoroutineTask> {
-        let mut repeat = repeat;
-        let no_duration =
-            duration == 0.0 || start_song_time + (duration * (repeat as f32 + 1.0)) < song_time;
+        let mut repeat = data.repeat;
+
+        let no_duration = duration_song_time == 0.0
+            || data.start_song_time + (duration_song_time * (repeat as f32 + 1.0))
+                < current_song_time;
         let mut property = data.property;
         let track_key = data.track_key;
 
@@ -176,10 +167,10 @@ impl CoroutineManager {
                 let result = animate_track(
                     point_data,
                     property,
-                    duration,
-                    start_song_time,
-                    song_time,
-                    easing,
+                    duration_song_time,
+                    data.start_song_time,
+                    current_song_time,
+                    data.easing,
                     has_base,
                     provider_context,
                 );
@@ -205,10 +196,10 @@ impl CoroutineManager {
                 }
                 let res = assign_path_animation(
                     path_property,
-                    duration,
-                    start_song_time,
-                    easing,
-                    song_time,
+                    duration_song_time,
+                    data.start_song_time,
+                    data.easing,
+                    current_song_time,
                 );
                 if res == CoroutineResult::Break {
                     return None;
@@ -216,15 +207,15 @@ impl CoroutineManager {
             }
         };
         Some(CoroutineTask {
-            easing,
+            easing: data.easing,
             track_key,
             event_type: property,
 
             point_definition: point_data,
 
             repeat,
-            duration_song_time: duration,
-            start_song_time,
+            duration_song_time,
+            start_song_time: data.start_song_time,
         })
     }
 
@@ -309,13 +300,13 @@ fn animate_track(
     points: &base_point_definition::BasePointDefinition,
     property: &mut ValueProperty,
     duration: f32,
-    start_time: f32,
-    song_time: f32,
+    start_song_time: f32,
+    current_song_time: f32,
     easing: Functions,
     non_lazy: bool,
     context: &BaseProviderContext,
 ) -> CoroutineResult {
-    let elapsed_time = song_time - start_time;
+    let elapsed_time = current_song_time - start_song_time;
 
     let normalized_time = (elapsed_time / duration).min(1.0);
     let time = easing.interpolate(normalized_time);
@@ -338,7 +329,7 @@ fn assign_path_animation(
 ) -> CoroutineResult {
     let elapsed_time = song_time - start_time;
     let normalized_time = (elapsed_time / duration).min(1.0);
-    interpolation.time = easing.interpolate(normalized_time);
+    interpolation.interpolate_time = easing.interpolate(normalized_time);
 
     if elapsed_time < duration {
         return CoroutineResult::Yield;
@@ -369,15 +360,20 @@ fn set_property_value(
 mod tests {
     use super::*;
     use crate::animation::events::{EventData, EventType};
+    use crate::animation::track::PathPropertyHandle;
     use crate::animation::track::Track;
     use crate::animation::track::ValuePropertyHandle;
     use crate::animation::tracks_holder::TracksHolder;
     use crate::base_provider_context::BaseProviderContext;
     use crate::easings::functions::Functions;
     use crate::modifiers::float_modifier::FloatValues;
+    use crate::modifiers::vector3_modifier::Vector3Values;
     use crate::point_data::PointData;
     use crate::point_data::float_point_data::FloatPointData;
+    use crate::point_data::vector3_point_data::Vector3PointData;
     use crate::point_definition::float_point_definition::FloatPointDefinition;
+    use crate::point_definition::vector3_point_definition::Vector3PointDefinition;
+    use glam::Vec3;
     use glam::Vec4;
 
     #[test]
@@ -700,6 +696,86 @@ mod tests {
             "expected final value 10.0, got {}",
             v
         );
+    }
+
+    #[test]
+    fn zero_duration_assign_path_interpolate_not_none() {
+        let mut cm = CoroutineManager::default();
+        let ctx = BaseProviderContext::new();
+
+        let mut holder = TracksHolder::new();
+        let mut t = Track::default();
+        t.name = "path_track".to_string();
+        let key = holder.add_track(t);
+
+        // Vec3 point definition (0 -> 3 over time 0..1)
+        let pd = Vector3PointDefinition::new(vec![
+            PointData::Vector3(Vector3PointData::new(
+                Vector3Values::Static(Vec3::new(0.0, 0.0, 0.0)),
+                false,
+                0.0,
+                vec![],
+                Functions::EaseLinear,
+            )),
+            PointData::Vector3(Vector3PointData::new(
+                Vector3Values::Static(Vec3::new(3.0, 3.0, 3.0)),
+                false,
+                1.0,
+                vec![],
+                Functions::EaseLinear,
+            )),
+        ]);
+
+        let ev = EventData {
+            raw_duration: 0.0,
+            easing: Functions::EaseLinear,
+            repeat: 0,
+            start_song_time: 0.0,
+            property: EventType::AssignPathAnimation(PathPropertyHandle::new("definitePosition")),
+            track_key: key,
+            point_data: Some(pd.into()),
+        };
+
+        cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev);
+
+        // 0-duration events should not leave coroutines enqueued
+        assert!(
+            cm.coroutines.is_empty(),
+            "0-duration coroutine should not be retained"
+        );
+
+        {
+            let track = holder.get_track(key).unwrap();
+            // Interpolating the definitePosition path property should NOT return None
+            let res = track
+                .path_properties
+                .definite_position
+                .interpolate(0.0, &ctx);
+            assert!(
+                res.is_some(),
+                "interpolate should return Some for zero-duration assign path"
+            );
+
+            // value should equal the final point (0.0, 0.0, 0.0)
+            let v = res.unwrap().as_vec3().unwrap();
+            assert_eq!(v, Vec3::new(0.0, 0.0, 0.0));
+        }
+
+        cm.poll_events(20.0, &ctx, &mut holder);
+
+        {
+            let track = holder.get_track(key).unwrap();
+            let res_end = track
+                .path_properties
+                .definite_position
+                .interpolate(1.0, &ctx);
+            assert!(
+                res_end.is_some(),
+                "interpolate should return Some for zero-duration assign path at end"
+            );
+            let v_end = res_end.unwrap().as_vec3().unwrap();
+            assert_eq!(v_end, Vec3::new(3.0, 3.0, 3.0));
+        }
     }
 
     #[test]

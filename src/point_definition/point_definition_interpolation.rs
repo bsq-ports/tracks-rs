@@ -8,7 +8,7 @@ use super::{PointDefinition, base_point_definition::BasePointDefinition};
 /// A structure to manage interpolation between two point definitions over time.
 #[derive(Default, Debug, Clone)]
 pub struct PointDefinitionInterpolation {
-    pub time: f32,
+    pub interpolate_time: f32,
     // use refs here to avoid mass cloning
     pub prev_point: Option<BasePointDefinition>,
     pub point: Option<BasePointDefinition>,
@@ -18,7 +18,7 @@ pub struct PointDefinitionInterpolation {
 impl PointDefinitionInterpolation {
     pub fn new(point: Option<BasePointDefinition>, ty: WrapBaseValueType) -> Self {
         PointDefinitionInterpolation {
-            time: 0.0,
+            interpolate_time: 0.0,
             prev_point: None,
             point,
             ty,
@@ -27,7 +27,7 @@ impl PointDefinitionInterpolation {
 
     pub fn empty(ty: WrapBaseValueType) -> Self {
         PointDefinitionInterpolation {
-            time: 0.0,
+            interpolate_time: 0.0,
             prev_point: None,
             point: None,
             ty,
@@ -43,7 +43,7 @@ impl PointDefinitionInterpolation {
     }
 
     pub fn init(&mut self, new_point_data: Option<BasePointDefinition>) {
-        self.time = 0.0;
+        self.interpolate_time = 0.0;
         self.prev_point = self.point.take();
         self.point = new_point_data;
 
@@ -65,7 +65,7 @@ impl PointDefinitionInterpolation {
                 let a = prev_point_data.interpolate(time, context).0;
                 let b = point_data.interpolate(time, context).0;
 
-                let result = BaseValue::lerp(a, b, self.time);
+                let result = BaseValue::lerp(a, b, self.interpolate_time);
 
                 Some(result)
             }
@@ -135,7 +135,7 @@ mod tests {
 
         let mut interp = PointDefinitionInterpolation::new(Some(next_bp), WrapBaseValueType::Float);
         interp.prev_point = Some(prev_bp);
-        interp.time = 0.5;
+        interp.interpolate_time = 0.5;
 
         let ctx = BaseProviderContext::new();
 
@@ -190,7 +190,7 @@ mod tests {
         let mut interp_v3 =
             PointDefinitionInterpolation::new(Some(next_bp_v3), WrapBaseValueType::Vec3);
         interp_v3.prev_point = Some(prev_bp_v3);
-        interp_v3.time = 0.5;
+        interp_v3.interpolate_time = 0.5;
 
         let ctx = BaseProviderContext::new();
         let result_v3 = interp_v3.interpolate(0.25, &ctx).unwrap();
@@ -241,7 +241,7 @@ mod tests {
         let mut interp_v4 =
             PointDefinitionInterpolation::new(Some(next_bp_v4), WrapBaseValueType::Vec4);
         interp_v4.prev_point = Some(prev_bp_v4);
-        interp_v4.time = 0.5;
+        interp_v4.interpolate_time = 0.5;
 
         let result_v4 = interp_v4.interpolate(0.25, &ctx).unwrap();
         let v4 = result_v4.as_vec4().unwrap();
@@ -278,7 +278,7 @@ mod tests {
         let mut interp_q =
             PointDefinitionInterpolation::new(Some(next_bp_q), WrapBaseValueType::Quat);
         interp_q.prev_point = Some(prev_bp_q);
-        interp_q.time = 0.25;
+        interp_q.interpolate_time = 0.25;
 
         let ctx = BaseProviderContext::new();
         let result_q = interp_q.interpolate(0.0, &ctx).unwrap();
