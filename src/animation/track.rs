@@ -176,10 +176,7 @@ impl Track {
             .for_each(|callback| callback(game_object, true));
     }
 
-    pub fn register_game_object_callback<F>(&mut self, callback: Rc<F>)
-    where
-        F: GameObjectCallback + 'static,
-    {
+    pub fn register_game_object_callback(&mut self, callback: Rc<dyn GameObjectCallback>) {
         self.game_object_callbacks.push(callback);
     }
 
@@ -206,10 +203,7 @@ impl Track {
             .for_each(|callback| callback(*game_object, false));
     }
 
-    pub fn remove_game_object_callback<F>(&mut self, callback: Rc<F>)
-    where
-        F: GameObjectCallback + 'static,
-    {
+    pub fn remove_game_object_callback(&mut self, callback: Rc<dyn GameObjectCallback>) {
         let callback_ref: Rc<dyn GameObjectCallback> = callback;
         self.game_object_callbacks
             .retain(|cb| !Rc::ptr_eq(cb, &callback_ref));
@@ -654,5 +648,112 @@ mod tests {
             (second - first).abs() > 1e-6,
             "dissolve should have been updated to a new value"
         );
+    }
+
+    #[test]
+    fn game_object_register_remove_and_callbacks() {
+        use crate::animation::game_object::GameObject;
+        use std::cell::RefCell;
+        use std::ffi::c_void;
+        use std::rc::Rc;
+
+        let mut track = Track::default();
+        track.name = "g_track".to_string();
+
+        // create a unique pointer for GameObject
+        let p = Box::into_raw(Box::new(42)) as *const c_void;
+        let go = GameObject::from(p);
+
+        // no game objects initially
+        assert!(!track.game_objects.contains(&go));
+
+        // callback tracking (add/remove)
+        let called = Rc::new(RefCell::new((false, false)));
+        let called_cb = called.clone();
+        let cb = Rc::new(move |_g: GameObject, added: bool| {
+            let mut v = called_cb.borrow_mut();
+            if added {
+                v.0 = true;
+            } else {
+                v.1 = true;
+            }
+        });
+
+        track.register_game_object_callback(cb.clone());
+
+        // register the game object (should invoke callback with added=true)
+        track.register_game_object(go);
+        assert!(track.game_objects.contains(&go));
+        assert!(called.borrow().0, "add callback should have fired");
+
+        // registering again should not duplicate
+        track.register_game_object(go);
+        let count = track.game_objects.iter().filter(|x| **x == go).count();
+        assert_eq!(count, 1, "duplicate game object should not be added");
+
+        // remove it (should invoke callback with added=false)
+        track.remove_game_object(&go);
+        assert!(!track.game_objects.contains(&go));
+        assert!(called.borrow().1, "remove callback should have fired");
+
+        // free the boxed memory
+        unsafe {
+            drop(Box::from_raw(p as *mut i32));
+        }
+    }
+
+    #[test]
+    fn register_and_remove_game_object_callback_works() {
+        use crate::animation::game_object::GameObject;
+        use std::cell::RefCell;
+        use std::ffi::c_void;
+        use std::rc::Rc;
+
+        let mut track = Track::default();
+
+        // two distinct game objects (unique pointers)
+        let p1 = Box::into_raw(Box::new(1)) as *const c_void;
+        let p2 = Box::into_raw(Box::new(2)) as *const c_void;
+        let go1 = GameObject::from(p1);
+        let go2 = GameObject::from(p2);
+
+        let cb1_called = Rc::new(RefCell::new(0usize));
+        let cb2_called = Rc::new(RefCell::new(0usize));
+
+        let cb1 = Rc::new({
+            let c = cb1_called.clone();
+            move |_g: GameObject, _added: bool| {
+                *c.borrow_mut() += 1;
+            }
+        });
+
+        let cb2 = Rc::new({
+            let c = cb2_called.clone();
+            move |_g: GameObject, _added: bool| {
+                *c.borrow_mut() += 1;
+            }
+        });
+
+        track.register_game_object_callback(cb1.clone());
+        track.register_game_object_callback(cb2.clone());
+
+        // add first object: both callbacks should fire once
+        track.register_game_object(go1);
+        assert_eq!(*cb1_called.borrow(), 1);
+        assert_eq!(*cb2_called.borrow(), 1);
+
+        // remove cb1
+        track.remove_game_object_callback(cb1.clone());
+
+        // add second object: only cb2 should fire
+        track.register_game_object(go2);
+        assert_eq!(*cb1_called.borrow(), 1, "cb1 should not have fired again");
+        assert_eq!(*cb2_called.borrow(), 2, "cb2 should have fired twice");
+
+        // cleanup leaked boxes
+        unsafe {
+            drop(Box::from_raw(p1 as *mut i32));
+            drop(Box::from_raw(p2 as *mut i32));
+        }
     }
 }

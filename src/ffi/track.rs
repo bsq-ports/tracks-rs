@@ -361,7 +361,7 @@ pub unsafe extern "C" fn track_get_path_property_by_name(
 /// - `id` must be a valid C string.
 /// - `property` must be a valid pointer to a `PathProperty`; the property value is moved from the pointer.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn track_register_path_property<'a>(
+pub unsafe extern "C" fn track_register_path_property(
     track: *mut Track,
     id: *const c_char,
     property: *const PathProperty,
@@ -491,7 +491,6 @@ pub unsafe extern "C" fn track_register_game_object_callback(
         let rc = Rc::new(rust_callback);
 
         track_ref.register_game_object_callback(rc.clone());
-
         Rc::into_raw(rc) as *const fn(GameObject, bool)
     }
 }
@@ -517,5 +516,100 @@ pub unsafe extern "C" fn track_remove_game_object_callback(
         let rc: Rc<fn(GameObject, bool)> = Rc::from_raw(callback);
 
         track_ref.remove_game_object_callback(rc);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::ffi::{CString, c_void};
+    use std::os::raw::c_char;
+
+    extern "C" fn test_c_callback(_go: GameObject, added: bool, user_data: *mut c_void) {
+        if user_data.is_null() {
+            return;
+        }
+
+        unsafe {
+            let val = user_data as *mut i32;
+            if added {
+                *val = 1;
+            } else {
+                *val = 2;
+            }
+        }
+    }
+
+    #[test]
+    fn test_track_set_get_name_and_destroy() {
+        unsafe {
+            let track = track_create();
+            assert!(!track.is_null());
+
+            let name = CString::new("ffi_track").unwrap();
+            track_set_name(track, name.as_ptr());
+
+            let ret = track_get_name(track as *const Track);
+            assert!(!ret.is_null());
+
+            // take ownership and convert to Rust string to free raw C string
+            let got = CString::from_raw(ret as *mut c_char);
+            assert_eq!(got.to_str().unwrap(), "ffi_track");
+
+            track_destroy(track);
+        }
+    }
+
+    #[test]
+    fn test_track_register_unregister_game_object_and_callbacks() {
+        unsafe {
+            let track = track_create();
+            assert!(!track.is_null());
+
+            // user data for callback
+            let user_box = Box::new(0i32);
+
+            // register C callback
+            let handle = track_register_game_object_callback(
+                track,
+                test_c_callback,
+                user_box.as_ref() as *const i32 as *mut c_void,
+            );
+            assert!(!handle.is_null());
+
+            // create a game object pointer
+            let p = Box::into_raw(Box::new(123i32)) as *const c_void;
+            let go = GameObject::from(p);
+
+            // register the game object via FFI
+            track_register_game_object(track, go);
+
+            // inspect game objects array
+            let mut size: usize = 0;
+            let arr = track_get_game_objects(track as *const Track, &mut size as *mut usize);
+            assert_eq!(size, 1);
+            assert!(!arr.is_null());
+            let first = *arr;
+            assert_eq!(first, go);
+
+            // callback should have set user data to 1 (added)
+            let added_val = *user_box;
+            assert_eq!(added_val, 1);
+
+            // unregister the game object
+            track_unregister_game_object(track, go);
+
+            // callback should have been invoked with added=false => 2
+            let removed_val = *user_box;
+            assert_eq!(removed_val, 2);
+
+            // remove callback handle
+            track_remove_game_object_callback(track, handle);
+
+            // cleanup allocated boxes
+            drop(Box::from_raw(p as *mut i32));
+
+            track_destroy(track);
+        }
     }
 }
