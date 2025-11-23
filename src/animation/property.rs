@@ -69,8 +69,11 @@ impl ValueProperty {
                 v.get_type()
             );
         }
+        let modified = self.value != value;
         self.value = value;
-        self.mark_updated();
+        if modified {
+            self.mark_updated();
+        }
     }
 }
 
