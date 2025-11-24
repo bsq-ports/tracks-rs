@@ -780,6 +780,7 @@ void path_property_init(PathProperty *ptr,
  * # Safety
  * - `ptr` must be a valid pointer to a `PathProperty`.
  * - `new_point_data`, if non-null, must point to a valid `BasePointDefinition` and ownership of its contents may be moved.
+ *
  * Consumes the path property and frees its memory.
  */
 void path_property_free(PathProperty *ptr);
@@ -996,6 +997,8 @@ struct CPathPropertiesMap track_get_path_properties_map(struct Track *track);
  * - `callback` and `user_data` must remain valid for as long as the callback may be invoked.
  * - The returned pointer is an opaque handle to the stored Rust closure; it must be removed with `track_remove_game_object_callback`.
  * - The callback is invoked on the Rust side; ensure `callback` is safe to call from Rust execution context.
+ *
+ * - the callback signature is `extern "C" fn(GameObject, bool, *mut c_void)` where the bool indicates if the object was added (true) or removed (false).
  */
 void (**track_register_game_object_callback(struct Track *track,
                                             CGameObjectCallback callback,

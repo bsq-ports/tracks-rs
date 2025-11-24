@@ -139,6 +139,7 @@ pub struct PropertiesMap {
 }
 
 /// A GameObjectCallback is a function that gets called when a game object is added or removed from a Track.
+/// bool is true if added, false if removed.
 pub trait GameObjectCallback = Fn(GameObject, bool);
 
 /// A Track represents a collection of properties and path properties associated with game objects.

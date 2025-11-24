@@ -471,6 +471,8 @@ pub unsafe extern "C" fn track_get_path_properties_map(track: *mut Track) -> CPa
 /// - `callback` and `user_data` must remain valid for as long as the callback may be invoked.
 /// - The returned pointer is an opaque handle to the stored Rust closure; it must be removed with `track_remove_game_object_callback`.
 /// - The callback is invoked on the Rust side; ensure `callback` is safe to call from Rust execution context.
+/// 
+/// - the callback signature is `extern "C" fn(GameObject, bool, *mut c_void)` where the bool indicates if the object was added (true) or removed (false).
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn track_register_game_object_callback(
     track: *mut Track,
