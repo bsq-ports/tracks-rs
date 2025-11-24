@@ -147,11 +147,6 @@ typedef struct QuaternionPointDefinition QuaternionPointDefinition;
  */
 typedef struct Track Track;
 
-/**
- * Context that holds tracks, point definitions, and coroutine manager.
- */
-typedef struct TracksContext TracksContext;
-
 typedef struct TracksHolder TracksHolder;
 
 typedef struct ValueProperty ValueProperty;
@@ -159,57 +154,6 @@ typedef struct ValueProperty ValueProperty;
 typedef struct Vector3PointDefinition Vector3PointDefinition;
 
 typedef struct Vector4PointDefinition Vector4PointDefinition;
-
-typedef struct TrackKeyFFI {
-  uint64_t _0;
-} TrackKeyFFI;
-
-typedef union CEventPropertyId {
-  const char *property_str;
-  PropertyNames property_name;
-} CEventPropertyId;
-
-typedef struct CEventType {
-  CEventTypeEnum ty;
-  union CEventPropertyId property_id;
-  enum CEventPropertyIdType property_id_type;
-} CEventType;
-
-typedef struct CEventData {
-  float raw_duration;
-  enum Functions easing;
-  uint32_t repeat;
-  float start_time;
-  struct CEventType event_type;
-  struct TrackKeyFFI track_key;
-  /**
-   * nullable pointer to BasePointDefinition
-   */
-  const struct BasePointDefinition *point_data_ptr;
-} CEventData;
-
-typedef struct JsonArray {
-  const struct FFIJsonValue *elements;
-  uintptr_t length;
-} JsonArray;
-
-typedef union JsonValueData {
-  double number_value;
-  const char *string_value;
-  const struct JsonArray *array;
-} JsonValueData;
-
-typedef struct FFIJsonValue {
-  enum JsonValueType value_type;
-  union JsonValueData data;
-} FFIJsonValue;
-
-typedef struct WrappedValues {
-  const float *values;
-  uintptr_t length;
-} WrappedValues;
-
-typedef struct WrappedValues (*BaseFFIProvider)(const struct BaseProviderContext*, void*);
 
 typedef struct WrapVec3 {
   float x;
@@ -242,6 +186,57 @@ typedef struct WrapBaseValue {
   enum WrapBaseValueType ty;
   union WrapBaseValueUnion value;
 } WrapBaseValue;
+
+typedef struct WrappedValues {
+  const float *values;
+  uintptr_t length;
+} WrappedValues;
+
+typedef union CEventPropertyId {
+  const char *property_str;
+  PropertyNames property_name;
+} CEventPropertyId;
+
+typedef struct CEventType {
+  CEventTypeEnum ty;
+  union CEventPropertyId property_id;
+  enum CEventPropertyIdType property_id_type;
+} CEventType;
+
+typedef struct TrackKeyFFI {
+  uint64_t _0;
+} TrackKeyFFI;
+
+typedef struct CEventData {
+  float raw_duration;
+  enum Functions easing;
+  uint32_t repeat;
+  float start_time;
+  struct CEventType event_type;
+  struct TrackKeyFFI track_key;
+  /**
+   * nullable pointer to BasePointDefinition
+   */
+  const struct BasePointDefinition *point_data_ptr;
+} CEventData;
+
+typedef struct JsonArray {
+  const struct FFIJsonValue *elements;
+  uintptr_t length;
+} JsonArray;
+
+typedef union JsonValueData {
+  double number_value;
+  const char *string_value;
+  const struct JsonArray *array;
+} JsonValueData;
+
+typedef struct FFIJsonValue {
+  enum JsonValueType value_type;
+  union JsonValueData data;
+} FFIJsonValue;
+
+typedef struct WrappedValues (*BaseFFIProvider)(const struct BaseProviderContext*, void*);
 
 typedef struct FloatInterpolationResult {
   float value;
@@ -322,102 +317,6 @@ typedef void (*CGameObjectCallback)(struct GameObject, bool, void*);
 extern "C" {
 #endif // __cplusplus
 
-struct TracksContext *tracks_context_create(void);
-
-struct TracksContext *tracks_context_clone(const struct TracksContext *context);
-
-/**
- * Consumes the context and frees its memory.
- *
- * # Safety
- * - `context` must be a pointer previously returned by `tracks_context_create` and not already freed.
- * - Passing a null pointer is a no-op.
- */
-void tracks_context_destroy(struct TracksContext *context);
-
-/**
- * Consumes the track and moves it into the context. Returns a `TrackKeyFFI` handle.
- *
- * # Safety
- * - `context` must be a valid pointer to a `TracksContext`.
- * - `track` must be a pointer returned by `track_create` and not already freed; the function takes ownership of the track.
- * - On failure this function returns a null-equivalent `TrackKeyFFI`.
- */
-struct TrackKeyFFI tracks_context_add_track(struct TracksContext *context,
-                                            struct Track *track);
-
-/**
- * Consumes the point definition and moves it into the context.
- * Returns a const pointer to the point definition.
- *
- * If id is null/empty, generates a uuid for the point definition.
- *
- * # Safety
- * - `context` must be a valid pointer to a `TracksContext`.
- * - `point_def` must be a pointer returned by a point-definition creator and not yet freed; ownership is transferred to the context.
- * - `id` may be null; when non-null it must be a valid C string.
- */
-const struct BasePointDefinition *tracks_context_add_point_definition(struct TracksContext *context,
-                                                                      const char *id,
-                                                                      struct BasePointDefinition *point_def);
-
-/**
- * Get a previously-registered point definition by name and type.
- *
- * # Safety
- * - `context` must be a valid pointer to a `TracksContext`.
- * - `name` must be a valid C string pointer.
- */
-const struct BasePointDefinition *tracks_context_get_point_definition(struct TracksContext *context,
-                                                                      const char *name,
-                                                                      enum WrapBaseValueType ty);
-
-/**
- * Lookup a track key (handle) by name.
- *
- * # Safety
- * - `context` must be a valid pointer to a `TracksContext`.
- * - `name` must be a valid C string pointer.
- */
-struct TrackKeyFFI tracks_context_get_track_key(struct TracksContext *context, const char *name);
-
-/**
- * Get a mutable pointer to a track by `TrackKeyFFI`.
- *
- * # Safety
- * - `context` must be a valid pointer to a `TracksContext`.
- * - The returned pointer is valid while the track remains registered in the context and has not been removed.
- */
-struct Track *tracks_context_get_track(struct TracksContext *context,
-                                       struct TrackKeyFFI index);
-
-/**
- * Get a mutable pointer to the context's `CoroutineManager`.
- *
- * # Safety
- * - `context` must be a valid pointer to a `TracksContext`.
- * - The returned pointer is valid while the context is alive; do not hold it while mutating the context in ways that could invalidate internal state.
- */
-struct CoroutineManager *tracks_context_get_coroutine_manager(struct TracksContext *context);
-
-/**
- * Get a mutable pointer to the context's `BaseProviderContext`.
- *
- * # Safety
- * - `context` must be a valid pointer to a `TracksContext`.
- * - The returned pointer is valid while the context is alive; do not retain it across mutations of the context.
- */
-struct BaseProviderContext *tracks_context_get_base_provider_context(struct TracksContext *context);
-
-/**
- * Get a mutable pointer to the internal `TracksHolder`.
- *
- * # Safety
- * - `context` must be a valid pointer to a `TracksContext`.
- * - The returned pointer should not be used after the context is freed.
- */
-struct TracksHolder *tracks_context_get_tracks_holder(struct TracksContext *context);
-
 /**
  * Creates a new CoroutineManager instance and returns a raw pointer to it.
  * The caller is responsible for freeing the memory using destroy_coroutine_manager.
@@ -461,6 +360,42 @@ void poll_events(struct CoroutineManager *manager,
                  float song_time,
                  const struct BaseProviderContext *context,
                  struct TracksHolder *tracks_holder);
+
+/**
+ * Create a new `BaseProviderContext` and return a raw pointer to it.
+ */
+struct BaseProviderContext *base_provider_context_create(void);
+
+/**
+ * Destroy a `BaseProviderContext` previously returned by `base_provider_context_create`.
+ */
+void base_provider_context_destroy(struct BaseProviderContext *ctx);
+
+/**
+ * Set a base provider value by name. `value` is a `WrapBaseValue` (C layout) converted into `BaseValue`.
+ */
+void base_provider_context_set_value(struct BaseProviderContext *ctx,
+                                     const char *base,
+                                     struct WrapBaseValue value);
+
+/**
+ * Get a base provider value by name as a `WrapBaseValue`.
+ * The returned `WrapBaseValue` points into data owned by `ctx` (via slice pointer), callers must not free it.
+ */
+struct WrapBaseValue base_provider_context_get_value(const struct BaseProviderContext *ctx,
+                                                     const char *base);
+
+/**
+ * Get base provider values as a pointer+length pair. The returned `WrappedValues` borrows data from `ctx`.
+ */
+struct WrappedValues base_provider_context_get_values_array(const struct BaseProviderContext *ctx,
+                                                            const char *base);
+
+/**
+ * Get the type of the base provider value for `base` (Vec3/Quat/Vec4/Float)
+ */
+enum WrapBaseValueType base_provider_context_get_type(const struct BaseProviderContext *ctx,
+                                                      const char *base);
 
 /**
  * C-compatible wrapper for easing functions
@@ -1014,6 +949,49 @@ void (**track_register_game_object_callback(struct Track *track,
  */
 void track_remove_game_object_callback(struct Track *track, void (**callback)(struct GameObject,
                                                                               bool));
+
+/**
+ * Create a new `TracksHolder` and return a raw pointer to it.
+ */
+struct TracksHolder *tracks_holder_create(void);
+
+/**
+ * Destroy a `TracksHolder` previously returned by `tracks_holder_create`.
+ */
+void tracks_holder_destroy(struct TracksHolder *holder);
+
+/**
+ * Add a `Track` to the holder. Takes ownership of the `Track` pointer passed in.
+ * Returns a `TrackKeyFFI` identifying the inserted track, or null-equivalent on error.
+ */
+struct TrackKeyFFI tracks_holder_add_track(struct TracksHolder *holder, struct Track *track);
+
+/**
+ * Get an immutable pointer to a `Track` by `TrackKeyFFI`.
+ */
+const struct Track *tracks_holder_get_track(const struct TracksHolder *holder,
+                                            struct TrackKeyFFI key);
+
+/**
+ * Get a mutable pointer to a `Track` by `TrackKeyFFI`.
+ */
+struct Track *tracks_holder_get_track_mut(struct TracksHolder *holder, struct TrackKeyFFI key);
+
+/**
+ * Look up a track by name and return a pointer to it (const).
+ */
+const struct Track *tracks_holder_get_track_by_name(const struct TracksHolder *holder,
+                                                    const char *name);
+
+/**
+ * Get the `TrackKeyFFI` for a track with the given name, or null-equivalent if not found.
+ */
+struct TrackKeyFFI tracks_holder_get_track_key(struct TracksHolder *holder, const char *name);
+
+/**
+ * Return number of tracks in the holder.
+ */
+uintptr_t tracks_holder_count(const struct TracksHolder *holder);
 
 #ifdef __cplusplus
 }  // extern "C"

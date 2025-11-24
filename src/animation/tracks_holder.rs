@@ -58,4 +58,8 @@ impl TracksHolder {
     pub fn get_track_by_name(&self, name: &str) -> Option<&Track> {
         self.tracks.iter().find(|t| t.1.name == name).map(|t| t.1)
     }
+
+    pub fn len(&self) -> usize {
+        self.tracks.len()
+    }
 }
