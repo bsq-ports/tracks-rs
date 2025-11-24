@@ -883,4 +883,95 @@ mod tests {
             v2
         );
     }
+
+    #[test]
+    fn event_duration_scales_with_bpm_and_value_persists_after_expiry() {
+        let mut cm = CoroutineManager::default();
+        // use bpm=120 so duration = (60 * raw_duration) / bpm = 0.5 when raw_duration=1.0
+        let bpm = 120.0;
+        let ctx = BaseProviderContext::new();
+
+        let mut holder = TracksHolder::new();
+        let mut t = Track::default();
+        t.name = "persist_track".to_string();
+        let key = holder.add_track(t);
+
+        let pd = FloatPointDefinition::new(vec![
+            PointData::Float(FloatPointData::new(
+                FloatValues::Static(0.0),
+                0.0,
+                vec![],
+                Functions::EaseLinear,
+            )),
+            PointData::Float(FloatPointData::new(
+                FloatValues::Static(10.0),
+                1.0,
+                vec![],
+                Functions::EaseLinear,
+            )),
+        ]);
+
+        let ev = EventData {
+            raw_duration: 1.0,
+            easing: Functions::EaseLinear,
+            repeat: 0,
+            start_song_time: 0.0,
+            property: EventType::AnimateTrack(ValuePropertyHandle::new("dissolve")),
+            track_key: key,
+            point_data: Some(pd.into()),
+        };
+
+        // Start at song_time = 0.0
+        cm.start_event_coroutine(bpm, 0.0, &ctx, &mut holder, ev);
+
+        // Half of duration (duration = 0.5) occurs at song_time = 0.25
+        cm.poll_events(0.25, &ctx, &mut holder);
+        let v_half = holder
+            .get_track(key)
+            .unwrap()
+            .properties
+            .dissolve
+            .get_value()
+            .unwrap()
+            .as_float()
+            .unwrap();
+        // Expect around 5.0
+        assert!((v_half - 5.0).abs() < 1e-3, "expected ~5.0 got {}", v_half);
+
+        // After duration (0.5), at song_time = 0.6 the coroutine should finish and value be final
+        cm.poll_events(0.6, &ctx, &mut holder);
+        let v_final = holder
+            .get_track(key)
+            .unwrap()
+            .properties
+            .dissolve
+            .get_value()
+            .unwrap()
+            .as_float()
+            .unwrap();
+        assert!(
+            (v_final - 10.0).abs() < 1e-6,
+            "expected final 10.0 got {}",
+            v_final
+        );
+
+        // No coroutines should remain for this manager (event expired)
+        assert!(cm.coroutines.is_empty(), "expected no coroutines left");
+
+        // Poll much later and ensure value remains the same
+        cm.poll_events(2.0, &ctx, &mut holder);
+        let v_later = holder
+            .get_track(key)
+            .unwrap()
+            .properties
+            .dissolve
+            .get_value()
+            .unwrap()
+            .as_float()
+            .unwrap();
+        assert!(
+            (v_later - 10.0).abs() < 1e-6,
+            "value should persist at final value"
+        );
+    }
 }
