@@ -1,8 +1,17 @@
 use crate::base_provider_context::BaseProviderContext;
 use crate::ffi::types::{WrapBaseValue, WrapBaseValueType, WrappedValues};
+use crate::values::base_ffi::{BaseFFIProvider, BaseFFIProviderValues};
 use crate::values::value::BaseValue;
-use std::ffi::CStr;
+use std::ffi::{CStr, c_void};
 use std::ptr;
+
+#[repr(C)]
+pub enum PointDefinitionType {
+    Float = 0,
+    Vector3 = 1,
+    Vector4 = 2,
+    Quaternion = 3,
+}
 
 /// Create a new `BaseProviderContext` and return a raw pointer to it.
 #[unsafe(no_mangle)]
@@ -20,6 +29,23 @@ pub unsafe extern "C" fn base_provider_context_destroy(ctx: *mut BaseProviderCon
     unsafe {
         drop(Box::from_raw(ctx));
     }
+}
+
+/// Create a `BaseFFIProviderValues` wrapper from a C function pointer and user value.
+///
+/// # Safety
+/// - `func` must be a valid pointer to a `BaseFFIProvider` function table and not null.
+/// - `user_value` is passed through as-is and its ownership remains with the caller.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn tracks_make_base_ffi_provider(
+    func: *const BaseFFIProvider,
+    user_value: *mut c_void,
+) -> *mut BaseFFIProviderValues {
+    assert!(!func.is_null());
+
+    let context = Box::new(BaseFFIProviderValues::new(func, user_value));
+
+    Box::into_raw(context)
 }
 
 /// Set a base provider value by name. `value` is a `WrapBaseValue` (C layout) converted into `BaseValue`.

@@ -155,6 +155,13 @@ typedef struct Vector3PointDefinition Vector3PointDefinition;
 
 typedef struct Vector4PointDefinition Vector4PointDefinition;
 
+typedef struct WrappedValues {
+  const float *values;
+  uintptr_t length;
+} WrappedValues;
+
+typedef struct WrappedValues (*BaseFFIProvider)(const struct BaseProviderContext*, void*);
+
 typedef struct WrapVec3 {
   float x;
   float y;
@@ -186,11 +193,6 @@ typedef struct WrapBaseValue {
   enum WrapBaseValueType ty;
   union WrapBaseValueUnion value;
 } WrapBaseValue;
-
-typedef struct WrappedValues {
-  const float *values;
-  uintptr_t length;
-} WrappedValues;
 
 typedef union CEventPropertyId {
   const char *property_str;
@@ -235,8 +237,6 @@ typedef struct FFIJsonValue {
   enum JsonValueType value_type;
   union JsonValueData data;
 } FFIJsonValue;
-
-typedef struct WrappedValues (*BaseFFIProvider)(const struct BaseProviderContext*, void*);
 
 typedef struct FloatInterpolationResult {
   float value;
@@ -372,6 +372,16 @@ struct BaseProviderContext *base_provider_context_create(void);
 void base_provider_context_destroy(struct BaseProviderContext *ctx);
 
 /**
+ * Create a `BaseFFIProviderValues` wrapper from a C function pointer and user value.
+ *
+ * # Safety
+ * - `func` must be a valid pointer to a `BaseFFIProvider` function table and not null.
+ * - `user_value` is passed through as-is and its ownership remains with the caller.
+ */
+struct BaseFFIProviderValues *tracks_make_base_ffi_provider(const BaseFFIProvider *func,
+                                                            void *user_value);
+
+/**
  * Set a base provider value by name. `value` is a `WrapBaseValue` (C layout) converted into `BaseValue`.
  */
 void base_provider_context_set_value(struct BaseProviderContext *ctx,
@@ -468,48 +478,6 @@ struct FFIJsonValue tracks_create_json_array(const struct FFIJsonValue *elements
  * - This implementation only frees the top-level `JsonArray` if present; nested structures are not recursively freed.
  */
 void tracks_free_json_value(struct FFIJsonValue *json_value);
-
-/**
- * Create a `BaseFFIProviderValues` wrapper from a C function pointer and user value.
- *
- * # Safety
- * - `func` must be a valid pointer to a `BaseFFIProvider` function table and not null.
- * - `user_value` is passed through as-is and its ownership remains with the caller.
- */
-struct BaseFFIProviderValues *tracks_make_base_ffi_provider(const BaseFFIProvider *func,
-                                                            void *user_value);
-
-/**
- * Dispose the base provider. Consumes
- * Dispose of a `BaseFFIProviderValues` previously created.
- *
- * # Safety
- * - `func` must be a pointer previously returned by `tracks_make_base_ffi_provider` and not already freed.
- */
-void tracks_dipose_base_ffi_provider(struct BaseFFIProviderValues *func);
-
-/**
- * CONTEXT
- * Create a `BaseProviderContext` and return a pointer to it.
- *
- * # Safety
- * - The returned pointer is owned by the caller and must be freed with the matching disposal function if provided.
- */
-struct BaseProviderContext *tracks_make_base_provider_context(void);
-
-/**
- * Set a named base provider's values from a raw float buffer.
- *
- * # Safety
- * - `context` must be a valid pointer to a `BaseProviderContext`.
- * - `base` must be a valid null-terminated C string.
- * - `values` must point to `count` contiguous `f32` values.
- */
-void tracks_set_base_provider(struct BaseProviderContext *context,
-                              const char *base,
-                              float *values,
-                              uintptr_t count,
-                              bool quat);
 
 /**
  * BASE POINT DEFINITION
@@ -739,7 +707,7 @@ void path_property_set_time(PathProperty *ptr, float time);
  */
 struct CValueNullable path_property_interpolate(PathProperty *ptr,
                                                 float time,
-                                                struct BaseProviderContext *context);
+                                                const struct BaseProviderContext *context);
 
 /**
  * # Safety
