@@ -151,13 +151,13 @@ pub unsafe extern "C" fn path_property_set_time(ptr: *mut PathProperty, time: f3
 pub unsafe extern "C" fn path_property_interpolate(
     ptr: *mut PathProperty,
     time: f32,
-    context: *mut BaseProviderContext,
+    context: *const BaseProviderContext,
 ) -> CValueNullable {
     if ptr.is_null() || context.is_null() {
         return CValueNullable::default();
     }
     unsafe {
-        let context = &mut *context;
+        let context = &*context;
         let inner = &mut *ptr;
         inner.interpolate(time, context).into()
     }
