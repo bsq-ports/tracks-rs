@@ -107,3 +107,14 @@ pub unsafe extern "C" fn tracks_base_point_definition_has_base_provider(
     let point_definition = unsafe { &*point_definition };
     point_definition.has_base_provider()
 }
+
+/// Get the `WrapBaseValueType` of the point definition.
+/// Safety:
+/// - `point_definition` must be a valid, non-null pointer to a `BasePointDefinition`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn tracks_base_point_definition_get_type(
+    point_definition: *const base_point_definition::BasePointDefinition,
+) -> WrapBaseValueType {
+    let point_definition = unsafe { &*point_definition };
+    point_definition.get_type()
+}

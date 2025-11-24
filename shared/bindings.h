@@ -534,6 +534,13 @@ uintptr_t tracks_base_point_definition_count(const struct BasePointDefinition *p
 bool tracks_base_point_definition_has_base_provider(const struct BasePointDefinition *point_definition);
 
 /**
+ * Get the `WrapBaseValueType` of the point definition.
+ * Safety:
+ * - `point_definition` must be a valid, non-null pointer to a `BasePointDefinition`.
+ */
+enum WrapBaseValueType tracks_base_point_definition_get_type(const struct BasePointDefinition *point_definition);
+
+/**
  * FLOAT POINT DEFINITION
  *
  * # Safety
