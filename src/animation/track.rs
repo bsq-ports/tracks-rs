@@ -152,8 +152,8 @@ pub struct Track {
     pub name: String,
 
     // hashset but must be insertion ordered
-    pub game_objects: Vec<GameObject>,
-    pub game_object_callbacks: Vec<Rc<dyn GameObjectCallback>>,
+    game_objects: Vec<GameObject>,
+    game_object_callbacks: Vec<Rc<dyn GameObjectCallback>>,
 }
 
 impl Track {
@@ -166,11 +166,9 @@ impl Track {
     }
 
     pub fn register_game_object(&mut self, game_object: GameObject) {
-        if self.game_objects.contains(&game_object) {
-            return;
+        if !self.game_objects.contains(&game_object) {
+            self.game_objects.push(game_object);
         }
-
-        self.game_objects.push(game_object);
 
         self.game_object_callbacks
             .iter()
@@ -196,8 +194,14 @@ impl Track {
     //     self.path_properties.get_mut(id)
     // }
 
+    pub fn get_game_objects(&self) -> &Vec<GameObject> {
+        &self.game_objects
+    }
+
     pub fn remove_game_object(&mut self, game_object: &GameObject) {
-        self.game_objects.retain(|go| go != game_object);
+        if let Some(position) = self.game_objects.iter().position(|go| go == game_object) {
+            self.game_objects.remove(position);
+        };
 
         self.game_object_callbacks
             .iter()
@@ -755,6 +759,132 @@ mod tests {
         unsafe {
             drop(Box::from_raw(p1 as *mut i32));
             drop(Box::from_raw(p2 as *mut i32));
+        }
+    }
+
+    #[test]
+    fn callbacks_and_gameobjects_preserve_order() {
+        use crate::animation::game_object::GameObject;
+        use std::cell::RefCell;
+        use std::ffi::c_void;
+        use std::rc::Rc;
+
+        let mut track = Track::default();
+
+        // prepare three unique game objects
+        let p1 = Box::into_raw(Box::new(11)) as *const c_void;
+        let p2 = Box::into_raw(Box::new(22)) as *const c_void;
+        let p3 = Box::into_raw(Box::new(33)) as *const c_void;
+        let go1 = GameObject::from(p1);
+        let go2 = GameObject::from(p2);
+        let go3 = GameObject::from(p3);
+
+        // record order of callback invocations (by pointer value)
+        let calls = Rc::new(RefCell::new(Vec::new()));
+
+        let c1 = {
+            let calls = calls.clone();
+            Rc::new(move |g: GameObject, _added: bool| {
+                calls.borrow_mut().push(g.ptr as usize);
+            })
+        };
+
+        let c2 = {
+            let calls = calls.clone();
+            Rc::new(move |g: GameObject, _added: bool| {
+                calls.borrow_mut().push(g.ptr as usize + 1000); // offset to distinguish
+            })
+        };
+
+        // register callbacks in order c1 then c2
+        track.register_game_object_callback(c1.clone());
+        track.register_game_object_callback(c2.clone());
+
+        // register game objects in order go1, go2, go3
+        track.register_game_object(go1);
+        track.register_game_object(go2);
+        track.register_game_object(go3);
+
+        // callbacks should have been called for each registration in registration order
+        {
+            let recorded = calls.borrow();
+            // we expect 6 entries: for each gameobject, c1 then c2
+            assert_eq!(recorded.len(), 6);
+            // verify pattern: [p1, p1+1000, p2, p2+1000, p3, p3+1000]
+            assert_eq!(recorded[0], p1 as usize);
+            assert_eq!(recorded[1], p1 as usize + 1000);
+            assert_eq!(recorded[2], p2 as usize);
+            assert_eq!(recorded[3], p2 as usize + 1000);
+            assert_eq!(recorded[4], p3 as usize);
+            assert_eq!(recorded[5], p3 as usize + 1000);
+
+            // verify track.game_objects preserves insertion order
+            assert_eq!(track.game_objects.len(), 3);
+            assert_eq!(track.game_objects[0], go1);
+            assert_eq!(track.game_objects[1], go2);
+            assert_eq!(track.game_objects[2], go3);
+        }
+
+        // remove middle object and ensure callbacks called (with removed=false)
+        calls.borrow_mut().clear();
+        track.remove_game_object(&go2);
+        // removal should have called callbacks once per registered callback
+        assert_eq!(calls.borrow().len(), 2);
+        // after removal, remaining game_objects should be go1, go3 (order preserved)
+        assert_eq!(track.game_objects.len(), 2);
+        assert_eq!(track.game_objects[0], go1);
+        assert_eq!(track.game_objects[1], go3);
+
+        // cleanup boxes
+        unsafe {
+            drop(Box::from_raw(p1 as *mut i32));
+            drop(Box::from_raw(p2 as *mut i32));
+            drop(Box::from_raw(p3 as *mut i32));
+        }
+    }
+
+    #[test]
+    fn register_remove_multiple_times_invokes_callbacks_each_time() {
+        use crate::animation::game_object::GameObject;
+        use std::cell::RefCell;
+        use std::ffi::c_void;
+        use std::rc::Rc;
+
+        let mut track = Track::default();
+
+        let p = Box::into_raw(Box::new(55)) as *const c_void;
+        let go = GameObject::from(p);
+
+        let calls = Rc::new(RefCell::new(0usize));
+        let calls_clone = calls.clone();
+        let cb = Rc::new(move |_g: GameObject, _added: bool| {
+            *calls_clone.borrow_mut() += 1;
+        });
+
+        track.register_game_object_callback(cb.clone());
+
+        // alternate register/remove three times; reset counter each iteration and assert per-iteration
+        for _ in 1..=3 {
+            // reset
+            *calls.borrow_mut() = 0;
+
+            track.register_game_object(go);
+            assert_eq!(
+                *calls.borrow(),
+                1,
+                "register should have invoked callback once per registration"
+            );
+
+            track.remove_game_object(&go);
+            assert_eq!(
+                *calls.borrow(),
+                2,
+                "remove should have invoked callback once per removal"
+            );
+        }
+
+        unsafe {
+            drop(Box::from_raw(p as *mut i32));
         }
     }
 }

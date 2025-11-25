@@ -7,7 +7,7 @@ use crate::animation::{
     tracks_holder::TrackKey,
 };
 use std::{
-    ffi::{CStr, CString, c_char},
+    ffi::{c_char, CStr, CString},
     ptr,
     rc::Rc,
 };
@@ -254,9 +254,9 @@ pub unsafe extern "C" fn track_get_game_objects(
     unsafe {
         let track_ref = &*track;
 
-        *size = track_ref.game_objects.len();
+        *size = track_ref.get_game_objects().len();
 
-        track_ref.game_objects.as_ptr()
+        track_ref.get_game_objects().as_ptr()
     }
 }
 
@@ -471,7 +471,7 @@ pub unsafe extern "C" fn track_get_path_properties_map(track: *mut Track) -> CPa
 /// - `callback` and `user_data` must remain valid for as long as the callback may be invoked.
 /// - The returned pointer is an opaque handle to the stored Rust closure; it must be removed with `track_remove_game_object_callback`.
 /// - The callback is invoked on the Rust side; ensure `callback` is safe to call from Rust execution context.
-/// 
+///
 /// - the callback signature is `extern "C" fn(GameObject, bool, *mut c_void)` where the bool indicates if the object was added (true) or removed (false).
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn track_register_game_object_callback(
@@ -524,7 +524,7 @@ pub unsafe extern "C" fn track_remove_game_object_callback(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::ffi::{CString, c_void};
+    use std::ffi::{c_void, CString};
     use std::os::raw::c_char;
 
     extern "C" fn test_c_callback(_go: GameObject, added: bool, user_data: *mut c_void) {
@@ -569,13 +569,13 @@ mod tests {
             assert!(!track.is_null());
 
             // user data for callback
-            let user_box = Box::new(0i32);
+            let mut user_box = Box::new(0i32);
 
             // register C callback
             let handle = track_register_game_object_callback(
                 track,
                 test_c_callback,
-                user_box.as_ref() as *const i32 as *mut c_void,
+                user_box.as_mut() as *mut i32 as *mut c_void,
             );
             assert!(!handle.is_null());
 
@@ -594,19 +594,38 @@ mod tests {
             let first = *arr;
             assert_eq!(first, go);
 
-            // callback should have set user data to 1 (added)
-            let added_val = *user_box;
-            assert_eq!(added_val, 1);
+            {
+                // callback should have set user data to 1 (added)
+                let added_val = *user_box;
+                assert_eq!(added_val, 1);
 
-            // unregister the game object
-            track_unregister_game_object(track, go);
+                // unregister the game object
+                track_unregister_game_object(track, go);
 
-            // callback should have been invoked with added=false => 2
-            let removed_val = *user_box;
-            assert_eq!(removed_val, 2);
+                // callback should have been invoked with added=false => 2
+                let removed_val = *user_box;
+                assert_eq!(removed_val, 2);
+            }
 
             // remove callback handle
             track_remove_game_object_callback(track, handle);
+
+            {
+                *user_box = 3;
+                // register the game object via FFI
+                track_register_game_object(track, go);
+
+                // callback should have set user data to 1 (added)
+                let added_val = *user_box;
+                assert_ne!(added_val, 1);
+
+                // unregister the game object
+                track_unregister_game_object(track, go);
+
+                // callback should have been invoked with added=false => 2
+                let removed_val = *user_box;
+                assert_ne!(removed_val, 2);
+            }
 
             // cleanup allocated boxes
             drop(Box::from_raw(p as *mut i32));
