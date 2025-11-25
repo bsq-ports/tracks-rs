@@ -308,12 +308,23 @@ fn animate_track(
 ) -> CoroutineResult {
     let elapsed_time = current_song_time - start_song_time;
 
-    let normalized_time = (elapsed_time / duration).min(1.0);
+    // clamped normalized time
+    let normalized_time = if duration <= 0.0 {
+        1.0
+    } else {
+        (elapsed_time / duration).clamp(0.0, 1.0)
+    };
     let time = easing.interpolate(normalized_time);
     let on_last = set_property_value(points, property, time, context);
     let skip = !non_lazy && on_last;
 
-    if elapsed_time < duration && !skip {
+    // if elapsed time is less than duration, yield
+    if elapsed_time < duration {
+        // we only break if we've reached the end
+        if skip {
+            return CoroutineResult::Break;
+        }
+
         return CoroutineResult::Yield;
     }
 
@@ -973,5 +984,126 @@ mod tests {
             (v_later - 10.0).abs() < 1e-6,
             "value should persist at final value"
         );
+    }
+
+    #[test]
+    fn animate_track_matches_csharp_coroutine_semantics() {
+        use crate::modifiers::float_modifier::FloatValues;
+        use crate::point_data::PointData;
+        use crate::point_data::float_point_data::FloatPointData;
+        use crate::point_definition::float_point_definition::FloatPointDefinition;
+
+        // prepare points 0 -> 10 over 0..1
+        let pd = FloatPointDefinition::new(vec![
+            PointData::Float(FloatPointData::new(
+                FloatValues::Static(0.0),
+                0.0,
+                vec![],
+                Functions::EaseLinear,
+            )),
+            PointData::Float(FloatPointData::new(
+                FloatValues::Static(10.0),
+                1.0,
+                vec![],
+                Functions::EaseLinear,
+            )),
+        ]);
+
+        // common parameters
+        let duration = 1.0_f32;
+        let easing = Functions::EaseLinear;
+        let non_lazy = true;
+        let repeat = 1; // run twice total
+
+        // create a CoroutineManager and a TracksHolder with a track that has a `dissolve` property
+        let mut cm = CoroutineManager::default();
+        let ctx = BaseProviderContext::new();
+
+        let mut holder = TracksHolder::new();
+        let mut t = Track::default();
+        t.name = "coro_track".to_string();
+        let key = holder.add_track(t);
+
+        // event definition (raw_duration 1.0 -> duration = 1.0 when bpm=60)
+        let ev = EventData {
+            raw_duration: 1.0,
+            easing,
+            repeat,
+            start_song_time: 0.0,
+            property: EventType::AnimateTrack(ValuePropertyHandle::new("dissolve")),
+            track_key: key,
+            point_data: Some(pd.clone().into()),
+        };
+
+        // Start the coroutine (bpm=60 -> duration_song_time = 1.0)
+        cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev);
+
+        // C#-side simulation property
+        let mut prop_csharp = ValueProperty::empty(crate::ffi::types::WrapBaseValueType::Float);
+
+        // C# simulation state
+        let mut cs_repeat = repeat as i32;
+        let mut cs_start = 0.0_f32;
+        let mut cs_skip = false;
+
+        // We'll step song_time forward in small increments and compare property values after each frame
+        let mut song_time = 0.0_f32;
+        let dt = 0.1_f32;
+        let mut iter = 0;
+
+        loop {
+            iter += 1;
+            assert!(iter < 500, "test timed out");
+
+            // --- C# step ---
+            let mut cs_done = false;
+            let elapsed = song_time - cs_start;
+            if !cs_skip {
+                let normalized = (elapsed / duration).min(1.0);
+                let time = easing.interpolate(normalized);
+                let on_last = {
+                    let (value, finished) = pd.interpolate(time, &BaseProviderContext::new());
+                    prop_csharp.set_value(Some(crate::values::value::BaseValue::Float(value)));
+                    finished
+                };
+                cs_skip = !non_lazy && on_last;
+            }
+
+            if elapsed < duration {
+                if cs_repeat <= 0 && cs_skip {
+                    cs_done = true;
+                }
+            } else {
+                cs_repeat -= 1;
+                cs_start += duration;
+                cs_skip = false;
+                if cs_repeat < 0 {
+                    cs_done = true;
+                }
+            }
+
+            // --- Rust step via CoroutineManager ---
+            cm.poll_events(song_time, &ctx, &mut holder);
+
+            // Read the property's value from the track
+            let track = holder.get_track(key).unwrap();
+            let v_r = track
+                .properties
+                .dissolve
+                .get_value()
+                .map(|v| v.as_float().unwrap());
+
+            let v_cs = prop_csharp.get_value().map(|v| v.as_float().unwrap());
+
+            assert_eq!(v_cs, v_r, "property mismatch at song_time {}", song_time);
+
+            let r_done = cm.coroutines.is_empty();
+
+            if cs_done && r_done {
+                break;
+            }
+
+            song_time += dt;
+        }
     }
 }
