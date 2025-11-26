@@ -257,22 +257,26 @@ impl CoroutineManager {
                     .get_by_handle_mut(value_property_handle)
                     .expect("Property not found");
 
-                let mut result = animate_track(
+
+                let mut run_event = |start: f32| animate_track(
                     point_def,
                     value_property,
                     duration,
-                    event_data.start_song_time,
+                    start,
                     song_time,
                     event_data.easing,
                     has_base,
                     context,
                 );
 
+                let mut result = run_event(event_data.start_song_time);
+
                 // when we repeat, we restart state
-                if result == CoroutineResult::Break && event_data.repeat > 0 {
+                while result == CoroutineResult::Break && event_data.repeat > 0 {
                     event_data.repeat = event_data.repeat.saturating_sub(1);
                     event_data.start_song_time += duration;
-                    result = CoroutineResult::Yield;
+                    
+                    result = run_event(event_data.start_song_time);
                 }
 
                 result
@@ -790,6 +794,354 @@ mod tests {
     }
 
     #[test]
+    fn zero_duration_assign_path_finishes_immediately() {
+        let mut cm = CoroutineManager::default();
+        let ctx = BaseProviderContext::new();
+
+        let mut holder = TracksHolder::new();
+        let mut t = Track::default();
+        t.name = "path_track_immediate".to_string();
+        let key = holder.add_track(t);
+
+        // Vec3 point definition (0 -> 3 over time 0..1)
+        let pd = Vector3PointDefinition::new(vec![
+            PointData::Vector3(Vector3PointData::new(
+                Vector3Values::Static(Vec3::new(0.0, 0.0, 0.0)),
+                false,
+                0.0,
+                vec![],
+                Functions::EaseLinear,
+            )),
+            PointData::Vector3(Vector3PointData::new(
+                Vector3Values::Static(Vec3::new(3.0, 3.0, 3.0)),
+                false,
+                1.0,
+                vec![],
+                Functions::EaseLinear,
+            )),
+        ]);
+
+        let ev = EventData {
+            raw_duration: 0.0,
+            easing: Functions::EaseLinear,
+            repeat: 0,
+            start_song_time: 0.0,
+            property: EventType::AssignPathAnimation(PathPropertyHandle::new("definitePosition")),
+            track_key: key,
+            point_data: Some(pd.into()),
+        };
+
+        cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev);
+
+        // zero-duration events should not leave coroutines enqueued
+        assert!(
+            cm.coroutines.is_empty(),
+            "0-duration coroutine should not be retained"
+        );
+
+        // The path property should already be finished and return the final value immediately
+        let track = holder.get_track(key).unwrap();
+        let res = track
+            .path_properties
+            .definite_position
+            .interpolate(1.0, &ctx);
+        assert!(
+            res.is_some(),
+            "interpolate should return Some after zero-duration assign"
+        );
+        let v = res.unwrap().as_vec3().unwrap();
+        assert_eq!(v, Vec3::new(3.0, 3.0, 3.0));
+    }
+
+    #[test]
+    fn path_animation_progress_and_persistence() {
+        let mut cm = CoroutineManager::default();
+        let ctx = BaseProviderContext::new();
+
+        let mut holder = TracksHolder::new();
+        let mut t = Track::default();
+        t.name = "path_track_progress".to_string();
+        let key = holder.add_track(t);
+
+        // Vec3 point definition (0 -> 3 over time 0..1)
+        let pd = Vector3PointDefinition::new(vec![
+            PointData::Vector3(Vector3PointData::new(
+                Vector3Values::Static(Vec3::new(0.0, 0.0, 0.0)),
+                false,
+                0.0,
+                vec![],
+                Functions::EaseLinear,
+            )),
+            PointData::Vector3(Vector3PointData::new(
+                Vector3Values::Static(Vec3::new(3.0, 3.0, 3.0)),
+                false,
+                1.0,
+                vec![],
+                Functions::EaseLinear,
+            )),
+        ]);
+
+        let ev = EventData {
+            raw_duration: 1.0,
+            easing: Functions::EaseLinear,
+            repeat: 0,
+            start_song_time: 0.0,
+            property: EventType::AssignPathAnimation(PathPropertyHandle::new("definitePosition")),
+            track_key: key,
+            point_data: Some(pd.into()),
+        };
+
+        cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev);
+
+        // halfway through duration (0.5) -> should be approximately halfway along the path
+        cm.poll_events(0.5, &ctx, &mut holder);
+        let track = holder.get_track(key).unwrap();
+        let interp_time = track.path_properties.definite_position.interpolate_time;
+        let res_mid = track
+            .path_properties
+            .definite_position
+            .interpolate(interp_time, &ctx);
+        assert!(
+            res_mid.is_some(),
+            "interpolate should return Some during animation"
+        );
+        let v_mid = res_mid.unwrap().as_vec3().unwrap();
+        assert!(
+            (v_mid.x - 1.5).abs() < 1e-3,
+            "expected ~1.5 got {}",
+            v_mid.x
+        );
+
+        // after duration (slightly after 1.0) the animation should finish and value be final
+        cm.poll_events(1.1, &ctx, &mut holder);
+        let track = holder.get_track(key).unwrap();
+        let res_final = track
+            .path_properties
+            .definite_position
+            .interpolate(1.0, &ctx);
+        assert!(
+            res_final.is_some(),
+            "interpolate should return Some after finish"
+        );
+        let v_final = res_final.unwrap().as_vec3().unwrap();
+        assert_eq!(v_final, Vec3::new(3.0, 3.0, 3.0));
+
+        // much later, value should persist
+        cm.poll_events(5.0, &ctx, &mut holder);
+        let track = holder.get_track(key).unwrap();
+        let res_later = track
+            .path_properties
+            .definite_position
+            .interpolate(1.0, &ctx);
+        assert!(res_later.is_some(), "interpolate should return Some later");
+        let v_later = res_later.unwrap().as_vec3().unwrap();
+        assert_eq!(v_later, Vec3::new(3.0, 3.0, 3.0));
+    }
+
+    #[test]
+    fn animate_repeat_runs_multiple_times() {
+        let mut cm = CoroutineManager::default();
+        let ctx = BaseProviderContext::new();
+
+        let mut holder = TracksHolder::new();
+        let mut t = Track::default();
+        t.name = "animate_repeat".to_string();
+        let key = holder.add_track(t);
+
+        // float point definition (0 -> 10 over 0..1)
+        let pd = FloatPointDefinition::new(vec![
+            PointData::Float(FloatPointData::new(
+                FloatValues::Static(0.0),
+                0.0,
+                vec![],
+                Functions::EaseLinear,
+            )),
+            PointData::Float(FloatPointData::new(
+                FloatValues::Static(10.0),
+                1.0,
+                vec![],
+                Functions::EaseLinear,
+            )),
+        ]);
+
+        // repeat = 2 -> should run 3 times total
+        let ev = EventData {
+            raw_duration: 1.0,
+            easing: Functions::EaseLinear,
+            repeat: 2,
+            start_song_time: 0.0,
+            property: EventType::AnimateTrack(ValuePropertyHandle::new("dissolve")),
+            track_key: key,
+            point_data: Some(pd.into()),
+        };
+
+        cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev);
+
+        // midpoint of first iteration
+        cm.poll_events(0.5, &ctx, &mut holder);
+        let v1 = holder
+            .get_track(key)
+            .unwrap()
+            .properties
+            .dissolve
+            .get_value()
+            .unwrap()
+            .as_float()
+            .unwrap();
+        assert!(
+            (v1 - 5.0).abs() < 1e-3,
+            "expected ~5.0 during first iteration, got {}",
+            v1
+        );
+
+        // ensure first iteration finishes and schedules restart
+        cm.poll_events(1.01, &ctx, &mut holder);
+        // midpoint of second iteration
+        cm.poll_events(1.5, &ctx, &mut holder);
+        let v2 = holder
+            .get_track(key)
+            .unwrap()
+            .properties
+            .dissolve
+            .get_value()
+            .unwrap()
+            .as_float()
+            .unwrap();
+        assert!(
+            (v2 - 5.0).abs() < 1e-3,
+            "expected ~5.0 during second iteration, got {}",
+            v2
+        );
+
+
+        // midpoint of third iteration
+        cm.poll_events(2.5, &ctx, &mut holder);
+        let v3 = holder
+            .get_track(key)
+            .unwrap()
+            .properties
+            .dissolve
+            .get_value()
+            .unwrap()
+            .as_float()
+            .unwrap();
+        assert!(
+            (v3 - 5.0).abs() < 1e-3,
+            "expected ~5.0 during third iteration, got {}",
+            v3
+        );
+
+        // after all repeats complete
+        cm.poll_events(3.1, &ctx, &mut holder);
+        let v_final = holder
+            .get_track(key)
+            .unwrap()
+            .properties
+            .dissolve
+            .get_value()
+            .unwrap()
+            .as_float()
+            .unwrap();
+        assert!(
+            (v_final - 10.0).abs() < 1e-6,
+            "expected final 10.0 got {}",
+            v_final
+        );
+        assert!(cm.coroutines.is_empty(), "expected no coroutines left");
+    }
+
+    #[test]
+    fn path_repeat_runs_multiple_times() {
+        let mut cm = CoroutineManager::default();
+        let ctx = BaseProviderContext::new();
+
+        let mut holder = TracksHolder::new();
+        let mut t = Track::default();
+        t.name = "path_repeat".to_string();
+        let key = holder.add_track(t);
+
+        // Vec3 point definition (0 -> 3 over 0..1)
+        let pd = Vector3PointDefinition::new(vec![
+            PointData::Vector3(Vector3PointData::new(
+                Vector3Values::Static(Vec3::new(0.0, 0.0, 0.0)),
+                false,
+                0.0,
+                vec![],
+                Functions::EaseLinear,
+            )),
+            PointData::Vector3(Vector3PointData::new(
+                Vector3Values::Static(Vec3::new(3.0, 3.0, 3.0)),
+                false,
+                1.0,
+                vec![],
+                Functions::EaseLinear,
+            )),
+        ]);
+
+        // repeat = 2 -> should run 3 times total
+        let ev = EventData {
+            raw_duration: 1.0,
+            easing: Functions::EaseLinear,
+            repeat: 2,
+            start_song_time: 0.0,
+            property: EventType::AssignPathAnimation(PathPropertyHandle::new("definitePosition")),
+            track_key: key,
+            point_data: Some(pd.into()),
+        };
+
+        cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev);
+
+        // midpoint first
+        cm.poll_events(0.5, &ctx, &mut holder);
+        let track = holder.get_track(key).unwrap();
+        let res1 = track
+            .path_properties
+            .definite_position
+            .interpolate(0.5, &ctx)
+            .unwrap()
+            .as_vec3()
+            .unwrap();
+        assert!((res1.x - 1.5).abs() < 1e-3, "expected ~1.5 got {}", res1.x);
+
+        // midpoint second
+        cm.poll_events(1.5, &ctx, &mut holder);
+        let track = holder.get_track(key).unwrap();
+        let res2 = track
+            .path_properties
+            .definite_position
+            .interpolate(0.5, &ctx)
+            .unwrap()
+            .as_vec3()
+            .unwrap();
+        assert!((res2.x - 1.5).abs() < 1e-3, "expected ~1.5 got {}", res2.x);
+
+        // midpoint third
+        cm.poll_events(2.5, &ctx, &mut holder);
+        let track = holder.get_track(key).unwrap();
+        let res3 = track
+            .path_properties
+            .definite_position
+            .interpolate(0.5, &ctx)
+            .unwrap()
+            .as_vec3()
+            .unwrap();
+        assert!((res3.x - 1.5).abs() < 1e-3, "expected ~1.5 got {}", res3.x);
+
+        // after completion final value
+        cm.poll_events(3.1, &ctx, &mut holder);
+        let track = holder.get_track(key).unwrap();
+        let res_final = track
+            .path_properties
+            .definite_position
+            .interpolate(1.0, &ctx)
+            .unwrap()
+            .as_vec3()
+            .unwrap();
+        assert_eq!(res_final, Vec3::new(3.0, 3.0, 3.0));
+        assert!(cm.coroutines.is_empty(), "expected no coroutines left");
+    }
+
+    #[test]
     fn missing_point_data_sets_property_to_none() {
         let mut cm = CoroutineManager::default();
         let ctx = BaseProviderContext::new();
@@ -1055,30 +1407,36 @@ mod tests {
             iter += 1;
             assert!(iter < 500, "test timed out");
 
-            // --- C# step ---
+            // --- C# step: simulate full coroutine loop (may iterate multiple times in same tick) ---
             let mut cs_done = false;
-            let elapsed = song_time - cs_start;
-            if !cs_skip {
-                let normalized = (elapsed / duration).min(1.0);
-                let time = easing.interpolate(normalized);
-                let on_last = {
-                    let (value, finished) = pd.interpolate(time, &BaseProviderContext::new());
-                    prop_csharp.set_value(Some(crate::values::value::BaseValue::Float(value)));
-                    finished
-                };
-                cs_skip = !non_lazy && on_last;
-            }
-
-            if elapsed < duration {
-                if cs_repeat <= 0 && cs_skip {
-                    cs_done = true;
+            loop {
+                let elapsed = song_time - cs_start;
+                if !cs_skip {
+                    let normalized = (elapsed / duration).min(1.0);
+                    let time = easing.interpolate(normalized);
+                    let on_last = {
+                        let (value, finished) = pd.interpolate(time, &BaseProviderContext::new());
+                        prop_csharp.set_value(Some(crate::values::value::BaseValue::Float(value)));
+                        finished
+                    };
+                    cs_skip = !non_lazy && on_last;
                 }
-            } else {
-                cs_repeat -= 1;
-                cs_start += duration;
-                cs_skip = false;
-                if cs_repeat < 0 {
-                    cs_done = true;
+
+                if elapsed < duration {
+                    if cs_repeat <= 0 && cs_skip {
+                        cs_done = true;
+                    }
+                    break;
+                } else {
+                    cs_repeat -= 1;
+                    cs_start += duration;
+                    cs_skip = false;
+                    if cs_repeat < 0 {
+                        cs_done = true;
+                        break;
+                    }
+                    // otherwise, continue the loop and run next iteration in same tick
+                    continue;
                 }
             }
 
