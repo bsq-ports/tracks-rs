@@ -7,7 +7,7 @@ use crate::animation::{
     tracks_holder::TrackKey,
 };
 use std::{
-    ffi::{c_char, CStr, CString},
+    ffi::{CStr, CString, c_char},
     ptr,
     rc::Rc,
 };
@@ -524,7 +524,7 @@ pub unsafe extern "C" fn track_remove_game_object_callback(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::ffi::{c_void, CString};
+    use std::ffi::{CString, c_void};
     use std::os::raw::c_char;
 
     extern "C" fn test_c_callback(_go: GameObject, added: bool, user_data: *mut c_void) {

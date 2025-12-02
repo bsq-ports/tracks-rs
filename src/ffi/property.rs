@@ -111,7 +111,7 @@ pub unsafe extern "C" fn path_property_init(
 /// # Safety
 /// - `ptr` must be a valid pointer to a `PathProperty`.
 /// - `new_point_data`, if non-null, must point to a valid `BasePointDefinition` and ownership of its contents may be moved.
-/// 
+///
 /// Consumes the path property and frees its memory.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn path_property_free(ptr: *mut PathProperty) {

@@ -104,12 +104,7 @@ pub fn draw_quat(
                 chart
                     .draw_series(LineSeries::new(
                         [(0.0, 0.0, x), (to.x as f64, to.y as f64, x + to.z as f64)],
-                        RGBAColor {
-                            0: (255.0 * x) as u8,
-                            1: (255.0 * (1.0 - x)) as u8,
-                            2: 0,
-                            3: 1.0,
-                        },
+                        RGBAColor((255.0 * x) as u8, (255.0 * (1.0 - x)) as u8, 0, 1.0),
                     ))
                     .unwrap();
             })

@@ -82,12 +82,12 @@ pub fn draw_color(
                     .0;
                 Rectangle::new(
                     [(x, 0.0), (x + 0.01, 1.0)],
-                    RGBAColor {
-                        0: (color.x * 255.0) as u8,
-                        1: (color.y * 255.0) as u8,
-                        2: (color.z * 255.0) as u8,
-                        3: color.w as f64,
-                    }
+                    RGBAColor(
+                        (color.x * 255.0) as u8,
+                        (color.y * 255.0) as u8,
+                        (color.z * 255.0) as u8,
+                        color.w as f64,
+                    )
                     .filled(),
                 )
             }))

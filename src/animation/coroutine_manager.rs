@@ -257,17 +257,18 @@ impl CoroutineManager {
                     .get_by_handle_mut(value_property_handle)
                     .expect("Property not found");
 
-
-                let mut run_event = |start: f32| animate_track(
-                    point_def,
-                    value_property,
-                    duration,
-                    start,
-                    song_time,
-                    event_data.easing,
-                    has_base,
-                    context,
-                );
+                let mut run_event = |start: f32| {
+                    animate_track(
+                        point_def,
+                        value_property,
+                        duration,
+                        start,
+                        song_time,
+                        event_data.easing,
+                        has_base,
+                        context,
+                    )
+                };
 
                 let mut result = run_event(event_data.start_song_time);
 
@@ -275,7 +276,7 @@ impl CoroutineManager {
                 while result == CoroutineResult::Break && event_data.repeat > 0 {
                     event_data.repeat = event_data.repeat.saturating_sub(1);
                     event_data.start_song_time += duration;
-                    
+
                     result = run_event(event_data.start_song_time);
                 }
 
@@ -1012,7 +1013,6 @@ mod tests {
             "expected ~5.0 during second iteration, got {}",
             v2
         );
-
 
         // midpoint of third iteration
         cm.poll_events(2.5, &ctx, &mut holder);

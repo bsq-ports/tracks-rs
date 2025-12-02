@@ -11,7 +11,7 @@ use glam::{EulerRot, Quat, Vec3};
 ///
 /// Euler angles can represent a three dimensional rotation by performing
 /// three separate rotations around individual axes.
-/// In Unity these rotations are performed around the 
+/// In Unity these rotations are performed around the
 /// Z axis, the X axis, and the Y axis, in that order.
 pub const TRACKS_EULER_ROT: EulerRot = EulerRot::ZXY;
 
