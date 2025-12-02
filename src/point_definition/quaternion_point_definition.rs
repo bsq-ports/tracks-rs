@@ -146,7 +146,7 @@ mod tests {
     };
 
     // Use Unity's Euler rotation order (ZXY) for expected values in tests
-    const UNITY_EULER: EulerRot = EulerRot::ZXY;
+    const UNITY_EULER: EulerRot = EulerRot::YXZ;
 
     fn approx_eq(a: f32, b: f32, eps: f32) -> bool {
         (a - b).abs() <= eps

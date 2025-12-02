@@ -13,7 +13,7 @@ use glam::{EulerRot, Quat, Vec3};
 /// three separate rotations around individual axes.
 /// In Unity these rotations are performed around the
 /// Z axis, the X axis, and the Y axis, in that order.
-pub const TRACKS_EULER_ROT: EulerRot = EulerRot::ZXY;
+pub const TRACKS_EULER_ROT: EulerRot = EulerRot::YXZ;
 
 #[derive(Debug)]
 pub enum QuaternionValues {
