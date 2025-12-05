@@ -8,9 +8,10 @@ use crate::{
     modifiers::{
         Modifier,
         operation::Operation,
-        quaternion_modifier::{QuaternionModifier, QuaternionValues, TRACKS_EULER_ROT},
+        quaternion_modifier::{QuaternionModifier, QuaternionValues},
     },
     point_data::{PointData, quaternion_point_data::QuaternionPointData},
+    quaternion_utils::QuaternionUtilsExt,
     values::{AbstractValueProvider, ValueProvider},
 };
 
@@ -46,12 +47,8 @@ impl PointDefinition for QuaternionPointDefinition {
             [ValueProvider::Static(static_val)] if static_val.values(context).len() == 3 => {
                 let values = static_val.values(context);
                 let raw_vector = vec3(values[0], values[1], values[2]);
-                let quat = Quat::from_euler(
-                    TRACKS_EULER_ROT,
-                    values[2].to_radians(),
-                    values[0].to_radians(),
-                    values[1].to_radians(),
-                );
+                let quat =
+                    Quat::from_unity_euler_degrees(&Vec3::new(values[0], values[1], values[2]));
                 QuaternionValues::Static(raw_vector, quat)
             }
             _ => {
@@ -75,12 +72,9 @@ impl PointDefinition for QuaternionPointDefinition {
             [ValueProvider::Static(static_val)] if static_val.values(context).len() == 4 => {
                 let values = static_val.values(context);
                 let raw_vector_point = Vec3::new(values[0], values[1], values[2]);
-                let quat = Quat::from_euler(
-                    TRACKS_EULER_ROT,
-                    values[2].to_radians(),
-                    values[0].to_radians(),
-                    values[1].to_radians(),
-                );
+                let quat =
+                    Quat::from_unity_euler_degrees(&Vec3::new(values[0], values[1], values[2]));
+
                 (QuaternionValues::Static(raw_vector_point, quat), values[3])
             }
             _ => {
@@ -141,7 +135,6 @@ mod tests {
 
     use crate::{
         base_provider_context::BaseProviderContext,
-        modifiers::quaternion_modifier::TRACKS_EULER_ROT,
         point_data::quaternion_point_data::QuaternionPointData, point_definition::PointDefinition,
     };
 
@@ -171,10 +164,10 @@ mod tests {
 
         // Initial (time 0.0)
         let (q0, is_last0) = def.interpolate(0.0, &ctx);
-        let e0 = q0.to_euler(UNITY_EULER);
-        assert!(approx_eq(e0.0.to_degrees(), 0.0, 1e-3));
-        assert!(approx_eq(e0.1.to_degrees(), 0.0, 1e-3));
-        assert!(approx_eq(e0.2.to_degrees(), 0.0, 1e-3));
+        let e0 = q0.to_unity_euler_degrees();
+        assert!(approx_eq(e0.z, 0.0, 1e-3));
+        assert!(approx_eq(e0.y, 0.0, 1e-3));
+        assert!(approx_eq(e0.z, 0.0, 1e-3));
         // identity quaternion expected
         assert!(approx_eq(q0.x, 0.0, 1e-3));
         assert!(approx_eq(q0.y, 0.0, 1e-3));
@@ -184,18 +177,8 @@ mod tests {
         // Intermediate between 0.1 and 0.2 -> t = 0.15 -> normalized 0.5 between those points
         let (q_mid, is_last_mid) = def.interpolate(0.15, &ctx);
         // Build expected by slerping the endpoint quaternions
-        let q_l = Quat::from_euler(
-            UNITY_EULER,
-            0.0f32.to_radians(),
-            0.0f32.to_radians(),
-            0.0f32.to_radians(),
-        );
-        let q_r = Quat::from_euler(
-            UNITY_EULER,
-            0.0f32.to_radians(),
-            0.0f32.to_radians(),
-            (-90.0f32).to_radians(),
-        );
+        let q_l = Quat::from_unity_euler_degrees(&Vec3::new(0.0f32, 0.0f32, 0.0f32));
+        let q_r = Quat::from_unity_euler_degrees(&Vec3::new(0.0f32, -90.0f32, 0.0f32));
         let expected_mid = q_l.slerp(q_r, 0.5);
 
         // compare quaternion components
@@ -205,23 +188,11 @@ mod tests {
         assert!(approx_eq(q_mid.w, expected_mid.w, 1e-3));
 
         // compare euler angles (converted to degrees)
-        let e_mid = q_mid.to_euler(UNITY_EULER);
-        let e_expected = expected_mid.to_euler(UNITY_EULER);
-        assert!(approx_eq(
-            e_mid.0.to_degrees(),
-            e_expected.0.to_degrees(),
-            1e-2
-        ));
-        assert!(approx_eq(
-            e_mid.1.to_degrees(),
-            e_expected.1.to_degrees(),
-            1e-2
-        ));
-        assert!(approx_eq(
-            e_mid.2.to_degrees(),
-            e_expected.2.to_degrees(),
-            1e-2
-        ));
+        let e_mid = q_mid.to_unity_euler_degrees();
+        let e_expected = expected_mid.to_unity_euler_degrees();
+        assert!(approx_eq(e_mid.x, e_expected.x, 1e-2));
+        assert!(approx_eq(e_mid.y, e_expected.y, 1e-2));
+        assert!(approx_eq(e_mid.z, e_expected.z, 1e-2));
 
         // Final (time 0.3)
         let (q_final, is_last_final) = def.interpolate(0.3, &ctx);
@@ -237,23 +208,11 @@ mod tests {
         assert!(approx_eq(q_final.z, expected_final.z, 1e-3));
         assert!(approx_eq(q_final.w, expected_final.w, 1e-3));
 
-        let e_final = q_final.to_euler(UNITY_EULER);
-        let e_expected_final = expected_final.to_euler(UNITY_EULER);
-        assert!(approx_eq(
-            e_final.0.to_degrees(),
-            e_expected_final.0.to_degrees(),
-            1e-2
-        ));
-        assert!(approx_eq(
-            e_final.1.to_degrees(),
-            e_expected_final.1.to_degrees(),
-            1e-2
-        ));
-        assert!(approx_eq(
-            e_final.2.to_degrees(),
-            e_expected_final.2.to_degrees(),
-            1e-2
-        ));
+        let e_final = q_final.to_unity_euler_degrees();
+        let e_expected_final = expected_final.to_unity_euler_degrees();
+        assert!(approx_eq(e_final.x, e_expected_final.x, 1e-2));
+        assert!(approx_eq(e_final.y, e_expected_final.y, 1e-2));
+        assert!(approx_eq(e_final.z, e_expected_final.z, 1e-2));
         assert!(is_last_final);
     }
 
@@ -263,30 +222,11 @@ mod tests {
         let ctx = BaseProviderContext::new();
 
         // Build quaternions from the same euler angles as the previous test
-        let q0 = Quat::from_euler(
-            TRACKS_EULER_ROT,
-            0.0f32.to_radians(),
-            0.0f32.to_radians(),
-            0.0f32.to_radians(),
-        );
-        let q1 = Quat::from_euler(
-            TRACKS_EULER_ROT,
-            0.0f32.to_radians(),
-            0.0f32.to_radians(),
-            0.0f32.to_radians(),
-        );
-        let q2 = Quat::from_euler(
-            TRACKS_EULER_ROT,
-            0.0f32.to_radians(),
-            0.0f32.to_radians(),
-            (-90.0f32).to_radians(),
-        );
-        let q3 = Quat::from_euler(
-            TRACKS_EULER_ROT,
-            0.0f32.to_radians(),
-            (-90.0f32).to_radians(),
-            (-90.0f32).to_radians(),
-        );
+        let q0 = Quat::from_unity_euler_degrees(&Vec3::new(0.0, 0.0, 0.0));
+        let q1 = Quat::from_unity_euler_degrees(&Vec3::new(0.0, 0.0, 0.0));
+
+        let q2 = Quat::from_unity_euler_degrees(&Vec3::new(0.0f32, -90.0f32, 0.0f32));
+        let q3 = Quat::from_unity_euler_degrees(&Vec3::new(-90.0f32, -90.0f32, 0.0f32));
 
         let p0 = PointData::Quaternion(QuaternionPointData::new(
             QuaternionValues::Static(Vec3::new(0.0, 0.0, 0.0), q0),
@@ -320,10 +260,10 @@ mod tests {
 
         // initial
         let (qi0, last0) = def.interpolate(0.0, &ctx);
-        let e0 = qi0.to_euler(TRACKS_EULER_ROT);
-        assert!(approx_eq(e0.0.to_degrees(), 0.0, 1e-3));
-        assert!(approx_eq(e0.1.to_degrees(), 0.0, 1e-3));
-        assert!(approx_eq(e0.2.to_degrees(), 0.0, 1e-3));
+        let e0 = qi0.to_unity_euler_degrees();
+        assert!(approx_eq(e0.x, 0.0, 1e-3));
+        assert!(approx_eq(e0.y, 0.0, 1e-3));
+        assert!(approx_eq(e0.z, 0.0, 1e-3));
         assert!(approx_eq(qi0.x, q0.x, 1e-3));
         assert!(approx_eq(qi0.y, q0.y, 1e-3));
         assert!(approx_eq(qi0.z, q0.z, 1e-3));
@@ -337,23 +277,11 @@ mod tests {
         assert!(approx_eq(qmid.y, expected_mid.y, 1e-3));
         assert!(approx_eq(qmid.z, expected_mid.z, 1e-3));
         assert!(approx_eq(qmid.w, expected_mid.w, 1e-3));
-        let e_mid = qmid.to_euler(TRACKS_EULER_ROT);
-        let e_expected = expected_mid.to_euler(TRACKS_EULER_ROT);
-        assert!(approx_eq(
-            e_mid.0.to_degrees(),
-            e_expected.0.to_degrees(),
-            1e-2
-        ));
-        assert!(approx_eq(
-            e_mid.1.to_degrees(),
-            e_expected.1.to_degrees(),
-            1e-2
-        ));
-        assert!(approx_eq(
-            e_mid.2.to_degrees(),
-            e_expected.2.to_degrees(),
-            1e-2
-        ));
+        let e_mid = qmid.to_unity_euler_degrees();
+        let e_expected = expected_mid.to_unity_euler_degrees();
+        assert!(approx_eq(e_mid.x, e_expected.x, 1e-2));
+        assert!(approx_eq(e_mid.y, e_expected.y, 1e-2));
+        assert!(approx_eq(e_mid.z, e_expected.z, 1e-2));
         assert!(!lastmid);
 
         // final
@@ -362,23 +290,11 @@ mod tests {
         assert!(approx_eq(qf.y, q3.y, 1e-3));
         assert!(approx_eq(qf.z, q3.z, 1e-3));
         assert!(approx_eq(qf.w, q3.w, 1e-3));
-        let e_f = qf.to_euler(TRACKS_EULER_ROT);
-        let e_expected_f = q3.to_euler(TRACKS_EULER_ROT);
-        assert!(approx_eq(
-            e_f.0.to_degrees(),
-            e_expected_f.0.to_degrees(),
-            1e-2
-        ));
-        assert!(approx_eq(
-            e_f.1.to_degrees(),
-            e_expected_f.1.to_degrees(),
-            1e-2
-        ));
-        assert!(approx_eq(
-            e_f.2.to_degrees(),
-            e_expected_f.2.to_degrees(),
-            1e-2
-        ));
+        let e_f = qf.to_unity_euler_degrees();
+        let e_expected_f = q3.to_unity_euler_degrees();
+        assert!(approx_eq(e_f.x, e_expected_f.x, 1e-2));
+        assert!(approx_eq(e_f.y, e_expected_f.y, 1e-2));
+        assert!(approx_eq(e_f.z, e_expected_f.z, 1e-2));
         assert!(lastf);
     }
 }

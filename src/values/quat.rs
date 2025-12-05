@@ -3,7 +3,8 @@ use std::borrow::Cow;
 use super::ValueProvider;
 
 use crate::{
-    base_provider_context::BaseProviderContext, modifiers::quaternion_modifier::TRACKS_EULER_ROT,
+    base_provider_context::BaseProviderContext,
+    quaternion_utils::{QuaternionUtilsExt, TRACKS_EULER_ROT},
 };
 
 use super::AbstractValueProvider;
@@ -26,14 +27,12 @@ impl QuaternionProviderValues {
 impl AbstractValueProvider for QuaternionProviderValues {
     fn values<'a>(&'a self, _context: &BaseProviderContext) -> Cow<'a, [f32]> {
         let source = self.source.values(_context);
-        let rotation = Quat::from_xyzw(source[0], source[1], source[2], source[3]);
-        let euler = rotation.to_euler(TRACKS_EULER_ROT);
 
-        let values = [
-            euler.0.to_degrees(),
-            euler.1.to_degrees(),
-            euler.2.to_degrees(),
-        ];
-        values.to_vec().into()
+        // We are receiving quaternion values directly here
+        // TODO: Verify this!
+        let rotation = Quat::from_xyzw(source[0], source[1], source[2], source[3]);
+        let euler = rotation.to_unity_euler_degrees();
+
+        euler.to_array().to_vec().into()
     }
 }

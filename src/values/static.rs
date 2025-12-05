@@ -8,7 +8,6 @@ use super::AbstractValueProvider;
 
 #[derive(Clone, Debug)]
 pub struct StaticValues {
-    // TODO: SWITCH TO SMALL VEC
     pub(crate) values: SmallVec<[f32; 4]>,
 }
 

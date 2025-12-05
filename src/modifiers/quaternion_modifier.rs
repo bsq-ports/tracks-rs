@@ -1,14 +1,11 @@
 use super::{Modifier, ModifierBase, operation::Operation, shared_has_base_provider};
 use crate::{
     base_provider_context::BaseProviderContext,
+    quaternion_utils::QuaternionUtilsExt,
     values::{AbstractValueProvider, ValueProvider},
 };
 use glam::Vec3A;
 use glam::{EulerRot, Quat, Vec3};
-
-// May be ZXYEx or YXZ
-// When using Quat::from_euler, match the order in the a, b, and c parameters
-pub const TRACKS_EULER_ROT: EulerRot = EulerRot::ZXYEx;
 
 #[derive(Debug)]
 pub enum QuaternionValues {
@@ -88,12 +85,7 @@ impl ModifierBase for QuaternionModifier {
         // modifiers applied to the point
         let vector_point = self.get_vector_point(context);
 
-        Quat::from_euler(
-            TRACKS_EULER_ROT,
-            vector_point.z.to_radians(),
-            vector_point.x.to_radians(),
-            vector_point.y.to_radians(),
-        )
+        Quat::from_unity_euler_degrees(&Vec3::new(vector_point.x, vector_point.y, vector_point.z))
     }
 
     fn get_raw_point(&self) -> Quat {
@@ -104,12 +96,7 @@ impl ModifierBase for QuaternionModifier {
     }
 
     fn translate(&self, values: &[f32]) -> Quat {
-        Quat::from_euler(
-            TRACKS_EULER_ROT,
-            values[2].to_radians(),
-            values[0].to_radians(),
-            values[1].to_radians(),
-        )
+        Quat::from_unity_euler_degrees(&Vec3::new(values[0], values[1], values[2]))
     }
 
     fn get_operation(&self) -> Operation {
