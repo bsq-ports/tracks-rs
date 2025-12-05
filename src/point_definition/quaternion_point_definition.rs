@@ -48,9 +48,9 @@ impl PointDefinition for QuaternionPointDefinition {
                 let raw_vector = vec3(values[0], values[1], values[2]);
                 let quat = Quat::from_euler(
                     TRACKS_EULER_ROT,
+                    values[2].to_radians(),
                     values[0].to_radians(),
                     values[1].to_radians(),
-                    values[2].to_radians(),
                 );
                 QuaternionValues::Static(raw_vector, quat)
             }
@@ -77,9 +77,9 @@ impl PointDefinition for QuaternionPointDefinition {
                 let raw_vector_point = Vec3::new(values[0], values[1], values[2]);
                 let quat = Quat::from_euler(
                     TRACKS_EULER_ROT,
+                    values[2].to_radians(),
                     values[0].to_radians(),
                     values[1].to_radians(),
-                    values[2].to_radians(),
                 );
                 (QuaternionValues::Static(raw_vector_point, quat), values[3])
             }
@@ -145,8 +145,8 @@ mod tests {
         point_data::quaternion_point_data::QuaternionPointData, point_definition::PointDefinition,
     };
 
-    // Use Unity's Euler rotation order (ZXY) for expected values in tests
-    const UNITY_EULER: EulerRot = EulerRot::YXZ;
+    // Use Unity's Euler rotation order (ZXY(Ex)) for expected values in tests
+    const UNITY_EULER: EulerRot = EulerRot::ZXYEx;
 
     fn approx_eq(a: f32, b: f32, eps: f32) -> bool {
         (a - b).abs() <= eps
@@ -193,8 +193,8 @@ mod tests {
         let q_r = Quat::from_euler(
             UNITY_EULER,
             0.0f32.to_radians(),
-            (-90.0f32).to_radians(),
             0.0f32.to_radians(),
+            (-90.0f32).to_radians(),
         );
         let expected_mid = q_l.slerp(q_r, 0.5);
 
@@ -227,9 +227,9 @@ mod tests {
         let (q_final, is_last_final) = def.interpolate(0.3, &ctx);
         let expected_final = Quat::from_euler(
             UNITY_EULER,
-            (-90.0f32).to_radians(),
-            (-90.0f32).to_radians(),
             0.0f32.to_radians(),
+            (-90.0f32).to_radians(),
+            (-90.0f32).to_radians(),
         );
 
         assert!(approx_eq(q_final.x, expected_final.x, 1e-3));
@@ -278,14 +278,14 @@ mod tests {
         let q2 = Quat::from_euler(
             TRACKS_EULER_ROT,
             0.0f32.to_radians(),
-            (-90.0f32).to_radians(),
             0.0f32.to_radians(),
+            (-90.0f32).to_radians(),
         );
         let q3 = Quat::from_euler(
             TRACKS_EULER_ROT,
-            (-90.0f32).to_radians(),
-            (-90.0f32).to_radians(),
             0.0f32.to_radians(),
+            (-90.0f32).to_radians(),
+            (-90.0f32).to_radians(),
         );
 
         let p0 = PointData::Quaternion(QuaternionPointData::new(

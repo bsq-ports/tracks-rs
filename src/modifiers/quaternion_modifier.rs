@@ -6,14 +6,9 @@ use crate::{
 use glam::Vec3A;
 use glam::{EulerRot, Quat, Vec3};
 
-/// Is it ZXY or XYZ???
-/// Is it just XYZ because it's the default?
-///
-/// Euler angles can represent a three dimensional rotation by performing
-/// three separate rotations around individual axes.
-/// In Unity these rotations are performed around the
-/// Z axis, the X axis, and the Y axis, in that order.
-pub const TRACKS_EULER_ROT: EulerRot = EulerRot::YXZ;
+// May be ZXYEx or YXZ
+// When using Quat::from_euler, match the order in the a, b, and c parameters
+pub const TRACKS_EULER_ROT: EulerRot = EulerRot::ZXYEx;
 
 #[derive(Debug)]
 pub enum QuaternionValues {
@@ -95,9 +90,9 @@ impl ModifierBase for QuaternionModifier {
 
         Quat::from_euler(
             TRACKS_EULER_ROT,
+            vector_point.z.to_radians(),
             vector_point.x.to_radians(),
             vector_point.y.to_radians(),
-            vector_point.z.to_radians(),
         )
     }
 
@@ -111,9 +106,9 @@ impl ModifierBase for QuaternionModifier {
     fn translate(&self, values: &[f32]) -> Quat {
         Quat::from_euler(
             TRACKS_EULER_ROT,
+            values[2].to_radians(),
             values[0].to_radians(),
             values[1].to_radians(),
-            values[2].to_radians(),
         )
     }
 
