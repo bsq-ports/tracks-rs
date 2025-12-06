@@ -26,6 +26,10 @@ harness = false
 name = "color"
 harness = false
 
+[[bench]]
+name = "coroutine_manager"
+harness = false
+
 [dev-dependencies]
 criterion = { version = "0.7", features = ["html_reports"] }
 
