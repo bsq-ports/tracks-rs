@@ -37,12 +37,19 @@ impl QuaternionModifier {
     fn translate_euler(values: &[ValueProvider], context: &BaseProviderContext) -> Vec3 {
         let mut vec3 = Vec3::ZERO;
 
-        values
-            .iter()
-            .flat_map(|x| x.values(context).iter().copied().collect::<Vec<_>>())
-            .take(Self::VALUE_COUNT)
-            .enumerate()
-            .for_each(|(i, v)| vec3[i] = v);
+        // Collect values from each provider into a local variable and copy them into vec3
+        // avoid allocations with Vec 
+        let mut count = 0usize;
+        'outer: for provider in values {
+            let vals = provider.values(context);
+            for v in vals.iter() {
+                if count >= Self::VALUE_COUNT {
+                    break 'outer;
+                }
+                vec3[count] = *v;
+                count += 1;
+            }
+        }
 
         vec3
     }

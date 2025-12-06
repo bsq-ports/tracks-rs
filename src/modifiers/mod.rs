@@ -7,6 +7,7 @@ pub mod vector4_modifier;
 use float_modifier::FloatModifier;
 use glam::{Quat, Vec3, Vec4};
 use quaternion_modifier::QuaternionModifier;
+use smallvec::SmallVec;
 use vector3_modifier::Vector3Modifier;
 use vector4_modifier::Vector4Modifier;
 
@@ -108,8 +109,8 @@ pub trait ModifierBase {
     fn get_operation(&self) -> Operation;
     fn has_base_provider(&self) -> bool;
 
-    fn fill_values(&self, ivals: &[ValueProvider], context: &BaseProviderContext) -> Vec<f32> {
-        let mut values = Vec::with_capacity(Self::VALUE_COUNT);
+    fn fill_values(&self, ivals: &[ValueProvider], context: &BaseProviderContext) -> SmallVec<[f32; 4]> {
+        let mut values = SmallVec::with_capacity(Self::VALUE_COUNT);
         for value in ivals {
             for v in value.values(context).iter().copied() {
                 if values.len() < Self::VALUE_COUNT {
@@ -122,6 +123,8 @@ pub trait ModifierBase {
         values
     }
 
+    // Default convert implementation avoids heap allocations by filling a fixed-size
+    // stack buffer (max 4 components) and passing a slice to `translate`.
     fn convert(&self, ivals: &[ValueProvider], context: &BaseProviderContext) -> Self::Value {
         let values = self.fill_values(ivals, context);
         self.translate(&values)
