@@ -74,6 +74,7 @@ enum PropertyNames
 #endif // __cplusplus
  {
   Position,
+  OffsetPosition,
   Rotation,
   Scale,
   LocalRotation,

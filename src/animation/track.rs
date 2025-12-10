@@ -9,6 +9,7 @@ use super::game_object::GameObject;
 
 // Define constants for property names
 pub const POSITION: &str = "position";
+pub const OFFSET_POSITION: &str = "offsetPosition";
 pub const ROTATION: &str = "rotation";
 pub const SCALE: &str = "scale";
 pub const LOCAL_ROTATION: &str = "localRotation";
@@ -76,6 +77,7 @@ impl PathPropertyHandle {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum PropertyNames {
     Position,
+    OffsetPosition,
     Rotation,
     Scale,
     LocalRotation,
@@ -100,6 +102,7 @@ pub struct PathPropertiesMap {
     pub path_properties: ahash::AHashMap<String, PathProperty>,
 
     pub position: PathProperty,
+    pub offset_position: PathProperty,
     pub rotation: PathProperty,
     pub scale: PathProperty,
     pub local_rotation: PathProperty,
@@ -121,6 +124,7 @@ pub struct PropertiesMap {
 
     // Noodle
     pub position: ValueProperty,
+    pub offset_position: ValueProperty,
     pub rotation: ValueProperty,
     pub scale: ValueProperty,
     pub local_rotation: ValueProperty,
@@ -227,6 +231,7 @@ impl Default for PropertiesMap {
         Self {
             properties: Default::default(),
             position: ValueProperty::empty(WrapBaseValueType::Vec3),
+            offset_position: ValueProperty::empty(WrapBaseValueType::Vec3),
             rotation: ValueProperty::empty(WrapBaseValueType::Quat),
             scale: ValueProperty::empty(WrapBaseValueType::Vec3),
             local_rotation: ValueProperty::empty(WrapBaseValueType::Quat),
@@ -250,6 +255,7 @@ impl Default for PathPropertiesMap {
         Self {
             path_properties: Default::default(),
             position: PathProperty::empty(WrapBaseValueType::Vec3),
+            offset_position: PathProperty::empty(WrapBaseValueType::Vec3),
             rotation: PathProperty::empty(WrapBaseValueType::Quat),
             scale: PathProperty::empty(WrapBaseValueType::Vec3),
             local_rotation: PathProperty::empty(WrapBaseValueType::Quat),
@@ -288,6 +294,7 @@ impl PropertiesMap {
     pub fn get_property_by_name(&self, name: PropertyNames) -> Option<&ValueProperty> {
         match name {
             PropertyNames::Position => Some(&self.position),
+            PropertyNames::OffsetPosition => Some(&self.offset_position),
             PropertyNames::Rotation => Some(&self.rotation),
             PropertyNames::Scale => Some(&self.scale),
             PropertyNames::LocalRotation => Some(&self.local_rotation),
@@ -308,6 +315,7 @@ impl PropertiesMap {
     pub fn get_property_by_name_mut(&mut self, name: PropertyNames) -> Option<&mut ValueProperty> {
         match name {
             PropertyNames::Position => Some(&mut self.position),
+            PropertyNames::OffsetPosition => Some(&mut self.offset_position),
             PropertyNames::Rotation => Some(&mut self.rotation),
             PropertyNames::Scale => Some(&mut self.scale),
             PropertyNames::LocalRotation => Some(&mut self.local_rotation),
@@ -477,6 +485,7 @@ impl Display for PropertyNames {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             PropertyNames::Position => write!(f, "{POSITION}"),
+            PropertyNames::OffsetPosition => write!(f, "{OFFSET_POSITION}"),
             PropertyNames::Rotation => write!(f, "{ROTATION}"),
             PropertyNames::Scale => write!(f, "{SCALE}"),
             PropertyNames::LocalRotation => write!(f, "{LOCAL_ROTATION}"),
