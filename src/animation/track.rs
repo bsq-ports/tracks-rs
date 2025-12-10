@@ -379,6 +379,7 @@ impl PathPropertiesMap {
     pub fn get_property_by_name(&self, name: PropertyNames) -> Option<&PathProperty> {
         match name {
             PropertyNames::Position => Some(&self.position),
+            PropertyNames::OffsetPosition => Some(&self.offset_position),
             PropertyNames::Rotation => Some(&self.rotation),
             PropertyNames::Scale => Some(&self.scale),
             PropertyNames::LocalRotation => Some(&self.local_rotation),
@@ -396,6 +397,7 @@ impl PathPropertiesMap {
     pub fn get_property_by_name_mut(&mut self, name: PropertyNames) -> Option<&mut PathProperty> {
         match name {
             PropertyNames::Position => Some(&mut self.position),
+            PropertyNames::OffsetPosition => Some(&mut self.offset_position),
             PropertyNames::Rotation => Some(&mut self.rotation),
             PropertyNames::Scale => Some(&mut self.scale),
             PropertyNames::LocalRotation => Some(&mut self.local_rotation),
@@ -445,6 +447,7 @@ impl FromStr for PropertyNames {
     fn from_str(name: &str) -> Result<Self, Self::Err> {
         match name {
             POSITION => Ok(PropertyNames::Position),
+            OFFSET_POSITION => Ok(PropertyNames::OffsetPosition),
             ROTATION => Ok(PropertyNames::Rotation),
             SCALE => Ok(PropertyNames::Scale),
             LOCAL_ROTATION => Ok(PropertyNames::LocalRotation),
