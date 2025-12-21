@@ -18,7 +18,10 @@ pub const DEFINITE_POSITION: &str = "definitePosition";
 pub const DISSOLVE: &str = "dissolve";
 pub const DISSOLVE_ARROW: &str = "dissolveArrow";
 pub const TIME: &str = "time";
-pub const CUTTABLE: &str = "cuttable";
+
+// v3
+pub const INTERACTABLE: &str = "interactable";
+
 pub const COLOR: &str = "color";
 pub const ATTENTUATION: &str = "attentuation";
 pub const FOG_OFFSET: &str = "fogOffset";
@@ -77,6 +80,7 @@ impl PathPropertyHandle {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum PropertyNames {
     Position,
+    // v2 aliased to position
     OffsetPosition,
     Rotation,
     Scale,
@@ -86,6 +90,8 @@ pub enum PropertyNames {
     Dissolve,
     DissolveArrow,
     Time,
+    // in v2 -> _interactable/V2_CUTTABLE
+    // in v3 -> interactable/INTERACTABLE
     Cuttable,
     Color,
     Attentuation,
@@ -446,6 +452,7 @@ impl FromStr for PropertyNames {
 
     fn from_str(name: &str) -> Result<Self, Self::Err> {
         match name {
+            // v3
             POSITION => Ok(PropertyNames::Position),
             OFFSET_POSITION => Ok(PropertyNames::OffsetPosition),
             ROTATION => Ok(PropertyNames::Rotation),
@@ -456,7 +463,10 @@ impl FromStr for PropertyNames {
             DISSOLVE => Ok(PropertyNames::Dissolve),
             DISSOLVE_ARROW => Ok(PropertyNames::DissolveArrow),
             TIME => Ok(PropertyNames::Time),
-            CUTTABLE => Ok(PropertyNames::Cuttable),
+            // in v3 -> interactable
+            INTERACTABLE => Ok(PropertyNames::Cuttable),
+
+
             COLOR => Ok(PropertyNames::Color),
             ATTENTUATION => Ok(PropertyNames::Attentuation),
             FOG_OFFSET => Ok(PropertyNames::FogOffset),
@@ -497,7 +507,7 @@ impl Display for PropertyNames {
             PropertyNames::Dissolve => write!(f, "{DISSOLVE}"),
             PropertyNames::DissolveArrow => write!(f, "{DISSOLVE_ARROW}"),
             PropertyNames::Time => write!(f, "{TIME}"),
-            PropertyNames::Cuttable => write!(f, "{CUTTABLE}"),
+            PropertyNames::Cuttable => write!(f, "{V2_CUTTABLE}"),
             PropertyNames::Color => write!(f, "{COLOR}"),
             PropertyNames::Attentuation => write!(f, "{ATTENTUATION}"),
             PropertyNames::FogOffset => write!(f, "{FOG_OFFSET}"),
