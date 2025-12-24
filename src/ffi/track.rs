@@ -1,10 +1,15 @@
+use glam::{Quat, Vec3, Vec4};
 use slotmap::{Key, KeyData};
 
-use crate::animation::{
-    game_object::GameObject,
-    property::{PathProperty, ValueProperty},
-    track::{PropertyNames, Track},
-    tracks_holder::TrackKey,
+use crate::{
+    animation::{
+        game_object::GameObject,
+        property::{PathProperty, ValueProperty},
+        track::{PropertyNames, Track},
+        tracks_holder::TrackKey,
+    },
+    base_provider_context::BaseProviderContext,
+    ffi::types::{FloatOption, QuatOption, Vec3Option, Vec4Option},
 };
 use std::{
     ffi::{CStr, CString, c_char},
@@ -81,6 +86,40 @@ pub struct CPathPropertiesMap {
     pub dissolve_arrow: *mut PathProperty,
     pub cuttable: *mut PathProperty,
     pub color: *mut PathProperty,
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+#[repr(C)]
+pub struct CPropertiesValues {
+    pub position: Vec3Option,
+    pub rotation: QuatOption,
+    pub scale: Vec3Option,
+    pub local_rotation: QuatOption,
+    pub local_position: Vec3Option,
+    pub dissolve: FloatOption,
+    pub dissolve_arrow: FloatOption,
+    pub time: FloatOption,
+    pub cuttable: FloatOption,
+    pub color: Vec4Option,
+    pub attentuation: FloatOption,
+    pub fog_offset: FloatOption,
+    pub height_fog_start_y: FloatOption,
+    pub height_fog_height: FloatOption,
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+#[repr(C)]
+pub struct CPathPropertiesValues {
+    pub position: Vec3Option,
+    pub rotation: QuatOption,
+    pub scale: Vec3Option,
+    pub local_rotation: QuatOption,
+    pub local_position: Vec3Option,
+    pub definite_position: FloatOption,
+    pub dissolve: FloatOption,
+    pub dissolve_arrow: FloatOption,
+    pub cuttable: FloatOption,
+    pub color: Vec4Option,
 }
 
 impl Default for CPropertiesMap {
@@ -460,6 +499,86 @@ pub unsafe extern "C" fn track_get_path_properties_map(track: *mut Track) -> CPa
         dissolve_arrow: &mut track.path_properties.dissolve_arrow as *mut PathProperty,
         cuttable: &mut track.path_properties.cuttable as *mut PathProperty,
         color: &mut track.path_properties.color as *mut PathProperty,
+    }
+}
+
+/// Return a `CPropertiesValues` with the current values of the track's properties.
+//// Safety:
+/// - `track` must be a valid, non-null pointer to a `Track
+/// - The returned struct contains copies of the current property values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn track_get_properties_values(track: *mut Track) -> CPropertiesValues {
+    if track.is_null() {
+        return CPropertiesValues::default();
+    }
+
+    let track = unsafe { &mut *track };
+
+    CPropertiesValues {
+        position: track.properties.position.get_value().into(),
+        rotation: track.properties.rotation.get_value().into(),
+        scale: track.properties.scale.get_value().into(),
+        local_rotation: track.properties.local_rotation.get_value().into(),
+        local_position: track.properties.local_position.get_value().into(),
+        dissolve: track.properties.dissolve.get_value().into(),
+        dissolve_arrow: track.properties.dissolve_arrow.get_value().into(),
+        time: track.properties.time.get_value().into(),
+        cuttable: track.properties.cuttable.get_value().into(),
+        color: track.properties.color.get_value().into(),
+        attentuation: track.properties.attentuation.get_value().into(),
+        fog_offset: track.properties.fog_offset.get_value().into(),
+        height_fog_start_y: track.properties.height_fog_start_y.get_value().into(),
+        height_fog_height: track.properties.height_fog_height.get_value().into(),
+    }
+}
+
+/// Return a `CPathPropertiesValues` with the interpolated values of the track's path properties at the given time.
+/// Safety:
+/// - `track` must be a valid, non-null pointer to a `Track`.
+/// - `ctx` must be a valid, non-null pointer to a `BaseProviderContext`.
+/// 
+/// - The returned struct contains copies of the interpolated property values.
+/// 
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn track_get_path_properties_values(
+    track: *mut Track,
+    time: f32,
+    ctx: *const BaseProviderContext,
+) -> CPathPropertiesValues {
+    if track.is_null() || ctx.is_null() {
+        return CPathPropertiesValues::default();
+    }
+
+    let ctx = unsafe { &*ctx };
+    let track = unsafe { &mut *track };
+
+    CPathPropertiesValues {
+        position: track.path_properties.position.interpolate(time, ctx).into(),
+        rotation: track.path_properties.rotation.interpolate(time, ctx).into(),
+        scale: track.path_properties.scale.interpolate(time, ctx).into(),
+        local_rotation: track
+            .path_properties
+            .local_rotation
+            .interpolate(time, ctx)
+            .into(),
+        local_position: track
+            .path_properties
+            .local_position
+            .interpolate(time, ctx)
+            .into(),
+        definite_position: track
+            .path_properties
+            .definite_position
+            .interpolate(time, ctx)
+            .into(),
+        dissolve: track.path_properties.dissolve.interpolate(time, ctx).into(),
+        dissolve_arrow: track
+            .path_properties
+            .dissolve_arrow
+            .interpolate(time, ctx)
+            .into(),
+        cuttable: track.path_properties.cuttable.interpolate(time, ctx).into(),
+        color: track.path_properties.color.interpolate(time, ctx).into(),
     }
 }
 

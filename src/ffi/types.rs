@@ -3,7 +3,7 @@ use glam::{Quat, Vec3, Vec4};
 use crate::values::value::BaseValue;
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Default, Debug)]
 pub struct WrapVec3 {
     pub(crate) x: f32,
     pub(crate) y: f32,
@@ -11,7 +11,7 @@ pub struct WrapVec3 {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Default, Debug)]
 pub struct WrapVec4 {
     pub(crate) x: f32,
     pub(crate) y: f32,
@@ -20,7 +20,7 @@ pub struct WrapVec4 {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Default, Debug)]
 pub struct WrapQuat {
     pub(crate) x: f32,
     pub(crate) y: f32,
@@ -131,4 +131,177 @@ impl From<WrapBaseValue> for BaseValue {
 pub struct WrappedValues {
     pub values: *const f32,
     pub length: usize,
+}
+
+#[derive(Copy, Clone, Default, Debug)]
+#[repr(C)]
+pub struct Vec3Option {
+    pub value: WrapVec3,
+    pub has_value: bool,
+}
+
+#[derive(Copy, Clone, Default, Debug)]
+#[repr(C)]
+pub struct QuatOption {
+    pub value: WrapQuat,
+    pub has_value: bool,
+}
+
+#[derive(Copy, Clone, Default, Debug)]
+#[repr(C)]
+pub struct Vec4Option {
+    pub value: WrapVec4,
+    pub has_value: bool,
+}
+
+#[derive(Copy, Clone, Default, Debug)]
+#[repr(C)]
+pub struct FloatOption {
+    pub value: f32,
+    pub has_value: bool,
+}
+
+impl From<Option<Vec3>> for Vec3Option {
+    fn from(option: Option<Vec3>) -> Self {
+        match option {
+            Some(v) => Vec3Option {
+                value: WrapVec3 {
+                    x: v.x,
+                    y: v.y,
+                    z: v.z,
+                },
+                has_value: true,
+            },
+            None => Vec3Option {
+                value: WrapVec3 { x: 0.0, y: 0.0, z: 0.0 },
+                has_value: false,
+            },
+        }
+    }
+}
+
+impl From<Option<Quat>> for QuatOption {
+    fn from(option: Option<Quat>) -> Self {
+        match option {
+            Some(v) => QuatOption {
+                value: WrapQuat {
+                    x: v.x,
+                    y: v.y,
+                    z: v.z,
+                    w: v.w,
+                },
+                has_value: true,
+            },
+            None => QuatOption {
+                value: WrapQuat { x: 0.0, y: 0.0, z: 0.0, w: 1.0 },
+                has_value: false,
+            },
+        }
+    }
+}
+
+impl From<Option<Vec4>> for Vec4Option {
+    fn from(option: Option<Vec4>) -> Self {
+        match option {
+            Some(v) => Vec4Option {
+                value: WrapVec4 {
+                    x: v.x,
+                    y: v.y,
+                    z: v.z,
+                    w: v.w,
+                },
+                has_value: true,
+            },
+            None => Vec4Option {
+                value: WrapVec4 { x: 0.0, y: 0.0, z: 0.0, w: 0.0 },
+                has_value: false,
+            },
+        }
+    }
+}
+
+impl From<Option<f32>> for FloatOption {
+    fn from(option: Option<f32>) -> Self {
+        match option {
+            Some(v) => FloatOption {
+                value: v,
+                has_value: true,
+            },
+            None => FloatOption {
+                value: 0.0,
+                has_value: false,
+            },
+        }
+    }
+}
+
+impl From<Option<BaseValue>> for Vec3Option {
+    fn from(option: Option<BaseValue>) -> Self {
+        match option {
+            Some(BaseValue::Vector3(v)) => Vec3Option {
+                value: WrapVec3 {
+                    x: v.x,
+                    y: v.y,
+                    z: v.z,
+                },
+                has_value: true,
+            },
+            _ => Vec3Option {
+                value: WrapVec3 { x: 0.0, y: 0.0, z: 0.0 },
+                has_value: false,
+            },
+        }
+    }
+}
+impl From<Option<BaseValue>> for FloatOption {
+    fn from(option: Option<BaseValue>) -> Self {
+        match option {
+            Some(BaseValue::Float(v)) => FloatOption {
+                value: v,
+                has_value: true,
+            },
+            _ => FloatOption {
+                value: 0.0,
+                has_value: false,
+            },
+        }
+    }
+}
+impl From<Option<BaseValue>> for QuatOption {
+    fn from(option: Option<BaseValue>) -> Self {
+        match option {
+            Some(BaseValue::Quaternion(v)) => QuatOption {
+                value: WrapQuat {
+                    x: v.x,
+                    y: v.y,
+                    z: v.z,
+                    w: v.w,
+                },
+                has_value: true,
+            },
+            _ => QuatOption {
+                value: WrapQuat { x: 0.0, y: 0.0, z: 0.0, w: 1.0 },
+                has_value: false,
+            },
+        }
+    }
+}
+impl From<Option<BaseValue>> for Vec4Option {
+    fn from(option: Option<BaseValue>) -> Self {
+        match option {
+            Some(BaseValue::Vector4(v)) => Vec4Option {
+                value: WrapVec4 {
+                    x: v.x,
+                    y: v.y,
+                    z: v.z,
+                    w: v.w,
+                },
+                has_value: true,
+            },
+            _ => Vec4Option {
+                value: WrapVec4 { x: 0.0, y: 0.0, z: 0.0, w: 0.0 },
+                has_value: false,
+            },
+        }
+    }
 }

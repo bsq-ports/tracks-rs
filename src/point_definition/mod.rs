@@ -257,8 +257,9 @@ pub trait PointDefinition: std::default::Default {
         let point_l = &points[l];
         let point_r = &points[r];
 
-        let normal_time = if point_r.get_time() - point_l.get_time() != 0.0 {
-            (time - point_l.get_time()) / (point_r.get_time() - point_l.get_time())
+        let time_delta = point_r.get_time() - point_l.get_time();
+        let normal_time = if time_delta != 0.0 {
+            (time - point_l.get_time()) / (time_delta)
         } else {
             0.0
         };
