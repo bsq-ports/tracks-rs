@@ -57,6 +57,7 @@ pub struct CPropertiesMap {
 
     // Noodle
     pub position: *mut ValueProperty,
+    pub offset_position: *mut ValueProperty,
     pub rotation: *mut ValueProperty,
     pub scale: *mut ValueProperty,
     pub local_rotation: *mut ValueProperty,
@@ -77,6 +78,7 @@ pub struct CPropertiesMap {
 #[repr(C)]
 pub struct CPathPropertiesMap {
     pub position: *mut PathProperty,
+    pub offset_position: *mut PathProperty,
     pub rotation: *mut PathProperty,
     pub scale: *mut PathProperty,
     pub local_rotation: *mut PathProperty,
@@ -92,6 +94,7 @@ pub struct CPathPropertiesMap {
 #[repr(C)]
 pub struct CPropertiesValues {
     pub position: Vec3Option,
+    pub offset_position: Vec3Option,
     pub rotation: QuatOption,
     pub scale: Vec3Option,
     pub local_rotation: QuatOption,
@@ -111,6 +114,7 @@ pub struct CPropertiesValues {
 #[repr(C)]
 pub struct CPathPropertiesValues {
     pub position: Vec3Option,
+    pub offset_position: Vec3Option,
     pub rotation: QuatOption,
     pub scale: Vec3Option,
     pub local_rotation: QuatOption,
@@ -126,6 +130,7 @@ impl Default for CPropertiesMap {
     fn default() -> Self {
         CPropertiesMap {
             position: ptr::null_mut(),
+            offset_position: ptr::null_mut(),
             rotation: ptr::null_mut(),
             scale: ptr::null_mut(),
             local_rotation: ptr::null_mut(),
@@ -147,6 +152,7 @@ impl Default for CPathPropertiesMap {
     fn default() -> Self {
         CPathPropertiesMap {
             position: ptr::null_mut(),
+            offset_position: ptr::null_mut(),
             rotation: ptr::null_mut(),
             scale: ptr::null_mut(),
             local_rotation: ptr::null_mut(),
@@ -460,6 +466,7 @@ pub unsafe extern "C" fn track_get_properties_map(track: *mut Track) -> CPropert
 
     CPropertiesMap {
         position: &mut track.properties.position as *mut ValueProperty,
+        offset_position: &mut track.properties.offset_position as *mut ValueProperty,
         rotation: &mut track.properties.rotation as *mut ValueProperty,
         scale: &mut track.properties.scale as *mut ValueProperty,
         local_rotation: &mut track.properties.local_rotation as *mut ValueProperty,
@@ -490,6 +497,7 @@ pub unsafe extern "C" fn track_get_path_properties_map(track: *mut Track) -> CPa
 
     CPathPropertiesMap {
         position: &mut track.path_properties.position as *mut PathProperty,
+        offset_position: &mut track.path_properties.offset_position as *mut PathProperty,
         rotation: &mut track.path_properties.rotation as *mut PathProperty,
         scale: &mut track.path_properties.scale as *mut PathProperty,
         local_rotation: &mut track.path_properties.local_rotation as *mut PathProperty,
@@ -516,6 +524,7 @@ pub unsafe extern "C" fn track_get_properties_values(track: *mut Track) -> CProp
 
     CPropertiesValues {
         position: track.properties.position.get_value().into(),
+        offset_position: track.properties.offset_position.get_value().into(),
         rotation: track.properties.rotation.get_value().into(),
         scale: track.properties.scale.get_value().into(),
         local_rotation: track.properties.local_rotation.get_value().into(),
@@ -554,6 +563,7 @@ pub unsafe extern "C" fn track_get_path_properties_values(
 
     CPathPropertiesValues {
         position: track.path_properties.position.interpolate(time, ctx).into(),
+        offset_position: track.path_properties.offset_position.interpolate(time, ctx).into(),
         rotation: track.path_properties.rotation.interpolate(time, ctx).into(),
         scale: track.path_properties.scale.interpolate(time, ctx).into(),
         local_rotation: track
