@@ -11,6 +11,7 @@ use super::game_object::GameObject;
 pub const POSITION: &str = "position";
 pub const OFFSET_POSITION: &str = "offsetPosition";
 pub const ROTATION: &str = "rotation";
+pub const OFFSET_ROTATION: &str = "offsetWorldRotation";
 pub const SCALE: &str = "scale";
 pub const LOCAL_ROTATION: &str = "localRotation";
 pub const LOCAL_POSITION: &str = "localPosition";
@@ -83,6 +84,7 @@ pub enum PropertyNames {
     // v2 aliased to position
     OffsetPosition,
     Rotation,
+    OffsetRotation,
     Scale,
     LocalRotation,
     LocalPosition,
@@ -110,6 +112,7 @@ pub struct PathPropertiesMap {
     pub position: PathProperty,
     pub offset_position: PathProperty,
     pub rotation: PathProperty,
+    pub offset_rotation: PathProperty,
     pub scale: PathProperty,
     pub local_rotation: PathProperty,
     pub local_position: PathProperty,
@@ -132,6 +135,7 @@ pub struct PropertiesMap {
     pub position: ValueProperty,
     pub offset_position: ValueProperty,
     pub rotation: ValueProperty,
+    pub offset_rotation: ValueProperty,
     pub scale: ValueProperty,
     pub local_rotation: ValueProperty,
     pub local_position: ValueProperty,
@@ -239,6 +243,7 @@ impl Default for PropertiesMap {
             position: ValueProperty::empty(WrapBaseValueType::Vec3),
             offset_position: ValueProperty::empty(WrapBaseValueType::Vec3),
             rotation: ValueProperty::empty(WrapBaseValueType::Quat),
+            offset_rotation: ValueProperty::empty(WrapBaseValueType::Quat),
             scale: ValueProperty::empty(WrapBaseValueType::Vec3),
             local_rotation: ValueProperty::empty(WrapBaseValueType::Quat),
             local_position: ValueProperty::empty(WrapBaseValueType::Vec3),
@@ -263,6 +268,7 @@ impl Default for PathPropertiesMap {
             position: PathProperty::empty(WrapBaseValueType::Vec3),
             offset_position: PathProperty::empty(WrapBaseValueType::Vec3),
             rotation: PathProperty::empty(WrapBaseValueType::Quat),
+            offset_rotation: PathProperty::empty(WrapBaseValueType::Quat),
             scale: PathProperty::empty(WrapBaseValueType::Vec3),
             local_rotation: PathProperty::empty(WrapBaseValueType::Quat),
             local_position: PathProperty::empty(WrapBaseValueType::Vec3),
@@ -302,6 +308,7 @@ impl PropertiesMap {
             PropertyNames::Position => Some(&self.position),
             PropertyNames::OffsetPosition => Some(&self.offset_position),
             PropertyNames::Rotation => Some(&self.rotation),
+            PropertyNames::OffsetRotation => Some(&self.offset_rotation),
             PropertyNames::Scale => Some(&self.scale),
             PropertyNames::LocalRotation => Some(&self.local_rotation),
             PropertyNames::LocalPosition => Some(&self.local_position),
@@ -323,6 +330,7 @@ impl PropertiesMap {
             PropertyNames::Position => Some(&mut self.position),
             PropertyNames::OffsetPosition => Some(&mut self.offset_position),
             PropertyNames::Rotation => Some(&mut self.rotation),
+            PropertyNames::OffsetRotation => Some(&mut self.offset_rotation),
             PropertyNames::Scale => Some(&mut self.scale),
             PropertyNames::LocalRotation => Some(&mut self.local_rotation),
             PropertyNames::LocalPosition => Some(&mut self.local_position),
@@ -387,6 +395,7 @@ impl PathPropertiesMap {
             PropertyNames::Position => Some(&self.position),
             PropertyNames::OffsetPosition => Some(&self.offset_position),
             PropertyNames::Rotation => Some(&self.rotation),
+            PropertyNames::OffsetRotation => Some(&self.offset_rotation),
             PropertyNames::Scale => Some(&self.scale),
             PropertyNames::LocalRotation => Some(&self.local_rotation),
             PropertyNames::LocalPosition => Some(&self.local_position),
@@ -405,6 +414,7 @@ impl PathPropertiesMap {
             PropertyNames::Position => Some(&mut self.position),
             PropertyNames::OffsetPosition => Some(&mut self.offset_position),
             PropertyNames::Rotation => Some(&mut self.rotation),
+            PropertyNames::OffsetRotation => Some(&mut self.offset_rotation),
             PropertyNames::Scale => Some(&mut self.scale),
             PropertyNames::LocalRotation => Some(&mut self.local_rotation),
             PropertyNames::LocalPosition => Some(&mut self.local_position),
@@ -456,6 +466,7 @@ impl FromStr for PropertyNames {
             POSITION => Ok(PropertyNames::Position),
             OFFSET_POSITION => Ok(PropertyNames::OffsetPosition),
             ROTATION => Ok(PropertyNames::Rotation),
+            OFFSET_ROTATION => Ok(PropertyNames::OffsetRotation),
             SCALE => Ok(PropertyNames::Scale),
             LOCAL_ROTATION => Ok(PropertyNames::LocalRotation),
             LOCAL_POSITION => Ok(PropertyNames::LocalPosition),
@@ -500,6 +511,7 @@ impl Display for PropertyNames {
             PropertyNames::Position => write!(f, "{POSITION}"),
             PropertyNames::OffsetPosition => write!(f, "{OFFSET_POSITION}"),
             PropertyNames::Rotation => write!(f, "{ROTATION}"),
+            PropertyNames::OffsetRotation => write!(f, "{OFFSET_ROTATION}"),
             PropertyNames::Scale => write!(f, "{SCALE}"),
             PropertyNames::LocalRotation => write!(f, "{LOCAL_ROTATION}"),
             PropertyNames::LocalPosition => write!(f, "{LOCAL_POSITION}"),
