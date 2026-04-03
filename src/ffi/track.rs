@@ -179,8 +179,29 @@ impl Default for CPathPropertiesMap {
 /// - The caller must not free the pointer by other means or use it after calling `track_destroy`.
 /// - This function is FFI-safe but the returned pointer is not thread-safe; use from the same thread unless synchronized.
 #[unsafe(no_mangle)]
+#[deprecated(note = "Use track_create_named instead to set the track name at creation time")]
 pub extern "C" fn track_create() -> *mut Track {
     let track = Track::default();
+    Box::into_raw(Box::new(track))
+}
+
+/// Create a new `Track` and return a raw pointer to it.
+///
+/// # Safety
+/// - The returned pointer is owned by the caller and must be freed with `track_destroy`.
+/// - The caller must not free the pointer by other means or use it after calling `track_destroy`.
+/// - This function is FFI-safe but the returned pointer is not thread-safe; use from the same thread unless synchronized.
+#[unsafe(no_mangle)]
+pub extern "C" fn track_create_named(name: *const c_char) -> *mut Track {
+    let name = if name.is_null() {
+        ""
+    } else {
+        unsafe { CStr::from_ptr(name) }
+            .to_str()
+            .unwrap_or_default()
+    };
+    let mut track = Track::default();
+    track.name = name.to_string();
     Box::into_raw(Box::new(track))
 }
 
