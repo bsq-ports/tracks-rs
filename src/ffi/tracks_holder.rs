@@ -118,13 +118,9 @@ pub unsafe extern "C" fn tracks_holder_get_track_key(
 
     let holder_ref = unsafe { &mut *holder };
     let cstr = unsafe { CStr::from_ptr(name) };
-    if let Ok(s) = cstr.to_str() {
-        match holder_ref.get_track_key(s) {
-            Some(k) => TrackKeyFFI::from(k),
-            None => TrackKeyFFI::null(),
-        }
-    } else {
-        TrackKeyFFI::null()
+    match cstr.to_str().ok().and_then(|s| holder_ref.get_track_key(s)) {
+        Some(s) => TrackKeyFFI::from(s),
+        None => TrackKeyFFI::null(),
     }
 }
 
