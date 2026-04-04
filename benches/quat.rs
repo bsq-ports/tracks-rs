@@ -7,10 +7,10 @@ use tracks_rs::{
 };
 
 fn point_step(n: u64) {
-    let context = BaseProviderContext::new();
+    let mut context = BaseProviderContext::new();
     let definition = QuaternionPointDefinition::parse(
         json!([[0.0, 0.0, 0.0, 0.0], [1.0, 1.0, 1.0, 1.0, "easeInOutSine"]]),
-        &context,
+        &mut context,
     );
 
     // let step = 1.0 / n as f32;
@@ -18,7 +18,7 @@ fn point_step(n: u64) {
     let values: Vec<f64> = (0..=(n as usize)).map(|i| i as f64 / n as f64).collect();
 
     values.into_iter().for_each(|x| {
-        black_box(definition.interpolate(x as f32, &context));
+        black_box(definition.interpolate(x as f32, &mut context));
     });
 }
 

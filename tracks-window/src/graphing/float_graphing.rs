@@ -22,9 +22,9 @@ pub struct FloatContext {
 
 impl FloatContext {
     pub fn new() -> Self {
-        let context = BaseProviderContext::new();
+        let mut context = BaseProviderContext::new();
         let definition =
-            FloatPointDefinition::parse(json!([[0.0, 0.0], [1.0, 1.0, "easeInOutSine"]]), &context);
+            FloatPointDefinition::parse(json!([[0.0, 0.0], [1.0, 1.0, "easeInOutSine"]]), &mut context);
         Self {
             definition,
             context: RefCell::new(context),
@@ -61,6 +61,9 @@ pub fn draw_2d(
     _epoch: f64,
 ) {
     {
+        // Ensure any registered updatable providers are ticked before sampling.
+        context.context.borrow().update_providers(0.0);
+
         let mut chart = chart.clone().restore(root);
         chart.plotting_area().fill(&BLACK).unwrap();
 

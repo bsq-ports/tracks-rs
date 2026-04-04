@@ -26,7 +26,7 @@ pub unsafe extern "C" fn tracks_make_base_point_definition(
     context: *mut BaseProviderContext,
 ) -> *mut base_point_definition::BasePointDefinition {
     let value = unsafe { json::convert_json_value_to_serde(json) };
-    let context = unsafe { &*context };
+    let context = unsafe { &mut*context };
 
     let point_definition: base_point_definition::BasePointDefinition = match ty {
         WrapBaseValueType::Vec3 => Vector3PointDefinition::parse(value, context).into(),
