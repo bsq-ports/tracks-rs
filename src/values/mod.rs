@@ -56,36 +56,36 @@ impl AbstractValueProvider for ValueProvider {
     }
 }
 
+impl UpdateableValues for ValueProvider {
+    fn update(&mut self, delta: f32) {
+        match self {
+            ValueProvider::Static(_) => {}
+            ValueProvider::BaseProvider(_) => {}
+            ValueProvider::QuaternionProvider(_) => {}
+            ValueProvider::PartialProvider(v) => v.update(delta),
+            ValueProvider::SmoothProviders(v) => v.update(delta),
+            ValueProvider::SmoothRotationProviders(v) => v.update(delta),
+        }
+    }
+}
+
+impl ValueProvider {
+    /// Check if the provider is updateable
+    pub fn is_updateable(&self) -> bool {
+        matches!(
+            self,
+            ValueProvider::PartialProvider(_)
+                | ValueProvider::SmoothProviders(_)
+                | ValueProvider::SmoothRotationProviders(_)
+        )
+    }
+}
+
 // Helper function for linear interpolation
 fn clamp_lerp(start: f32, end: f32, t: f32) -> f32 {
     start + (end - start) * t.clamp(0.0, 1.0)
 }
 
-#[derive(Clone, Debug)]
-pub enum JsonPointValues {
-    Static(Vec<f32>),
-    BaseProvider(BaseProviderValues),
-}
-
-impl JsonPointValues {
-    pub fn to_provider(self) -> ValueProvider {
-        match self {
-            JsonPointValues::Static(v) => ValueProvider::Static(r#static::StaticValues::new(&v)),
-            JsonPointValues::BaseProvider(v) => ValueProvider::BaseProvider(v),
-        }
-    }
-
-    /// Convert the values to raw values
-    /// based on the context
-    ///
-    /// array
-    pub fn to_raw_values<'a>(&'a self, context: &BaseProviderContext) -> Cow<'a, [f32]> {
-        match self {
-            JsonPointValues::Static(v) => Cow::Borrowed(v.as_slice()),
-            JsonPointValues::BaseProvider(v) => v.values(context),
-        }
-    }
-}
 
 // Values deserialization
 /// Creates a new instance of [`BaseProviderValues`] using the provided base values.
@@ -96,7 +96,7 @@ impl JsonPointValues {
 #[cfg(feature = "json")]
 pub fn deserialize_values(
     value: &[&JsonValue],
-    context: &BaseProviderContext,
+    context: &mut BaseProviderContext,
 ) -> Vec<ValueProvider> {
     let mut result = Vec::new();
     let mut start = 0;
