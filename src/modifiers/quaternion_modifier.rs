@@ -1,20 +1,17 @@
 use super::{BasicModifier, ModifierLike, operation::Operation, shared_has_base_provider};
-use crate::prelude::{AbstractValueProvider, BaseModifier, ValueProvider};
-use crate::{
-    base_provider_context::BaseProviderContext,
-    quaternion_utils::QuaternionUtilsExt,
-};
+use crate::prelude::{AbstractValueProvider, ValueProvider};
+use crate::{base_provider_context::BaseProviderContext, quaternion_utils::QuaternionUtilsExt};
 use glam::Vec3A;
 use glam::{EulerRot, Quat, Vec3};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum QuaternionValues {
     // equivalents but different repr
     Static(Vec3, Quat),
     Dynamic(Vec<ValueProvider>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct QuaternionModifier {
     values: QuaternionValues,
     has_base_provider: bool,
@@ -23,9 +20,13 @@ pub struct QuaternionModifier {
 }
 
 impl QuaternionModifier {
-    pub fn new(point: QuaternionValues, modifiers: Vec<QuaternionModifier>, operation: Operation) -> Self {
+    pub fn new(
+        point: QuaternionValues,
+        modifiers: Vec<QuaternionModifier>,
+        operation: Operation,
+    ) -> Self {
         let has_base_provider =
-            shared_has_base_provider::<QuaternionModifier>(matches!(point, QuaternionValues::Dynamic(_)), &modifiers);
+            shared_has_base_provider(matches!(point, QuaternionValues::Dynamic(_)), &modifiers);
         Self {
             values: point,
             has_base_provider,
@@ -38,7 +39,7 @@ impl QuaternionModifier {
         let mut vec3 = Vec3::ZERO;
 
         // Collect values from each provider into a local variable and copy them into vec3
-        // avoid allocations with Vec 
+        // avoid allocations with Vec
         let mut count = 0usize;
         'outer: for provider in values {
             let vals = provider.values(context);
@@ -78,11 +79,10 @@ impl QuaternionModifier {
     }
 }
 
-impl ModifierLike for QuaternionModifier {
-    type Value = Quat;
+impl ModifierLike<Quat> for QuaternionModifier {
     const VALUE_COUNT: usize = 3;
 
-    fn get_point(&self, context: &BaseProviderContext) -> Quat {
+    fn get_modified_point(&self, context: &BaseProviderContext) -> Quat {
         if self.modifiers.is_empty() && matches!(self.values, QuaternionValues::Static(_, _)) {
             return self.get_raw_point();
         }
@@ -97,10 +97,6 @@ impl ModifierLike for QuaternionModifier {
             QuaternionValues::Static(_, q) => q,
             _ => Quat::IDENTITY,
         }
-    }
-
-    fn translate(&self, values: &[f32]) -> Quat {
-        Quat::from_unity_euler_degrees(&Vec3::new(values[0], values[1], values[2]))
     }
 
     fn get_operation(&self) -> Operation {

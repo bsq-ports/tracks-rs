@@ -78,19 +78,22 @@ impl PointDefinitionInterpolation {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::point_data::quaternion_point_data::QuaternionPointData;
-    use crate::{base_provider_context::BaseProviderContext, modifiers::ModifierValues};
     use crate::easings::functions::Functions;
     use crate::ffi::types::WrapBaseValueType;
     use crate::modifiers::quaternion_modifier::QuaternionValues;
-    use crate::point_data::BasePointData;
-    use crate::point_data::point_data::BasicPointData;
+    use crate::point_data::basic_point_data::BasicPointData;
+    use crate::point_data::quaternion_point_data::QuaternionPointData;
+    use crate::{base_provider_context::BaseProviderContext, modifiers::ModifierValues};
     use glam::{Quat, Vec3, Vec4};
 
-    type FloatPointDefinition = crate::point_definition::basic_point_definition::BasicPointDefinition<f32>;
-    type Vector3PointDefinition = crate::point_definition::basic_point_definition::BasicPointDefinition<Vec3>;
-    type Vector4PointDefinition = crate::point_definition::basic_point_definition::BasicPointDefinition<Vec4>;
-    type QuaternionPointDefinition = crate::point_definition::quaternion_point_definition::QuaternionPointDefinition;
+    type FloatPointDefinition =
+        crate::point_definition::basic_point_definition::BasicPointDefinition<f32>;
+    type Vector3PointDefinition =
+        crate::point_definition::vector3_point_definition::Vector3PointDefinition;
+    type Vector4PointDefinition =
+        crate::point_definition::basic_point_definition::BasicPointDefinition<Vec4>;
+    type QuaternionPointDefinition =
+        crate::point_definition::quaternion_point_definition::QuaternionPointDefinition;
 
     #[test]
     fn test_float_interpolation_midpoint() {
@@ -98,12 +101,14 @@ mod tests {
             BasicPointData::new(
                 ModifierValues::Static(0.0),
                 0.0,
+                false,
                 vec![],
                 Functions::EaseLinear,
             ),
             BasicPointData::new(
                 ModifierValues::Static(10.0),
                 1.0,
+                false,
                 vec![],
                 Functions::EaseLinear,
             ),
@@ -113,12 +118,14 @@ mod tests {
             BasicPointData::new(
                 ModifierValues::Static(10.0),
                 0.0,
+                false,
                 vec![],
                 Functions::EaseLinear,
             ),
             BasicPointData::new(
                 ModifierValues::Static(20.0),
                 1.0,
+                false,
                 vec![],
                 Functions::EaseLinear,
             ),
@@ -148,12 +155,14 @@ mod tests {
             BasicPointData::new(
                 ModifierValues::Static(Vec3::new(0.0, 0.0, 0.0)),
                 0.0,
+                false,
                 vec![],
                 Functions::EaseLinear,
             ),
             BasicPointData::new(
                 ModifierValues::Static(Vec3::new(3.0, 3.0, 3.0)),
                 1.0,
+                false,
                 vec![],
                 Functions::EaseLinear,
             ),
@@ -163,21 +172,23 @@ mod tests {
             BasicPointData::new(
                 ModifierValues::Static(Vec3::new(3.0, 3.0, 3.0)),
                 0.0,
+                false,
                 vec![],
                 Functions::EaseLinear,
             ),
             BasicPointData::new(
                 ModifierValues::Static(Vec3::new(6.0, 6.0, 6.0)),
                 1.0,
+                false,
                 vec![],
                 Functions::EaseLinear,
             ),
         ]);
 
         let prev_bp_v3 =
-            crate::point_definition::base_point_definition::BasePointDefinition::Vector3(prev_v3);
+            BasePointDefinition::Vector3(prev_v3);
         let next_bp_v3 =
-            crate::point_definition::base_point_definition::BasePointDefinition::Vector3(next_v3);
+            BasePointDefinition::Vector3(next_v3);
 
         let mut interp_v3 =
             PointDefinitionInterpolation::new(Some(next_bp_v3), WrapBaseValueType::Vec3);
@@ -195,12 +206,14 @@ mod tests {
             BasicPointData::new(
                 ModifierValues::Static(Vec4::new(0.0, 0.0, 0.0, 0.0)),
                 0.0,
+                false,
                 vec![],
                 Functions::EaseLinear,
             ),
             BasicPointData::new(
                 ModifierValues::Static(Vec4::new(4.0, 4.0, 4.0, 4.0)),
                 1.0,
+                false,
                 vec![],
                 Functions::EaseLinear,
             ),
@@ -210,12 +223,14 @@ mod tests {
             BasicPointData::new(
                 ModifierValues::Static(Vec4::new(4.0, 4.0, 4.0, 4.0)),
                 0.0,
+                false,
                 vec![],
                 Functions::EaseLinear,
             ),
             BasicPointData::new(
                 ModifierValues::Static(Vec4::new(8.0, 8.0, 8.0, 8.0)),
                 1.0,
+                false,
                 vec![],
                 Functions::EaseLinear,
             ),
@@ -242,21 +257,19 @@ mod tests {
         let q1 = Quat::from_array([0.0, 0.0, 0.0, 1.0]);
         let q2 = Quat::from_array([0.0, 0.0, 1.0, 0.0]);
 
-        let prev_q =
-            QuaternionPointDefinition::new(vec![QuaternionPointData::new(
-                QuaternionValues::Static(Vec3::ZERO, q1),
-                0.0,
-                vec![],
-                Functions::EaseLinear,
-            )]);
+        let prev_q = QuaternionPointDefinition::new(vec![QuaternionPointData::new(
+            QuaternionValues::Static(Vec3::ZERO, q1),
+            0.0,
+            vec![],
+            Functions::EaseLinear,
+        )]);
 
-        let next_q =
-            QuaternionPointDefinition::new(vec![QuaternionPointData::new(
-                QuaternionValues::Static(Vec3::ZERO, q2),
-                0.0,
-                vec![],
-                Functions::EaseLinear,
-            )]);
+        let next_q = QuaternionPointDefinition::new(vec![QuaternionPointData::new(
+            QuaternionValues::Static(Vec3::ZERO, q2),
+            0.0,
+            vec![],
+            Functions::EaseLinear,
+        )]);
 
         let prev_bp_q =
             crate::point_definition::base_point_definition::BasePointDefinition::Quaternion(prev_q);

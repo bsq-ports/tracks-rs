@@ -151,6 +151,8 @@ typedef struct TracksHolder TracksHolder;
 
 typedef struct ValueProperty ValueProperty;
 
+typedef struct Vector3PointDefinition Vector3PointDefinition;
+
 typedef struct WrappedValues {
   const float *values;
   uintptr_t length;
@@ -672,8 +674,8 @@ bool tracks_quat_has_base_provider(const struct QuaternionPointDefinition *point
  * - `json` may be null; if non-null it must point to a valid `FFIJsonValue`.
  * - `context` must be a valid pointer to a `BaseProviderContext`.
  */
-const Vector3PointDefinition *tracks_make_vector3_point_definition(const struct FFIJsonValue *json,
-                                                                   struct BaseProviderContext *context);
+const struct Vector3PointDefinition *tracks_make_vector3_point_definition(const struct FFIJsonValue *json,
+                                                                          struct BaseProviderContext *context);
 
 /**
  * Interpolate a Vector3 point definition at `time`.
@@ -682,7 +684,7 @@ const Vector3PointDefinition *tracks_make_vector3_point_definition(const struct 
  * - `point_definition` must be a valid pointer to a `Vector3PointDefinition`.
  * - `context` must be a valid pointer to a `BaseProviderContext`.
  */
-struct Vector3InterpolationResult tracks_interpolate_vector3(const Vector3PointDefinition *point_definition,
+struct Vector3InterpolationResult tracks_interpolate_vector3(const struct Vector3PointDefinition *point_definition,
                                                              float time,
                                                              struct BaseProviderContext *context);
 
@@ -690,13 +692,13 @@ struct Vector3InterpolationResult tracks_interpolate_vector3(const Vector3PointD
  * # Safety
  * - `point_definition` must be a valid pointer to a `Vector3PointDefinition`.
  */
-uintptr_t tracks_vector3_count(const Vector3PointDefinition *point_definition);
+uintptr_t tracks_vector3_count(const struct Vector3PointDefinition *point_definition);
 
 /**
  * # Safety
  * - `point_definition` must be a valid pointer to a `Vector3PointDefinition`.
  */
-bool tracks_vector3_has_base_provider(const Vector3PointDefinition *point_definition);
+bool tracks_vector3_has_base_provider(const struct Vector3PointDefinition *point_definition);
 
 /**
  * VECTOR4 POINT DEFINITION

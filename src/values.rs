@@ -14,6 +14,7 @@ pub trait ValueType:
     const VALUE_COUNT: usize;
 
     fn from_translate_slice(values: &[f32]) -> Self;
+    fn from_translate_array(values: [f32; Self::VALUE_COUNT]) -> Self;
 
     fn from_slice(values: &[f32]) -> Self;
 
@@ -37,6 +38,10 @@ impl ValueType for f32 {
     fn from_translate_slice(values: &[f32]) -> Self {
         values[0]
     }
+
+    fn from_translate_array(values: [f32; Self::VALUE_COUNT]) -> Self {
+        values[0]
+    }
 }
 
 impl ValueType for Vec2 {
@@ -47,7 +52,11 @@ impl ValueType for Vec2 {
     }
 
     fn from_translate_slice(values: &[f32]) -> Self {
-        Vec2::new(values[0], values[1])
+        Vec2::from_slice(values)
+    }
+
+    fn from_translate_array(values: [f32; Self::VALUE_COUNT]) -> Self {
+        Vec2::from_array(values)
     }
 }
 
@@ -59,7 +68,11 @@ impl ValueType for Vec3 {
     }
 
     fn from_translate_slice(values: &[f32]) -> Self {
-        Vec3::new(values[0], values[1], values[2])
+        Vec3::from_slice(values)
+    }
+
+    fn from_translate_array(values: [f32; Self::VALUE_COUNT]) -> Self {
+        Vec3::from_array(values)
     }
 }
 
@@ -71,10 +84,13 @@ impl ValueType for Vec4 {
     }
 
     fn from_translate_slice(values: &[f32]) -> Self {
-        Vec4::new(values[0], values[1], values[2], values[3])
+        Vec4::from_slice(values)
+    }
+
+    fn from_translate_array(values: [f32; Self::VALUE_COUNT]) -> Self {
+        Vec4::from_array(values)
     }
 }
-
 
 impl ValueType for BaseValue {
     const VALUE_COUNT: usize = 4;
@@ -87,6 +103,11 @@ impl ValueType for BaseValue {
             4 => BaseValue::Vector4(Vec4::new(values[0], values[1], values[2], values[3])),
             _ => panic!("Invalid number of values for BaseValue: {}", values.len()),
         }
+    }
+    fn from_translate_array(values: [f32; Self::VALUE_COUNT]) -> Self {
+        unreachable!(
+            "from_translate_array should not be called for BaseValue, as it does not have a fixed number of components"
+        );
     }
 
     fn from_translate_slice(values: &[f32]) -> Self {

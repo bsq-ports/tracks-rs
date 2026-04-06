@@ -1,6 +1,9 @@
 pub mod base_point_definition;
 pub mod basic_point_definition;
 pub mod point_definition_interpolation;
+
+// specific handling
+pub mod vector3_point_definition;
 pub mod quaternion_point_definition;
 
 use std::str::FromStr;
@@ -11,11 +14,10 @@ use serde_json::json;
 use crate::base_provider_context::BaseProviderContext;
 use crate::ffi::types::WrapBaseValueType;
 use crate::modifiers::ModifierLike;
-use crate::point_data::BasePointData;
 use crate::point_data::PointDataLike;
 use crate::{
     easings::functions::Functions,
-    modifiers::{BaseModifier, operation::Operation},
+    modifiers::operation::Operation,
     providers::{ValueProvider, deserialize_values},
 };
 
@@ -31,10 +33,9 @@ pub enum GroupType {
 /// Point definitions are used to describe what happens over the course of an animation,
 /// they are used slightly differently for different properties.
 /// They consist of a collection of points over time.
-pub trait PointDefinitionLike: std::default::Default {
-    type Value: Default + Clone;
-    type Modifier: ModifierLike<Value = Self::Value>;
-    type PointData: PointDataLike<Self::Value>;
+pub trait PointDefinitionLike<T>: Default where T: Default + Clone {
+    type Modifier: ModifierLike<T>;
+    type PointData: PointDataLike<T>;
 
     // Required methods common to all definitions
     fn get_count(&self) -> usize;
@@ -43,9 +44,11 @@ pub trait PointDefinitionLike: std::default::Default {
         &self,
         l: &Self::PointData,
         r: &Self::PointData,
+        l_index: usize,
+        r_index: usize,
         time: f32,
         context: &BaseProviderContext,
-    ) -> Self::Value;
+    ) -> T;
     fn create_modifier(
         values: Vec<ValueProvider>,
         modifiers: Vec<Self::Modifier>,
@@ -62,7 +65,6 @@ pub trait PointDefinitionLike: std::default::Default {
     // fn get_points_mut(&mut self) -> &mut Vec<PointData>;
     fn get_points(&self) -> &[Self::PointData];
 
-    fn get_point(&self, point: &Self::PointData, context: &BaseProviderContext) -> Self::Value;
     fn get_type(&self) -> WrapBaseValueType;
 
     fn new(points: Vec<Self::PointData>) -> Self;
@@ -201,21 +203,21 @@ pub trait PointDefinitionLike: std::default::Default {
     }
 
     // The main interpolation method. Returns a tuple (interpolated value, is_last_point)
-    fn interpolate(&self, time: f32, context: &BaseProviderContext) -> (Self::Value, bool) {
+    fn interpolate(&self, time: f32, context: &BaseProviderContext) -> (T, bool) {
         let points = self.get_points();
 
         if points.is_empty() {
-            return (Self::Value::default(), true);
+            return (T::default(), true);
         }
 
         let last_point = points.last().unwrap();
         if last_point.get_time() <= time {
-            return (self.get_point(last_point, context), true);
+            return (last_point.get_point(context), true);
         }
 
         let first_point = points.first().unwrap();
         if first_point.get_time() >= time {
-            return (self.get_point(first_point, context), false);
+            return (first_point.get_point(context), false);
         }
 
         let (l, r) = search_index(points, time);
@@ -231,7 +233,7 @@ pub trait PointDefinitionLike: std::default::Default {
 
         let eased_time = point_r.get_easing().interpolate(normal_time);
         (
-            self.interpolate_points(point_l, point_r, eased_time, context),
+            self.interpolate_points(point_l, point_r, l, r, eased_time, context),
             false,
         )
     }

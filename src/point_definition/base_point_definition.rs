@@ -2,17 +2,18 @@ use glam::{Quat, Vec3, Vec4};
 
 use crate::easings::functions::Functions;
 
+use crate::modifiers::base_modifier::BaseModifier;
 use crate::modifiers::operation::Operation;
 
-use crate::modifiers::BaseModifier;
-
+use crate::point_data::base_point_data::BasePointData;
 use crate::point_definition::basic_point_definition::BasicPointDefinition;
 use crate::point_definition::quaternion_point_definition::QuaternionPointDefinition;
+use crate::point_definition::vector3_point_definition::Vector3PointDefinition;
 use crate::providers::ValueProvider;
 
 use crate::base_provider_context::BaseProviderContext;
 
-use crate::point_data::{BasePointData, PointDataLike};
+use crate::point_data::PointDataLike;
 
 use crate::providers::value::BaseValue;
 use crate::values::ValueType;
@@ -25,13 +26,12 @@ use super::PointDefinitionLike;
 #[derive(Debug, Clone)]
 pub enum BasePointDefinition {
     Float(BasicPointDefinition<f32>),
-    Vector3(BasicPointDefinition<Vec3>),
+    Vector3(Vector3PointDefinition),
     Vector4(BasicPointDefinition<Vec4>),
     Quaternion(QuaternionPointDefinition),
 }
 
-impl PointDefinitionLike for BasePointDefinition {
-    type Value = BaseValue;
+impl PointDefinitionLike<BaseValue> for BasePointDefinition {
     type PointData = BasePointData;
     type Modifier = BaseModifier;
 
@@ -109,23 +109,6 @@ impl PointDefinitionLike for BasePointDefinition {
         }
     }
 
-    fn get_point(&self, point: &BasePointData, context: &BaseProviderContext) -> Self::Value {
-        match self {
-            BasePointDefinition::Float(float_point_definition) => {
-                BaseValue::Float(float_point_definition.get_point(point, context))
-            }
-            BasePointDefinition::Vector3(vector3_point_definition) => {
-                BaseValue::Vector3(vector3_point_definition.get_point(point, context))
-            }
-            BasePointDefinition::Vector4(vector4_point_definition) => {
-                BaseValue::Vector4(vector4_point_definition.get_point(point, context))
-            }
-            BasePointDefinition::Quaternion(quaternion_point_definition) => {
-                BaseValue::Quaternion(quaternion_point_definition.get_point(point, context))
-            }
-        }
-    }
-
     fn get_type(&self) -> crate::ffi::types::WrapBaseValueType {
         match self {
             BasePointDefinition::Float(_) => crate::ffi::types::WrapBaseValueType::Float,
@@ -140,19 +123,15 @@ impl PointDefinitionLike for BasePointDefinition {
             "Cannot create BasePointDefinition directly; use specific point definition types instead."
         )
     }
-    
+
     fn interpolate_points(
         &self,
         l: &Self::PointData,
         r: &Self::PointData,
         time: f32,
         context: &BaseProviderContext,
-    ) -> Self::Value {
-        BaseValue::value_lerp(
-            l.get_point(context),
-            r.get_point(context),
-            time,
-        )
+    ) -> BaseValue {
+        BaseValue::value_lerp(l.get_point(context), r.get_point(context), time)
     }
 }
 

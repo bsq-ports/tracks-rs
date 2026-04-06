@@ -9,7 +9,7 @@ use crate::{
         operation::Operation,
         quaternion_modifier::{QuaternionModifier, QuaternionValues},
     },
-    point_data::{BasePointData, PointDataLike, quaternion_point_data::QuaternionPointData},
+    point_data::{PointDataLike, quaternion_point_data::QuaternionPointData},
     prelude::{AbstractValueProvider, ValueProvider},
     quaternion_utils::QuaternionUtilsExt,
 };
@@ -21,8 +21,7 @@ pub struct QuaternionPointDefinition {
     points: Rc<[QuaternionPointData]>,
 }
 
-impl PointDefinitionLike for QuaternionPointDefinition {
-    type Value = Quat;
+impl PointDefinitionLike<Quat> for QuaternionPointDefinition {
     type Modifier = QuaternionModifier;
     type PointData = QuaternionPointData;
 
@@ -101,6 +100,8 @@ impl PointDefinitionLike for QuaternionPointDefinition {
         &self,
         l: &Self::PointData,
         r: &Self::PointData,
+        l_index: usize,
+        r_index: usize,
         time: f32,
         context: &BaseProviderContext,
     ) -> Quat {
@@ -111,10 +112,6 @@ impl PointDefinitionLike for QuaternionPointDefinition {
 
     fn get_points(&self) -> &[Self::PointData] {
         &self.points
-    }
-
-    fn get_point(&self, point: &Self::PointData, context: &BaseProviderContext) -> Quat {
-        point.get_point(context)
     }
 
     fn new(points: Vec<Self::PointData>) -> Self {

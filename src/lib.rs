@@ -24,6 +24,7 @@
 //! See `benches/` and unit tests in `src/point_definition/` for minimal examples of usage.
 #![feature(trait_alias)]
 #![feature(unboxed_closures)]
+#![feature(generic_const_exprs)]
 
 #[cfg(feature = "ffi")]
 pub mod ffi;
@@ -47,6 +48,6 @@ pub mod prelude {
     pub use crate::base_provider_context::BaseProviderContext;
     pub use crate::point_definition::PointDefinitionLike;
     pub use crate::providers::{ValueProvider, AbstractValueProvider, UpdateableValues, deserialize_values};
-    pub use crate::modifiers::BaseModifier;
+    pub use crate::modifiers::base_modifier::BaseModifier;
     pub use crate::easings::functions::Functions;
 }

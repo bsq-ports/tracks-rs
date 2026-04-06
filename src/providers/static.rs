@@ -8,7 +8,7 @@ use super::AbstractValueProvider;
 
 #[derive(Clone, Debug)]
 pub struct StaticValues {
-    pub(crate) values: SmallVec<[f32; 4]>,
+    pub values: SmallVec<[f32; 4]>,
 }
 
 impl StaticValues {
