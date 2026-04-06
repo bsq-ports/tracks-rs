@@ -37,9 +37,10 @@ impl AbstractValueProvider for SmoothRotationProvidersValues {
 
 impl UpdateableValues for SmoothRotationProvidersValues {
     fn update(&mut self, delta: f32) {
+        let mult_delta = delta * self.mult;
         self.last_quaternion = self
             .last_quaternion
-            .slerp(self.rotation_values, delta * self.mult);
+            .slerp(self.rotation_values, mult_delta);
 
         let euler = self.last_quaternion.to_unity_euler_degrees();
 
