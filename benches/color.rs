@@ -7,13 +7,13 @@ use tracks_rs::{
 };
 
 fn point_step(n: u64) {
-    let context = BaseProviderContext::new();
+    let mut context = BaseProviderContext::new();
     let definition = Vector4PointDefinition::parse(
         json!([
             [0.0, 1.0, 0.0, 0.0, 0.0],
             [1.0, 0.0, 1.0, 1.0, 1.0, "easeInOutSine"]
         ]),
-        &context,
+        &mut context,
     );
 
     // let step = 1.0 / n as f32;

@@ -7,26 +7,26 @@ use tracks_rs::{
 };
 
 fn point_step(n: u64) {
-    let context = BaseProviderContext::new();
+    let mut context = BaseProviderContext::new();
     let definition =
-        FloatPointDefinition::parse(json!([[0.0, 0.0], [1.0, 1.0, "easeInOutSine"]]), &context);
+        FloatPointDefinition::parse(json!([[0.0, 0.0], [1.0, 1.0, "easeInOutSine"]]), &mut context);
 
     // let step = 1.0 / n as f32;
 
     let values: Vec<f64> = (0..=(n as usize)).map(|i| i as f64 / n as f64).collect();
 
     values.into_iter().for_each(|x| {
-        black_box(definition.interpolate(x as f32, &context));
+        black_box(definition.interpolate(x as f32, &mut context));
     });
 }
 
 #[cfg(feature = "compare_old")]
 fn point_step_slow(n: u64) {
-    let context = track_rs_old::base_provider_context::BaseProviderContext::new();
+    let mut context = track_rs_old::base_provider_context::BaseProviderContext::new();
     let definition =
         track_rs_old::point_definition::float_point_definition::FloatPointDefinition::new(
             &json!([[0.0, 0.0], [1.0, 1.0, "easeInOutSine"]]),
-            &context,
+            &mut context,
         );
 
     // let step = 1.0 / n as f32;
@@ -38,7 +38,7 @@ fn point_step_slow(n: u64) {
             track_rs_old::point_definition::PointDefinition::interpolate(
                 &definition,
                 x as f32,
-                &context,
+                &mut context,
             ),
         );
     });

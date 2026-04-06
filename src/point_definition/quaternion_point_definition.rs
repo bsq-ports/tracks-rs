@@ -157,7 +157,7 @@ mod tests {
 
         let mut ctx = BaseProviderContext::new();
 
-        let def = QuaternionPointDefinition::parse(js, &ctx);
+        let def = QuaternionPointDefinition::parse(js, &mut ctx);
 
         // sanity
         assert_eq!(def.get_count(), 4);

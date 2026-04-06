@@ -31,8 +31,9 @@ impl AbstractValueProvider for SmoothProvidersValues {
 
 impl UpdateableValues for SmoothProvidersValues {
     fn update(&mut self, delta: f32) {
+        let mult_delta = self.mult * delta;
         for i in 0..self.source.len() {
-            self.values[i] = clamp_lerp(self.values[i], self.source[i], delta);
+            self.values[i] = clamp_lerp(self.values[i], self.source[i], mult_delta);
         }
     }
 }

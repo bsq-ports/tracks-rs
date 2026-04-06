@@ -66,14 +66,15 @@ pub trait PointDefinition: std::default::Default {
 
     fn new(points: Vec<PointData>) -> Self;
 
+    /// Deserializes a JSON value into a Modifier. This is used for parsing modifiers from JSON.
     #[cfg(feature = "json")]
-    fn deserialize_modifier(list: &JsonValue, context: &BaseProviderContext) -> Modifier {
+    fn deserialize_modifier(list: &JsonValue, context: &mut BaseProviderContext) -> Modifier {
         let mut modifiers: Option<Vec<Modifier>> = None;
         let mut operation: Option<Operation> = None;
         let mut values: Option<Vec<ValueProvider>> = None;
 
         // Group values similar to PointDefinition::group_values
-        for group in Self::group_values(list) {
+        for group in group_values(list) {
             match group.0 {
                 GroupType::Value => {
                     values = Some(deserialize_values(&group.1, context));
@@ -106,16 +107,24 @@ pub trait PointDefinition: std::default::Default {
         )
     }
 
-    // Shared parse implementation
+    /// Parses a JSON value into a PointDefinition.
+    ///
+    /// Accepted input shapes (compat with Heck spec):
+    /// - An array of points: `[[p0], [p1], ...]` (each point is itself an array)
+    /// - A single point shorthand: `[v0, v1, ..., time]` (top-level array that is not an array-of-arrays)
+    /// - A single-point-without-time shorthand: `[v0, v1, ...]` — this will be treated as time `0`.
+    ///
+    /// This method normalizes the input into an array-of-points form and then groups values/modifiers/flags
+    /// for each point. It is defensive: non-array input or empty arrays return `Self::default()`.
     #[cfg(feature = "json")]
-    fn parse(value: JsonValue, context: &BaseProviderContext) -> Self
+    fn parse(value: JsonValue, context: &mut BaseProviderContext) -> Self
     where
         Self: Sized,
     {
         let root: JsonValue = match value.as_array().unwrap()[0] {
             JsonValue::Array(_) => value,
             _ => {
-                let mut cloned = value.as_array().unwrap().clone();
+                let mut cloned: Vec<JsonValue> = value.as_array().unwrap().clone();
                 cloned.push(json!(0));
                 json!([cloned])
             }
@@ -137,7 +146,7 @@ pub trait PointDefinition: std::default::Default {
             let mut vals: Option<Vec<ValueProvider>> = None;
 
             // Group the values and flags. (Assuming each raw_point has a structure similar to the C++ JSON)
-            for group in Self::group_values(raw_point) {
+            for group in group_values(raw_point) {
                 match group.0 {
                     GroupType::Value => {
                         vals = Some(deserialize_values(&group.1, context));
@@ -190,51 +199,6 @@ pub trait PointDefinition: std::default::Default {
         Self::new(points)
     }
 
-    // Binary search algorithm to find the relevant interval
-    fn search_index(&self, points: &[PointData], time: f32) -> (usize, usize) {
-        let mut l = 0;
-        let mut r = points.len();
-
-        while l < r - 1 {
-            let m = (l + r) / 2;
-            let point_time = points[m].get_time();
-            if point_time < time {
-                l = m;
-            } else {
-                r = m;
-            }
-        }
-
-        (l, r)
-    }
-
-    // Helper method to group values from a JSON value.
-    // In a more complete implementation, you'd examine the JSON structure.
-    #[cfg(feature = "json")]
-    fn group_values(value: &JsonValue) -> Vec<(GroupType, Vec<&JsonValue>)> {
-        use std::collections::HashMap;
-
-        let JsonValue::Array(array) = value else {
-            return vec![];
-        };
-        let values: Vec<&JsonValue> = array.iter().collect();
-
-        let mut result: HashMap<GroupType, Vec<&JsonValue>> = HashMap::new();
-        for val in &values {
-            // group values by their type in the array
-            let entry = match val {
-                JsonValue::String(s) if !s.starts_with("base") => GroupType::Flag,
-                JsonValue::Array(_) => GroupType::Modifier,
-                _ => GroupType::Value,
-            };
-            result.entry(entry).or_default().push(val);
-        }
-
-        let result: Vec<(GroupType, Vec<&JsonValue>)> = result.into_iter().collect();
-
-        result
-    }
-
     // The main interpolation method. Returns a tuple (interpolated value, is_last_point)
     fn interpolate(&self, time: f32, context: &BaseProviderContext) -> (Self::Value, bool) {
         let points = self.get_points();
@@ -253,7 +217,7 @@ pub trait PointDefinition: std::default::Default {
             return (self.get_point(first_point, context), false);
         }
 
-        let (l, r) = self.search_index(points, time);
+        let (l, r) = search_index(points, time);
         let point_l = &points[l];
         let point_r = &points[r];
 
@@ -270,4 +234,49 @@ pub trait PointDefinition: std::default::Default {
             false,
         )
     }
+}
+
+// Binary search algorithm to find the relevant interval
+fn search_index(points: &[PointData], time: f32) -> (usize, usize) {
+    let mut l = 0;
+    let mut r = points.len();
+
+    while l < r - 1 {
+        let m = (l + r) / 2;
+        let point_time = points[m].get_time();
+        if point_time < time {
+            l = m;
+        } else {
+            r = m;
+        }
+    }
+
+    (l, r)
+}
+
+// Helper method to group values from a JSON value.
+// In a more complete implementation, you'd examine the JSON structure.
+#[cfg(feature = "json")]
+fn group_values(value: &JsonValue) -> Vec<(GroupType, Vec<&JsonValue>)> {
+    use std::collections::HashMap;
+
+    let JsonValue::Array(array) = value else {
+        return vec![];
+    };
+    let values: Vec<&JsonValue> = array.iter().collect();
+
+    let mut result: HashMap<GroupType, Vec<&JsonValue>> = HashMap::new();
+    for val in &values {
+        // group values by their type in the array
+        let entry = match val {
+            JsonValue::String(s) if !s.starts_with("base") => GroupType::Flag,
+            JsonValue::Array(_) => GroupType::Modifier,
+            _ => GroupType::Value,
+        };
+        result.entry(entry).or_default().push(val);
+    }
+
+    let result: Vec<(GroupType, Vec<&JsonValue>)> = result.into_iter().collect();
+
+    result
 }

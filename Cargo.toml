@@ -31,15 +31,15 @@ name = "coroutine_manager"
 harness = false
 
 [dev-dependencies]
-criterion = { version = "0.7", features = ["html_reports"] }
+criterion = { version = "0.8", features = ["html_reports"] }
 
 # track_rs_old = { git = "https://github.com/Futuremappermydud/tracks-rs.git", branch = "old-benchmark", package = "tracks_rs", optional = true} # reference to the tracks-rs crate
 
 [dependencies]
-glam = { version = "0.30", features = [
+glam = { version = "0.32", features = [
     "core-simd",
 ] } #SIMD supported 
-palette = "0.7" # for color manipulation
+palette = {version = "0.7", features = ["std"], default-features = false } # for color manipulation
 
 cfg-if = "1"
 thiserror = "2"
@@ -48,7 +48,7 @@ itertools = "0.14"
 ahash = "0.8" # for hashmaps
 uuid = {version = "1", features = ["v4"] }
 log = "0.4"
-slotmap = "1.0"
+slotmap = "1"
 smallvec = "1.15"
 
 
