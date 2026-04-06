@@ -159,7 +159,7 @@ impl CoroutineManager {
                 let point_data = point_data.as_ref().unwrap();
 
                 let has_base = point_data.has_base_provider();
-                if no_duration || (point_data.get_points().len() <= 1 && !has_base) {
+                if no_duration || (point_data.get_count() <= 1 && !has_base) {
                     set_property_value(point_data, property, 1.0, provider_context);
                     return None;
                 }
