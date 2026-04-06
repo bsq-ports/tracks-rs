@@ -130,6 +130,10 @@ typedef struct BasePointDefinition BasePointDefinition;
  */
 typedef struct BaseProviderContext BaseProviderContext;
 
+typedef struct BasicPointDefinition_Vec4 BasicPointDefinition_Vec4;
+
+typedef struct BasicPointDefinition_f32 BasicPointDefinition_f32;
+
 typedef struct CoroutineManager CoroutineManager;
 
 typedef struct EventData EventData;
@@ -236,6 +240,8 @@ typedef struct FFIJsonValue {
   union JsonValueData data;
 } FFIJsonValue;
 
+typedef struct BasicPointDefinition_f32 FloatPointDefinition;
+
 typedef struct FloatInterpolationResult {
   float value;
   bool is_last;
@@ -250,6 +256,8 @@ typedef struct Vector3InterpolationResult {
   struct WrapVec3 value;
   bool is_last;
 } Vector3InterpolationResult;
+
+typedef struct BasicPointDefinition_Vec4 Vector4PointDefinition;
 
 typedef struct Vector4InterpolationResult {
   struct WrapVec4 value;
@@ -608,7 +616,7 @@ enum WrapBaseValueType tracks_base_point_definition_get_type(const struct BasePo
  * - `json` may be null; if non-null it must point to a valid `FFIJsonValue`.
  * - `context` must be a valid pointer to a `BaseProviderContext`.
  */
-const BasicPointDefinition *tracks_make_float_point_definition(const struct FFIJsonValue *json,
+const FloatPointDefinition *tracks_make_float_point_definition(const struct FFIJsonValue *json,
                                                                struct BaseProviderContext *context);
 
 /**
@@ -618,7 +626,7 @@ const BasicPointDefinition *tracks_make_float_point_definition(const struct FFIJ
  * - `point_definition` must be a valid pointer to a `FloatPointDefinition`.
  * - `context` must be a valid pointer to a `BaseProviderContext`.
  */
-struct FloatInterpolationResult tracks_interpolate_float(const BasicPointDefinition *point_definition,
+struct FloatInterpolationResult tracks_interpolate_float(const FloatPointDefinition *point_definition,
                                                          float time,
                                                          struct BaseProviderContext *context);
 
@@ -626,13 +634,13 @@ struct FloatInterpolationResult tracks_interpolate_float(const BasicPointDefinit
  * # Safety
  * - `point_definition` must be a valid pointer to a `FloatPointDefinition`.
  */
-uintptr_t tracks_float_count(const BasicPointDefinition *point_definition);
+uintptr_t tracks_float_count(const FloatPointDefinition *point_definition);
 
 /**
  * # Safety
  * - `point_definition` must be a valid pointer to a `FloatPointDefinition`.
  */
-bool tracks_float_has_base_provider(const BasicPointDefinition *point_definition);
+bool tracks_float_has_base_provider(const FloatPointDefinition *point_definition);
 
 /**
  * QUATERNION POINT DEFINITION
@@ -972,6 +980,7 @@ struct CPathPropertiesMap track_get_path_properties_map(struct Track *track);
 
 /**
  * Return a `CPropertiesValues` with the current values of the track's properties.
+ * Safety:
  * - `track` must be a valid, non-null pointer to a `Track
  * - The returned struct contains copies of the current property values.
  */

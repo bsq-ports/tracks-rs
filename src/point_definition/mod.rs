@@ -6,6 +6,9 @@ pub mod point_definition_interpolation;
 pub mod quaternion_point_definition;
 pub mod vector3_point_definition;
 
+pub type FloatPointDefinition = basic_point_definition::BasicPointDefinition<f32>;
+pub type Vector4PointDefinition = basic_point_definition::BasicPointDefinition<glam::Vec4>;
+
 use std::str::FromStr;
 
 #[cfg(feature = "json")]

@@ -196,3 +196,21 @@ impl From<QuaternionPointDefinition> for BasePointDefinition {
         BasePointDefinition::Quaternion(point_definition)
     }
 }
+
+impl From<Vector3PointDefinition> for BasePointDefinition {
+    fn from(point_definition: Vector3PointDefinition) -> Self {
+        BasePointDefinition::Vector3(point_definition)
+    }
+}
+
+impl From<BasicPointDefinition<Vec4>> for BasePointDefinition {
+    fn from(point_definition: BasicPointDefinition<Vec4>) -> Self {
+        BasePointDefinition::Vector4(point_definition)
+    }
+}
+
+impl From<BasicPointDefinition<f32>> for BasePointDefinition {
+    fn from(point_definition: BasicPointDefinition<f32>) -> Self {
+        BasePointDefinition::Float(point_definition)
+    }
+}

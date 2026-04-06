@@ -4,7 +4,7 @@ use crate::{
         json::{self, FFIJsonValue},
         types::WrapVec4,
     },
-    point_definition::{PointDefinitionLike, vector4_point_definition::Vector4PointDefinition},
+    point_definition::{PointDefinitionLike, Vector4PointDefinition},
 };
 
 #[repr(C)]

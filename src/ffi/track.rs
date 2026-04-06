@@ -1,4 +1,3 @@
-use glam::{Quat, Vec3, Vec4};
 use slotmap::{Key, KeyData};
 
 use crate::{
@@ -192,7 +191,7 @@ pub extern "C" fn track_create() -> *mut Track {
 /// - The caller must not free the pointer by other means or use it after calling `track_destroy`.
 /// - This function is FFI-safe but the returned pointer is not thread-safe; use from the same thread unless synchronized.
 #[unsafe(no_mangle)]
-pub extern "C" fn track_create_named(name: *const c_char) -> *mut Track {
+pub unsafe extern "C" fn track_create_named(name: *const c_char) -> *mut Track {
     let name = if name.is_null() {
         ""
     } else {
@@ -538,7 +537,7 @@ pub unsafe extern "C" fn track_get_path_properties_map(track: *mut Track) -> CPa
 }
 
 /// Return a `CPropertiesValues` with the current values of the track's properties.
-//// Safety:
+/// Safety:
 /// - `track` must be a valid, non-null pointer to a `Track
 /// - The returned struct contains copies of the current property values.
 #[unsafe(no_mangle)]
