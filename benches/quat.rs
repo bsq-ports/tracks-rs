@@ -3,7 +3,7 @@ use serde_json::json;
 use std::hint::black_box;
 use tracks_rs::{
     base_provider_context::BaseProviderContext,
-    point_definition::{PointDefinition, quaternion_point_definition::QuaternionPointDefinition},
+    point_definition::{PointDefinitionLike, quaternion_point_definition::QuaternionPointDefinition},
 };
 
 fn point_step(n: u64) {

@@ -1,35 +1,40 @@
+use glam::{Quat, Vec3, Vec4};
+
 use crate::easings::functions::Functions;
 
 use crate::modifiers::operation::Operation;
 
-use crate::modifiers::Modifier;
+use crate::modifiers::BaseModifier;
 
-use crate::values::ValueProvider;
+use crate::point_definition::basic_point_definition::BasicPointDefinition;
+use crate::point_definition::quaternion_point_definition::QuaternionPointDefinition;
+use crate::providers::ValueProvider;
 
 use crate::base_provider_context::BaseProviderContext;
 
-use crate::point_data::PointData;
+use crate::point_data::BasePointData;
 
-use crate::values::value::BaseValue;
+use crate::providers::value::BaseValue;
 
-use super::{
-    PointDefinition, float_point_definition, quaternion_point_definition, vector3_point_definition,
-    vector4_point_definition,
-};
+use super::PointDefinitionLike;
 
 /// Point definitions are used to describe what happens over the course of an animation,
 /// they are used slightly differently for different properties.
 /// They consist of a collection of points over time.
 #[derive(Debug, Clone)]
 pub enum BasePointDefinition {
-    Float(float_point_definition::FloatPointDefinition),
-    Vector3(vector3_point_definition::Vector3PointDefinition),
-    Vector4(vector4_point_definition::Vector4PointDefinition),
-    Quaternion(quaternion_point_definition::QuaternionPointDefinition),
+    Float(BasicPointDefinition<f32>),
+    Vector3(BasicPointDefinition<Vec3>),
+    Vector4(BasicPointDefinition<Vec4>),
+    Quaternion(QuaternionPointDefinition),
 }
 
-impl PointDefinition for BasePointDefinition {
+
+
+impl PointDefinitionLike for BasePointDefinition {
     type Value = BaseValue;
+    type PointData = BasePointData;
+    type Modifer = BaseModifier;
 
     fn get_count(&self) -> usize {
         match self {
@@ -67,12 +72,13 @@ impl PointDefinition for BasePointDefinition {
 
     fn interpolate_points(
         &self,
-        points: &[PointData],
+        points: &[BasePointData],
         l: usize,
         r: usize,
         time: f32,
         context: &BaseProviderContext,
     ) -> Self::Value {
+        
         match self {
             BasePointDefinition::Float(float_point_definition) => {
                 let v = float_point_definition.interpolate_points(points, l, r, time, context);
@@ -95,10 +101,10 @@ impl PointDefinition for BasePointDefinition {
 
     fn create_modifier(
         _values: Vec<ValueProvider>,
-        _modifiers: Vec<Modifier>,
+        _modifiers: Vec<BaseModifier>,
         _operation: Operation,
         _context: &BaseProviderContext,
-    ) -> Modifier {
+    ) -> BaseModifier {
         unimplemented!(
             "Cannot create Modifier directly from BasePointDefinition; use specific point definition types instead."
         )
@@ -107,16 +113,16 @@ impl PointDefinition for BasePointDefinition {
     fn create_point_data(
         _values: Vec<ValueProvider>,
         _flags: Vec<String>,
-        _modifiers: Vec<Modifier>,
+        _modifiers: Vec<BaseModifier>,
         _easing: Functions,
         _context: &BaseProviderContext,
-    ) -> PointData {
+    ) -> BasePointData {
         unimplemented!(
             "Cannot create PointData directly from BasePointDefinition; use specific point definition types instead."
         )
     }
 
-    fn get_points(&self) -> &[PointData] {
+    fn get_points(&self) -> &[BasePointData] {
         match self {
             BasePointDefinition::Float(float_point_definition) => {
                 float_point_definition.get_points()
@@ -133,7 +139,7 @@ impl PointDefinition for BasePointDefinition {
         }
     }
 
-    fn get_point(&self, point: &PointData, context: &BaseProviderContext) -> Self::Value {
+    fn get_point(&self, point: &BasePointData, context: &BaseProviderContext) -> Self::Value {
         match self {
             BasePointDefinition::Float(float_point_definition) => {
                 BaseValue::Float(float_point_definition.get_point(point, context))
@@ -159,7 +165,7 @@ impl PointDefinition for BasePointDefinition {
         }
     }
 
-    fn new(_points: Vec<PointData>) -> Self {
+    fn new(_points: Vec<BasePointData>) -> Self {
         unimplemented!(
             "Cannot create BasePointDefinition directly; use specific point definition types instead."
         )
@@ -168,30 +174,12 @@ impl PointDefinition for BasePointDefinition {
 
 impl Default for BasePointDefinition {
     fn default() -> Self {
-        BasePointDefinition::Float(float_point_definition::FloatPointDefinition::default())
+        BasePointDefinition::Float(Default::default())
     }
 }
 
-impl From<float_point_definition::FloatPointDefinition> for BasePointDefinition {
-    fn from(point_definition: float_point_definition::FloatPointDefinition) -> Self {
-        BasePointDefinition::Float(point_definition)
-    }
-}
-
-impl From<vector3_point_definition::Vector3PointDefinition> for BasePointDefinition {
-    fn from(point_definition: vector3_point_definition::Vector3PointDefinition) -> Self {
-        BasePointDefinition::Vector3(point_definition)
-    }
-}
-
-impl From<vector4_point_definition::Vector4PointDefinition> for BasePointDefinition {
-    fn from(point_definition: vector4_point_definition::Vector4PointDefinition) -> Self {
-        BasePointDefinition::Vector4(point_definition)
-    }
-}
-
-impl From<quaternion_point_definition::QuaternionPointDefinition> for BasePointDefinition {
-    fn from(point_definition: quaternion_point_definition::QuaternionPointDefinition) -> Self {
+impl From<QuaternionPointDefinition> for BasePointDefinition {
+    fn from(point_definition: QuaternionPointDefinition) -> Self {
         BasePointDefinition::Quaternion(point_definition)
     }
 }

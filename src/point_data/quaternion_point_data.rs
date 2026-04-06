@@ -2,14 +2,12 @@ use crate::{
     base_provider_context::BaseProviderContext,
     easings::functions::Functions,
     modifiers::{
-        Modifier, ModifierBase,
-        operation::Operation,
-        quaternion_modifier::{QuaternionModifier, QuaternionValues},
+        ModifierLike, modifier::BasicModifier, operation::Operation, quaternion_modifier::{QuaternionModifier, QuaternionValues}
     },
 };
 use glam::Quat;
 
-use super::BasePointData;
+use super::PointDataLike;
 
 #[derive(Debug)]
 pub struct QuaternionPointData {
@@ -22,7 +20,7 @@ impl QuaternionPointData {
     pub fn new(
         point: QuaternionValues,
         time: f32,
-        modifiers: Vec<Modifier>,
+        modifiers: Vec<QuaternionModifier>,
         easing: Functions,
     ) -> Self {
         Self {
@@ -33,7 +31,7 @@ impl QuaternionPointData {
     }
 }
 
-impl ModifierBase for QuaternionPointData {
+impl ModifierLike for QuaternionPointData {
     type Value = Quat;
     const VALUE_COUNT: usize = 3;
 
@@ -58,7 +56,7 @@ impl ModifierBase for QuaternionPointData {
     }
 }
 
-impl BasePointData<Quat> for QuaternionPointData {
+impl PointDataLike<Quat> for QuaternionPointData {
     fn get_easing(&self) -> Functions {
         self.easing
     }
@@ -72,6 +70,6 @@ impl BasePointData<Quat> for QuaternionPointData {
     }
 
     fn get_point(&self, context: &BaseProviderContext) -> Quat {
-        <Self as ModifierBase>::get_point(self, context)
+        <Self as ModifierLike>::get_point(self, context)
     }
 }

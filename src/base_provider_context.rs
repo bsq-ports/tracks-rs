@@ -3,7 +3,7 @@ use std::{borrow::Borrow, cell::RefCell, collections::HashMap, rc::Rc};
 use glam::{Quat, Vec3, Vec4};
 use log::{error, warn};
 
-use crate::values::{
+use crate::providers::{
     AbstractValueProvider, UpdateableValues, ValueProvider, base::BaseProviderValues, quat::QuaternionProviderValues, smooth::SmoothProvidersValues, smooth_rot::SmoothRotationProvidersValues, value::{BaseValue, BaseValueRef}
 };
 
@@ -348,7 +348,7 @@ impl BaseProviderContext {
             .collect();
 
         let src = source.values(self).to_vec();
-        ValueProvider::PartialProvider(crate::values::partial::PartialProviderValues::new(
+        ValueProvider::PartialProvider(crate::providers::partial::PartialProviderValues::new(
             src, parts,
         ))
     }

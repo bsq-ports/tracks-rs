@@ -533,7 +533,7 @@ impl Display for PropertyNames {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::values::value::BaseValue;
+    use crate::providers::value::BaseValue;
     use glam::{Quat, Vec3, Vec4};
 
     #[test]

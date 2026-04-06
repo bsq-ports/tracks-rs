@@ -1,19 +1,20 @@
-pub mod float_modifier;
+pub mod modifier;
 pub mod operation;
 pub mod quaternion_modifier;
-pub mod vector3_modifier;
-pub mod vector4_modifier;
 
-use float_modifier::FloatModifier;
+use modifier::BasicModifier;
 use glam::{Quat, Vec3, Vec4};
-use quaternion_modifier::QuaternionModifier;
 use smallvec::SmallVec;
-use vector3_modifier::Vector3Modifier;
-use vector4_modifier::Vector4Modifier;
 
 use crate::base_provider_context::BaseProviderContext;
+use crate::ffi::types::WrapBaseValue;
 use crate::modifiers::operation::Operation;
-use crate::values::{AbstractValueProvider, ValueProvider};
+use crate::modifiers::quaternion_modifier::QuaternionModifier;
+use crate::providers::value::BaseValue;
+use crate::providers::{AbstractValueProvider, ValueProvider};
+use crate::values::ValueType;
+
+pub type BaseModifier = BasicModifier<BaseValue>;
 
 #[derive(Clone, Debug)]
 pub enum ModifierValues<T> {
@@ -23,63 +24,29 @@ pub enum ModifierValues<T> {
 
 /// Modifiers are added at the end of points to allow you to do basic arithmetic on points.
 ///  How these modifiers interact can be defined using operations, all of which are done componentwise.
-#[derive(Debug)]
-pub enum Modifier {
-    Float(FloatModifier),
-    Vector3(Vector3Modifier),
-    Vector4(Vector4Modifier),
-    Quaternion(QuaternionModifier),
-}
+// #[derive(Debug)]
+// pub enum BaseModifier {
+//     Float(Modifier<f32>),
+//     Vector3(Modifier<Vec3>),
+//     Vector4(Modifier<Vec4>),
+//     Quaternion(QuaternionModifier),
+// }
 
-impl Modifier {
+impl BaseModifier {
     pub fn get_float(&self, context: &BaseProviderContext) -> f32 {
-        if let Modifier::Float(modifier) = self {
-            modifier.get_point(context)
-        } else {
-            panic!("Invalid modifier type");
-        }
+        self.get_point(context).as_float().expect("not a float but tried to use as float")
     }
 
     pub fn get_vector3(&self, context: &BaseProviderContext) -> Vec3 {
-        if let Modifier::Vector3(modifier) = self {
-            modifier.get_point(context)
-        } else {
-            panic!("Invalid modifier type");
-        }
+        self.get_point(context).as_vec3().expect("not a vector3 but tried to use as vector3")
     }
 
     pub fn get_vector4(&self, context: &BaseProviderContext) -> Vec4 {
-        if let Modifier::Vector4(modifier) = self {
-            modifier.get_point(context)
-        } else {
-            panic!("Invalid modifier type");
-        }
+        self.get_point(context).as_vec4().expect("not a vector4 but tried to use as vector4")
     }
 
     pub fn get_quaternion(&self, context: &BaseProviderContext) -> Quat {
-        if let Modifier::Quaternion(modifier) = self {
-            modifier.get_point(context)
-        } else {
-            panic!("Invalid modifier type");
-        }
-    }
-
-    pub fn get_operation(&self) -> Operation {
-        match self {
-            Modifier::Float(modifier) => modifier.get_operation(),
-            Modifier::Vector3(modifier) => modifier.get_operation(),
-            Modifier::Vector4(modifier) => modifier.get_operation(),
-            Modifier::Quaternion(modifier) => modifier.get_operation(),
-        }
-    }
-
-    pub fn has_base_provider(&self) -> bool {
-        match self {
-            Modifier::Float(modifier) => modifier.has_base_provider(),
-            Modifier::Vector3(modifier) => modifier.has_base_provider(),
-            Modifier::Vector4(modifier) => modifier.has_base_provider(),
-            Modifier::Quaternion(modifier) => modifier.has_base_provider(),
-        }
+        self.get_point(context).as_quat().expect("not a quaternion but tried to use as quaternion")
     }
 }
 
@@ -99,7 +66,7 @@ impl<T> ModifierValues<T> {
     }
 }
 
-pub trait ModifierBase {
+pub trait ModifierLike {
     type Value;
     const VALUE_COUNT: usize;
 
@@ -131,7 +98,7 @@ pub trait ModifierBase {
     }
 }
 
-pub fn shared_has_base_provider(is_dynamic: bool, modifiers: &[Modifier]) -> bool {
+pub fn shared_has_base_provider<T: ModifierLike>(is_dynamic: bool, modifiers: &[T]) -> bool {
     match is_dynamic {
         true => true,
         false => modifiers.iter().any(|m| m.has_base_provider()),

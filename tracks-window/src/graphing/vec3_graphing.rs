@@ -16,7 +16,7 @@ use serde_json::json;
 
 use tracks_rs::{
     base_provider_context::BaseProviderContext,
-    point_definition::{PointDefinition, vector3_point_definition::Vector3PointDefinition},
+    point_definition::{PointDefinitionLike, vector3_point_definition::Vector3PointDefinition},
 };
 
 pub struct Vec3Context {

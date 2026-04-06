@@ -1,7 +1,7 @@
 use crate::{
     base_provider_context::BaseProviderContext,
     ffi::json::{self, FFIJsonValue},
-    point_definition::{PointDefinition, float_point_definition::FloatPointDefinition},
+    point_definition::{PointDefinitionLike, basic_point_definition::BasicPointDefinition},
 };
 
 #[repr(C)]
@@ -19,9 +19,9 @@ pub struct FloatInterpolationResult {
 pub unsafe extern "C" fn tracks_make_float_point_definition(
     json: *const FFIJsonValue,
     context: *mut BaseProviderContext,
-) -> *const FloatPointDefinition {
+) -> *const BasicPointDefinition {
     let value = unsafe { json::convert_json_value_to_serde(json) };
-    let point_definition = Box::new(FloatPointDefinition::parse(value, unsafe { &mut *context }));
+    let point_definition = Box::new(BasicPointDefinition::parse(value, unsafe { &mut *context }));
 
     (Box::leak(point_definition)) as _
 }
@@ -33,7 +33,7 @@ pub unsafe extern "C" fn tracks_make_float_point_definition(
 /// - `context` must be a valid pointer to a `BaseProviderContext`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_interpolate_float(
-    point_definition: *const FloatPointDefinition,
+    point_definition: *const BasicPointDefinition,
     time: f32,
     context: *mut BaseProviderContext,
 ) -> FloatInterpolationResult {
@@ -46,7 +46,7 @@ pub unsafe extern "C" fn tracks_interpolate_float(
 /// - `point_definition` must be a valid pointer to a `FloatPointDefinition`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_float_count(
-    point_definition: *const FloatPointDefinition,
+    point_definition: *const BasicPointDefinition,
 ) -> usize {
     let point_definition = unsafe { &*point_definition };
     point_definition.get_count()
@@ -56,7 +56,7 @@ pub unsafe extern "C" fn tracks_float_count(
 /// - `point_definition` must be a valid pointer to a `FloatPointDefinition`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_float_has_base_provider(
-    point_definition: *const FloatPointDefinition,
+    point_definition: *const BasicPointDefinition,
 ) -> bool {
     let point_definition = unsafe { &*point_definition };
     point_definition.has_base_provider()

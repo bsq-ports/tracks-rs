@@ -1,6 +1,6 @@
-use tracks_rs::values::AbstractValueProvider;
-use tracks_rs::{base_provider_context::BaseProviderContext, values::UpdateableValues};
-use tracks_rs::values::value::BaseValue;
+use tracks_rs::providers::AbstractValueProvider;
+use tracks_rs::{base_provider_context::BaseProviderContext, providers::UpdateableValues};
+use tracks_rs::providers::value::BaseValue;
 use glam::{Vec3, Quat};
 use tracks_rs::quaternion_utils::QuaternionUtilsExt;
 

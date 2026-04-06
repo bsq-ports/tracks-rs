@@ -3,7 +3,7 @@ use std::time::SystemTime;
 use crate::{
     ffi::types::WrapBaseValueType,
     point_definition::point_definition_interpolation::PointDefinitionInterpolation,
-    values::value::BaseValue,
+    providers::value::BaseValue,
 };
 
 // pub type ValuePropertyCell = Cell<ValueProperty>;

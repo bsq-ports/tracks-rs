@@ -1,9 +1,7 @@
-pub mod base_point_definition;
-pub mod float_point_definition;
-pub mod point_definition_interpolation;
+pub mod basic_point_definition;
 pub mod quaternion_point_definition;
-pub mod vector3_point_definition;
-pub mod vector4_point_definition;
+pub mod base_point_definition;
+pub mod point_definition_interpolation;
 
 use std::str::FromStr;
 
@@ -12,11 +10,13 @@ use serde_json::json;
 
 use crate::base_provider_context::BaseProviderContext;
 use crate::ffi::types::WrapBaseValueType;
-use crate::point_data::PointData;
+use crate::modifiers::ModifierLike;
+use crate::point_data::BasePointData;
+use crate::point_data::PointDataLike;
 use crate::{
     easings::functions::Functions,
-    modifiers::{Modifier, operation::Operation},
-    values::{ValueProvider, deserialize_values},
+    modifiers::{BaseModifier, operation::Operation},
+    providers::{ValueProvider, deserialize_values},
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
@@ -31,15 +31,17 @@ pub enum GroupType {
 /// Point definitions are used to describe what happens over the course of an animation,
 /// they are used slightly differently for different properties.
 /// They consist of a collection of points over time.
-pub trait PointDefinition: std::default::Default {
+pub trait PointDefinitionLike: std::default::Default {
     type Value: Default + Clone;
+    type Modifer: ModifierLike<Value = Self::Value>;
+    type PointData: PointDataLike<Self::Value>;
 
     // Required methods common to all definitions
     fn get_count(&self) -> usize;
     fn has_base_provider(&self) -> bool;
     fn interpolate_points(
         &self,
-        points: &[PointData],
+        points: &[Self::PointData],
         l: usize,
         r: usize,
         time: f32,
@@ -47,29 +49,29 @@ pub trait PointDefinition: std::default::Default {
     ) -> Self::Value;
     fn create_modifier(
         values: Vec<ValueProvider>,
-        modifiers: Vec<Modifier>,
+        modifiers: Vec<Self::Modifer>,
         operation: Operation,
         context: &BaseProviderContext,
-    ) -> Modifier;
+    ) -> Self::Modifer;
     fn create_point_data(
         values: Vec<ValueProvider>,
         flags: Vec<String>,
-        modifiers: Vec<Modifier>,
+        modifiers: Vec<Self::Modifer>,
         easing: Functions,
         context: &BaseProviderContext,
-    ) -> PointData;
+    ) -> Self::PointData;
     // fn get_points_mut(&mut self) -> &mut Vec<PointData>;
-    fn get_points(&self) -> &[PointData];
+    fn get_points(&self) -> &[Self::PointData];
 
-    fn get_point(&self, point: &PointData, context: &BaseProviderContext) -> Self::Value;
+    fn get_point(&self, point: &Self::PointData, context: &BaseProviderContext) -> Self::Value;
     fn get_type(&self) -> WrapBaseValueType;
 
-    fn new(points: Vec<PointData>) -> Self;
+    fn new(points: Vec<Self::PointData>) -> Self;
 
     /// Deserializes a JSON value into a Modifier. This is used for parsing modifiers from JSON.
     #[cfg(feature = "json")]
-    fn deserialize_modifier(list: &JsonValue, context: &mut BaseProviderContext) -> Modifier {
-        let mut modifiers: Option<Vec<Modifier>> = None;
+    fn deserialize_modifier(list: &JsonValue, context: &mut BaseProviderContext) -> Self::Modifer {
+        let mut modifiers: Option<Vec<Self::Modifer>> = None;
         let mut operation: Option<Operation> = None;
         let mut values: Option<Vec<ValueProvider>> = None;
 
@@ -134,14 +136,14 @@ pub trait PointDefinition: std::default::Default {
             return Self::default();
         };
 
-        let mut points = vec![];
+        let mut points: Vec<Self::PointData> = vec![];
         for raw_point in array {
             if raw_point.is_null() {
                 continue;
             }
 
             let mut easing = Functions::EaseLinear;
-            let mut modifiers: Option<Vec<Modifier>> = None;
+            let mut modifiers: Option<Vec<Self::Modifier>> = None;
             let mut flags: Option<Vec<String>> = None;
             let mut vals: Option<Vec<ValueProvider>> = None;
 
@@ -237,7 +239,7 @@ pub trait PointDefinition: std::default::Default {
 }
 
 // Binary search algorithm to find the relevant interval
-fn search_index(points: &[PointData], time: f32) -> (usize, usize) {
+fn search_index<P: PointDataLike<T>, T>(points: &[T], time: f32) -> (usize, usize) {
     let mut l = 0;
     let mut r = points.len();
 

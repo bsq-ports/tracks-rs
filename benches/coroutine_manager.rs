@@ -7,9 +7,9 @@ use tracks_rs::animation::tracks_holder::TracksHolder;
 use tracks_rs::base_provider_context::BaseProviderContext;
 use tracks_rs::easings::functions::Functions;
 use tracks_rs::modifiers::vector3_modifier::Vector3Values;
-use tracks_rs::point_data::PointData;
+use tracks_rs::point_data::BasePointData;
 use tracks_rs::point_data::vector3_point_data::Vector3PointData;
-use tracks_rs::point_definition::PointDefinition;
+use tracks_rs::point_definition::PointDefinitionLike;
 use tracks_rs::point_definition::vector3_point_definition::Vector3PointDefinition;
 
 use tracks_rs::animation::track::{V2_COLOR, V2_LOCAL_ROTATION, V2_SCALE};
@@ -21,8 +21,8 @@ use tracks_rs::point_definition::quaternion_point_definition::QuaternionPointDef
 use tracks_rs::point_definition::vector4_point_definition::Vector4PointDefinition;
 use tracks_rs::quaternion_utils::QuaternionUtilsExt;
 
-fn make_vec3_point(x: f32, y: f32, z: f32, time: f32) -> PointData {
-    PointData::Vector3(Vector3PointData::new(
+fn make_vec3_point(x: f32, y: f32, z: f32, time: f32) -> BasePointData {
+    BasePointData::Vector3(Vector3PointData::new(
         Vector3Values::Static(Vec3::new(x, y, z)),
         false,
         time,
@@ -31,8 +31,8 @@ fn make_vec3_point(x: f32, y: f32, z: f32, time: f32) -> PointData {
     ))
 }
 
-fn make_vec4_point(r: f32, g: f32, b: f32, a: f32, time: f32) -> PointData {
-    PointData::Vector4(Vector4PointData::new(
+fn make_vec4_point(r: f32, g: f32, b: f32, a: f32, time: f32) -> BasePointData {
+    BasePointData::Vector4(Vector4PointData::new(
         Vector4Values::Static(Vec4::new(r, g, b, a)),
         false,
         time,
@@ -41,10 +41,10 @@ fn make_vec4_point(r: f32, g: f32, b: f32, a: f32, time: f32) -> PointData {
     ))
 }
 
-fn make_quat_point(x: f32, y: f32, z: f32, time: f32) -> PointData {
+fn make_quat_point(x: f32, y: f32, z: f32, time: f32) -> BasePointData {
     let raw_vec = Vec3::new(x, y, z);
     let quat = Quat::from_unity_euler_degrees(&raw_vec);
-    PointData::Quaternion(QuaternionPointData::new(
+    BasePointData::Quaternion(QuaternionPointData::new(
         QuaternionValues::Static(raw_vec, quat),
         time,
         vec![],
@@ -77,7 +77,7 @@ fn make_event(
 fn make_event2(
     track_key: tracks_rs::animation::tracks_holder::TrackKey,
     property: &str,
-    data: PointData,
+    data: BasePointData,
     duration: f32,
     start: f32,
 ) -> EventData {
@@ -89,9 +89,9 @@ fn make_event2(
         property: EventType::AnimateTrack(ValuePropertyHandle::new(property)),
         track_key,
         point_data: Some(match data {
-            PointData::Vector3(_) => Vector3PointDefinition::new(vec![data]).into(),
-            PointData::Vector4(_) => Vector4PointDefinition::new(vec![data]).into(),
-            PointData::Quaternion(_) => QuaternionPointDefinition::new(vec![data]).into(),
+            BasePointData::Vector3(_) => Vector3PointDefinition::new(vec![data]).into(),
+            BasePointData::Vector4(_) => Vector4PointDefinition::new(vec![data]).into(),
+            BasePointData::Quaternion(_) => QuaternionPointDefinition::new(vec![data]).into(),
             _ => panic!("Unsupported point data for bench"),
         }),
     }

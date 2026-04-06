@@ -4,7 +4,7 @@ use crate::{
         json::{self, FFIJsonValue},
         types::WrapQuat,
     },
-    point_definition::{PointDefinition, quaternion_point_definition::QuaternionPointDefinition},
+    point_definition::{PointDefinitionLike, quaternion_point_definition::QuaternionPointDefinition},
 };
 
 #[repr(C)]

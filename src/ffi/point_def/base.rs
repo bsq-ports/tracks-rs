@@ -5,10 +5,8 @@ use crate::{
         types::{WrapBaseValue, WrapBaseValueType},
     },
     point_definition::{
-        PointDefinition, base_point_definition, float_point_definition::FloatPointDefinition,
+        PointDefinitionLike, base_point_definition, basic_point_definition::BasicPointDefinition,
         quaternion_point_definition::QuaternionPointDefinition,
-        vector3_point_definition::Vector3PointDefinition,
-        vector4_point_definition::Vector4PointDefinition,
     },
 };
 
@@ -26,13 +24,13 @@ pub unsafe extern "C" fn tracks_make_base_point_definition(
     context: *mut BaseProviderContext,
 ) -> *mut base_point_definition::BasePointDefinition {
     let value = unsafe { json::convert_json_value_to_serde(json) };
-    let context = unsafe { &mut*context };
+    let context = unsafe { &mut *context };
 
     let point_definition: base_point_definition::BasePointDefinition = match ty {
         WrapBaseValueType::Vec3 => Vector3PointDefinition::parse(value, context).into(),
         WrapBaseValueType::Quat => QuaternionPointDefinition::parse(value, context).into(),
         WrapBaseValueType::Vec4 => Vector4PointDefinition::parse(value, context).into(),
-        WrapBaseValueType::Float => FloatPointDefinition::parse(value, context).into(),
+        WrapBaseValueType::Float => BasicPointDefinition::parse(value, context).into(),
         WrapBaseValueType::Unknown => {
             panic!("Cannot create BasePointDefinition with Unknown type");
         }

@@ -8,7 +8,7 @@ use crate::{
     base_provider_context::BaseProviderContext,
     easings::functions::Functions,
     point_definition::{
-        PointDefinition,
+        PointDefinitionLike,
         base_point_definition::{self},
     },
 };
@@ -384,10 +384,10 @@ mod tests {
     use crate::easings::functions::Functions;
     use crate::modifiers::float_modifier::FloatValues;
     use crate::modifiers::vector3_modifier::Vector3Values;
-    use crate::point_data::PointData;
-    use crate::point_data::float_point_data::FloatPointData;
+    use crate::point_data::BasePointData;
+    use crate::point_data::point_data::BasicPointData;
     use crate::point_data::vector3_point_data::Vector3PointData;
-    use crate::point_definition::float_point_definition::FloatPointDefinition;
+    use crate::point_definition::basic_point_definition::BasicPointDefinition;
     use crate::point_definition::vector3_point_definition::Vector3PointDefinition;
     use glam::Vec3;
     use glam::Vec4;
@@ -434,14 +434,14 @@ mod tests {
         let key = holder.add_track(t);
 
         // construct a simple float point definition with two points (0 -> 10 over time 0..1)
-        let pd = FloatPointDefinition::new(vec![
-            PointData::Float(FloatPointData::new(
+        let pd = BasicPointDefinition::new(vec![
+            BasePointData::Float(BasicPointData::new(
                 FloatValues::Static(0.0),
                 0.0,
                 vec![],
                 Functions::EaseLinear,
             )),
-            PointData::Float(FloatPointData::new(
+            BasePointData::Float(BasicPointData::new(
                 FloatValues::Static(10.0),
                 1.0,
                 vec![],
@@ -489,14 +489,14 @@ mod tests {
         let key_b = holder.add_track(tb);
 
         // initial coroutine on track A (should be cancelled later)
-        let pd_a1 = FloatPointDefinition::new(vec![
-            PointData::Float(FloatPointData::new(
+        let pd_a1 = BasicPointDefinition::new(vec![
+            BasePointData::Float(BasicPointData::new(
                 FloatValues::Static(0.0),
                 0.0,
                 vec![],
                 Functions::EaseLinear,
             )),
-            PointData::Float(FloatPointData::new(
+            BasePointData::Float(BasicPointData::new(
                 FloatValues::Static(10.0),
                 1.0,
                 vec![],
@@ -517,14 +517,14 @@ mod tests {
         cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev_a1);
 
         // start a coroutine on track B same property - should NOT be cancelled by later A
-        let pd_b = FloatPointDefinition::new(vec![
-            PointData::Float(FloatPointData::new(
+        let pd_b = BasicPointDefinition::new(vec![
+            BasePointData::Float(BasicPointData::new(
                 FloatValues::Static(5.0),
                 0.0,
                 vec![],
                 Functions::EaseLinear,
             )),
-            PointData::Float(FloatPointData::new(
+            BasePointData::Float(BasicPointData::new(
                 FloatValues::Static(15.0),
                 1.0,
                 vec![],
@@ -548,7 +548,7 @@ mod tests {
         // use color (vec4)
         let pd_color =
             crate::point_definition::vector4_point_definition::Vector4PointDefinition::new(vec![
-                PointData::Vector4(
+                BasePointData::Vector4(
                     crate::point_data::vector4_point_data::Vector4PointData::new(
                         crate::modifiers::vector4_modifier::Vector4Values::Static(Vec4::new(
                             0.0, 0.0, 0.0, 0.0,
@@ -559,7 +559,7 @@ mod tests {
                         Functions::EaseLinear,
                     ),
                 ),
-                PointData::Vector4(
+                BasePointData::Vector4(
                     crate::point_data::vector4_point_data::Vector4PointData::new(
                         crate::modifiers::vector4_modifier::Vector4Values::Static(Vec4::new(
                             4.0, 4.0, 4.0, 4.0,
@@ -585,14 +585,14 @@ mod tests {
         cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev_a_color);
 
         // Now start a NEW coroutine on track A for same property (dissolve) which should cancel the first one
-        let pd_a2 = FloatPointDefinition::new(vec![
-            PointData::Float(FloatPointData::new(
+        let pd_a2 = BasicPointDefinition::new(vec![
+            BasePointData::Float(BasicPointData::new(
                 FloatValues::Static(0.0),
                 0.0,
                 vec![],
                 Functions::EaseLinear,
             )),
-            PointData::Float(FloatPointData::new(
+            BasePointData::Float(BasicPointData::new(
                 FloatValues::Static(20.0),
                 1.0,
                 vec![],
@@ -664,14 +664,14 @@ mod tests {
         t.name = "z_track".to_string();
         let key = holder.add_track(t);
 
-        let pd = FloatPointDefinition::new(vec![
-            PointData::Float(FloatPointData::new(
+        let pd = BasicPointDefinition::new(vec![
+            BasePointData::Float(BasicPointData::new(
                 FloatValues::Static(0.0),
                 0.0,
                 vec![],
                 Functions::EaseLinear,
             )),
-            PointData::Float(FloatPointData::new(
+            BasePointData::Float(BasicPointData::new(
                 FloatValues::Static(10.0),
                 1.0,
                 vec![],
@@ -726,14 +726,14 @@ mod tests {
 
         // Vec3 point definition (0 -> 3 over time 0..1)
         let pd = Vector3PointDefinition::new(vec![
-            PointData::Vector3(Vector3PointData::new(
+            BasePointData::Vector3(Vector3PointData::new(
                 Vector3Values::Static(Vec3::new(0.0, 0.0, 0.0)),
                 false,
                 0.0,
                 vec![],
                 Functions::EaseLinear,
             )),
-            PointData::Vector3(Vector3PointData::new(
+            BasePointData::Vector3(Vector3PointData::new(
                 Vector3Values::Static(Vec3::new(3.0, 3.0, 3.0)),
                 false,
                 1.0,
@@ -806,14 +806,14 @@ mod tests {
 
         // Vec3 point definition (0 -> 3 over time 0..1)
         let pd = Vector3PointDefinition::new(vec![
-            PointData::Vector3(Vector3PointData::new(
+            BasePointData::Vector3(Vector3PointData::new(
                 Vector3Values::Static(Vec3::new(0.0, 0.0, 0.0)),
                 false,
                 0.0,
                 vec![],
                 Functions::EaseLinear,
             )),
-            PointData::Vector3(Vector3PointData::new(
+            BasePointData::Vector3(Vector3PointData::new(
                 Vector3Values::Static(Vec3::new(3.0, 3.0, 3.0)),
                 false,
                 1.0,
@@ -866,14 +866,14 @@ mod tests {
 
         // Vec3 point definition (0 -> 3 over time 0..1)
         let pd = Vector3PointDefinition::new(vec![
-            PointData::Vector3(Vector3PointData::new(
+            BasePointData::Vector3(Vector3PointData::new(
                 Vector3Values::Static(Vec3::new(0.0, 0.0, 0.0)),
                 false,
                 0.0,
                 vec![],
                 Functions::EaseLinear,
             )),
-            PointData::Vector3(Vector3PointData::new(
+            BasePointData::Vector3(Vector3PointData::new(
                 Vector3Values::Static(Vec3::new(3.0, 3.0, 3.0)),
                 false,
                 1.0,
@@ -950,14 +950,14 @@ mod tests {
         let key = holder.add_track(t);
 
         // float point definition (0 -> 10 over 0..1)
-        let pd = FloatPointDefinition::new(vec![
-            PointData::Float(FloatPointData::new(
+        let pd = BasicPointDefinition::new(vec![
+            BasePointData::Float(BasicPointData::new(
                 FloatValues::Static(0.0),
                 0.0,
                 vec![],
                 Functions::EaseLinear,
             )),
-            PointData::Float(FloatPointData::new(
+            BasePointData::Float(BasicPointData::new(
                 FloatValues::Static(10.0),
                 1.0,
                 vec![],
@@ -1062,14 +1062,14 @@ mod tests {
 
         // Vec3 point definition (0 -> 3 over 0..1)
         let pd = Vector3PointDefinition::new(vec![
-            PointData::Vector3(Vector3PointData::new(
+            BasePointData::Vector3(Vector3PointData::new(
                 Vector3Values::Static(Vec3::new(0.0, 0.0, 0.0)),
                 false,
                 0.0,
                 vec![],
                 Functions::EaseLinear,
             )),
-            PointData::Vector3(Vector3PointData::new(
+            BasePointData::Vector3(Vector3PointData::new(
                 Vector3Values::Static(Vec3::new(3.0, 3.0, 3.0)),
                 false,
                 1.0,
@@ -1182,14 +1182,14 @@ mod tests {
         let key = holder.add_track(t);
 
         // repeat = 1 -> should run twice
-        let pd = FloatPointDefinition::new(vec![
-            PointData::Float(FloatPointData::new(
+        let pd = BasicPointDefinition::new(vec![
+            BasePointData::Float(BasicPointData::new(
                 FloatValues::Static(0.0),
                 0.0,
                 vec![],
                 Functions::EaseLinear,
             )),
-            PointData::Float(FloatPointData::new(
+            BasePointData::Float(BasicPointData::new(
                 FloatValues::Static(10.0),
                 1.0,
                 vec![],
@@ -1259,14 +1259,14 @@ mod tests {
         t.name = "persist_track".to_string();
         let key = holder.add_track(t);
 
-        let pd = FloatPointDefinition::new(vec![
-            PointData::Float(FloatPointData::new(
+        let pd = BasicPointDefinition::new(vec![
+            BasePointData::Float(BasicPointData::new(
                 FloatValues::Static(0.0),
                 0.0,
                 vec![],
                 Functions::EaseLinear,
             )),
-            PointData::Float(FloatPointData::new(
+            BasePointData::Float(BasicPointData::new(
                 FloatValues::Static(10.0),
                 1.0,
                 vec![],
@@ -1341,19 +1341,19 @@ mod tests {
     #[test]
     fn animate_track_matches_csharp_coroutine_semantics() {
         use crate::modifiers::float_modifier::FloatValues;
-        use crate::point_data::PointData;
-        use crate::point_data::float_point_data::FloatPointData;
-        use crate::point_definition::float_point_definition::FloatPointDefinition;
+        use crate::point_data::BasePointData;
+        use crate::point_data::point_data::BasicPointData;
+        use crate::point_definition::basic_point_definition::BasicPointDefinition;
 
         // prepare points 0 -> 10 over 0..1
-        let pd = FloatPointDefinition::new(vec![
-            PointData::Float(FloatPointData::new(
+        let pd = BasicPointDefinition::new(vec![
+            BasePointData::Float(BasicPointData::new(
                 FloatValues::Static(0.0),
                 0.0,
                 vec![],
                 Functions::EaseLinear,
             )),
-            PointData::Float(FloatPointData::new(
+            BasePointData::Float(BasicPointData::new(
                 FloatValues::Static(10.0),
                 1.0,
                 vec![],
@@ -1416,7 +1416,7 @@ mod tests {
                     let time = easing.interpolate(normalized);
                     let on_last = {
                         let (value, finished) = pd.interpolate(time, &BaseProviderContext::new());
-                        prop_csharp.set_value(Some(crate::values::value::BaseValue::Float(value)));
+                        prop_csharp.set_value(Some(crate::providers::value::BaseValue::Float(value)));
                         finished
                     };
                     cs_skip = !non_lazy && on_last;

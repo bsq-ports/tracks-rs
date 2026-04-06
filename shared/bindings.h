@@ -134,8 +134,6 @@ typedef struct CoroutineManager CoroutineManager;
 
 typedef struct EventData EventData;
 
-typedef struct FloatPointDefinition FloatPointDefinition;
-
 /**
  * A structure to manage interpolation between two point definitions over time.
  */
@@ -152,10 +150,6 @@ typedef struct Track Track;
 typedef struct TracksHolder TracksHolder;
 
 typedef struct ValueProperty ValueProperty;
-
-typedef struct Vector3PointDefinition Vector3PointDefinition;
-
-typedef struct Vector4PointDefinition Vector4PointDefinition;
 
 typedef struct WrappedValues {
   const float *values;
@@ -612,8 +606,8 @@ enum WrapBaseValueType tracks_base_point_definition_get_type(const struct BasePo
  * - `json` may be null; if non-null it must point to a valid `FFIJsonValue`.
  * - `context` must be a valid pointer to a `BaseProviderContext`.
  */
-const struct FloatPointDefinition *tracks_make_float_point_definition(const struct FFIJsonValue *json,
-                                                                      struct BaseProviderContext *context);
+const BasicPointDefinition *tracks_make_float_point_definition(const struct FFIJsonValue *json,
+                                                               struct BaseProviderContext *context);
 
 /**
  * Interpolate a float point definition at `time`.
@@ -622,7 +616,7 @@ const struct FloatPointDefinition *tracks_make_float_point_definition(const stru
  * - `point_definition` must be a valid pointer to a `FloatPointDefinition`.
  * - `context` must be a valid pointer to a `BaseProviderContext`.
  */
-struct FloatInterpolationResult tracks_interpolate_float(const struct FloatPointDefinition *point_definition,
+struct FloatInterpolationResult tracks_interpolate_float(const BasicPointDefinition *point_definition,
                                                          float time,
                                                          struct BaseProviderContext *context);
 
@@ -630,13 +624,13 @@ struct FloatInterpolationResult tracks_interpolate_float(const struct FloatPoint
  * # Safety
  * - `point_definition` must be a valid pointer to a `FloatPointDefinition`.
  */
-uintptr_t tracks_float_count(const struct FloatPointDefinition *point_definition);
+uintptr_t tracks_float_count(const BasicPointDefinition *point_definition);
 
 /**
  * # Safety
  * - `point_definition` must be a valid pointer to a `FloatPointDefinition`.
  */
-bool tracks_float_has_base_provider(const struct FloatPointDefinition *point_definition);
+bool tracks_float_has_base_provider(const BasicPointDefinition *point_definition);
 
 /**
  * QUATERNION POINT DEFINITION
@@ -678,8 +672,8 @@ bool tracks_quat_has_base_provider(const struct QuaternionPointDefinition *point
  * - `json` may be null; if non-null it must point to a valid `FFIJsonValue`.
  * - `context` must be a valid pointer to a `BaseProviderContext`.
  */
-const struct Vector3PointDefinition *tracks_make_vector3_point_definition(const struct FFIJsonValue *json,
-                                                                          struct BaseProviderContext *context);
+const Vector3PointDefinition *tracks_make_vector3_point_definition(const struct FFIJsonValue *json,
+                                                                   struct BaseProviderContext *context);
 
 /**
  * Interpolate a Vector3 point definition at `time`.
@@ -688,7 +682,7 @@ const struct Vector3PointDefinition *tracks_make_vector3_point_definition(const 
  * - `point_definition` must be a valid pointer to a `Vector3PointDefinition`.
  * - `context` must be a valid pointer to a `BaseProviderContext`.
  */
-struct Vector3InterpolationResult tracks_interpolate_vector3(const struct Vector3PointDefinition *point_definition,
+struct Vector3InterpolationResult tracks_interpolate_vector3(const Vector3PointDefinition *point_definition,
                                                              float time,
                                                              struct BaseProviderContext *context);
 
@@ -696,13 +690,13 @@ struct Vector3InterpolationResult tracks_interpolate_vector3(const struct Vector
  * # Safety
  * - `point_definition` must be a valid pointer to a `Vector3PointDefinition`.
  */
-uintptr_t tracks_vector3_count(const struct Vector3PointDefinition *point_definition);
+uintptr_t tracks_vector3_count(const Vector3PointDefinition *point_definition);
 
 /**
  * # Safety
  * - `point_definition` must be a valid pointer to a `Vector3PointDefinition`.
  */
-bool tracks_vector3_has_base_provider(const struct Vector3PointDefinition *point_definition);
+bool tracks_vector3_has_base_provider(const Vector3PointDefinition *point_definition);
 
 /**
  * VECTOR4 POINT DEFINITION
@@ -711,8 +705,8 @@ bool tracks_vector3_has_base_provider(const struct Vector3PointDefinition *point
  * - `json` may be null; if non-null it must point to a valid `FFIJsonValue`.
  * - `context` must be a valid pointer to a `BaseProviderContext`.
  */
-const struct Vector4PointDefinition *tracks_make_vector4_point_definition(const struct FFIJsonValue *json,
-                                                                          struct BaseProviderContext *context);
+const Vector4PointDefinition *tracks_make_vector4_point_definition(const struct FFIJsonValue *json,
+                                                                   struct BaseProviderContext *context);
 
 /**
  * Interpolate a Vector4 point definition at `time`.
@@ -721,7 +715,7 @@ const struct Vector4PointDefinition *tracks_make_vector4_point_definition(const 
  * - `point_definition` must be a valid pointer to a `Vector4PointDefinition`.
  * - `context` must be a valid pointer to a `BaseProviderContext`.
  */
-struct Vector4InterpolationResult tracks_interpolate_vector4(const struct Vector4PointDefinition *point_definition,
+struct Vector4InterpolationResult tracks_interpolate_vector4(const Vector4PointDefinition *point_definition,
                                                              float time,
                                                              struct BaseProviderContext *context);
 
@@ -729,13 +723,13 @@ struct Vector4InterpolationResult tracks_interpolate_vector4(const struct Vector
  * # Safety
  * - `point_definition` must be a valid pointer to a `Vector4PointDefinition`.
  */
-uintptr_t tracks_vector4_count(const struct Vector4PointDefinition *point_definition);
+uintptr_t tracks_vector4_count(const Vector4PointDefinition *point_definition);
 
 /**
  * # Safety
  * - `point_definition` must be a valid pointer to a `Vector4PointDefinition`.
  */
-bool tracks_vector4_has_base_provider(const struct Vector4PointDefinition *point_definition);
+bool tracks_vector4_has_base_provider(const Vector4PointDefinition *point_definition);
 
 PathProperty *path_property_create(void);
 

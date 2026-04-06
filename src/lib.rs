@@ -34,6 +34,7 @@ pub mod easings;
 pub mod modifiers;
 pub mod point_data;
 pub mod point_definition;
+pub mod providers;
 pub mod values;
 
 pub mod quaternion_utils;
@@ -44,8 +45,8 @@ pub mod quaternion_utils;
 /// the crate root with many names.
 pub mod prelude {
     pub use crate::base_provider_context::BaseProviderContext;
-    pub use crate::point_definition::PointDefinition;
-    pub use crate::values::{ValueProvider, AbstractValueProvider, UpdateableValues, deserialize_values};
-    pub use crate::modifiers::Modifier;
+    pub use crate::point_definition::PointDefinitionLike;
+    pub use crate::providers::{ValueProvider, AbstractValueProvider, UpdateableValues, deserialize_values};
+    pub use crate::modifiers::BaseModifier;
     pub use crate::easings::functions::Functions;
 }

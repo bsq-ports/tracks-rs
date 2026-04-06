@@ -1,7 +1,7 @@
 use crate::base_provider_context::BaseProviderContext;
 use crate::ffi::types::{WrapBaseValue, WrapBaseValueType, WrappedValues};
-use crate::values::base_ffi::{BaseFFIProvider, BaseFFIProviderValues};
-use crate::values::value::BaseValue;
+use crate::providers::base_ffi::{BaseFFIProvider, BaseFFIProviderValues};
+use crate::providers::value::BaseValue;
 use std::ffi::{CStr, c_void};
 use std::ptr;
 
@@ -83,10 +83,10 @@ pub unsafe extern "C" fn base_provider_context_get_value(
     if let Ok(name) = cstr.to_str() {
         let bvref = ctx_ref.get_values(name);
         let bv = match bvref {
-            crate::values::value::BaseValueRef::Float(v) => BaseValue::Float(*v),
-            crate::values::value::BaseValueRef::Vector3(v) => BaseValue::Vector3(*v),
-            crate::values::value::BaseValueRef::Vector4(v) => BaseValue::Vector4(*v),
-            crate::values::value::BaseValueRef::Quaternion(v) => BaseValue::Quaternion(*v),
+            crate::providers::value::BaseValueRef::Float(v) => BaseValue::Float(*v),
+            crate::providers::value::BaseValueRef::Vector3(v) => BaseValue::Vector3(*v),
+            crate::providers::value::BaseValueRef::Vector4(v) => BaseValue::Vector4(*v),
+            crate::providers::value::BaseValueRef::Quaternion(v) => BaseValue::Quaternion(*v),
         };
 
         bv.into()
@@ -139,12 +139,26 @@ pub unsafe extern "C" fn base_provider_context_get_type(
     let cstr = unsafe { CStr::from_ptr(base) };
     if let Ok(name) = cstr.to_str() {
         match ctx_ref.get_values(name) {
-            crate::values::value::BaseValueRef::Float(_) => WrapBaseValueType::Float,
-            crate::values::value::BaseValueRef::Vector3(_) => WrapBaseValueType::Vec3,
-            crate::values::value::BaseValueRef::Vector4(_) => WrapBaseValueType::Vec4,
-            crate::values::value::BaseValueRef::Quaternion(_) => WrapBaseValueType::Quat,
+            crate::providers::value::BaseValueRef::Float(_) => WrapBaseValueType::Float,
+            crate::providers::value::BaseValueRef::Vector3(_) => WrapBaseValueType::Vec3,
+            crate::providers::value::BaseValueRef::Vector4(_) => WrapBaseValueType::Vec4,
+            crate::providers::value::BaseValueRef::Quaternion(_) => WrapBaseValueType::Quat,
         }
     } else {
         WrapBaseValueType::Unknown
     }
+}
+
+/// Call `update_providers` on the `BaseProviderContext` with a delta time.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn base_provider_context_update(
+    ctx: *mut BaseProviderContext,
+    delta: f32,
+) {
+    if ctx.is_null() {
+        return;
+    }
+
+    let ctx_ref = unsafe { &*ctx };
+    ctx_ref.update_providers(delta);
 }

@@ -6,7 +6,7 @@ use crate::animation::track::PropertyNames;
 use crate::base_provider_context::BaseProviderContext;
 use crate::ffi::types::{WrapBaseValue, WrapBaseValueType};
 use crate::point_definition::base_point_definition::{self};
-use crate::values::value::BaseValue;
+use crate::providers::value::BaseValue;
 
 use super::time::CTimeUnit;
 
