@@ -1,12 +1,16 @@
+use glam::Vec4;
+
 use crate::{
     base_provider_context::BaseProviderContext,
+    base_value::WrapBaseValueType,
     ffi::{
         json::{self, FFIJsonValue},
-        types::{WrapBaseValue, WrapBaseValueType},
+        types::WrapBaseValue,
     },
     point_definition::{
         PointDefinitionLike, base_point_definition, basic_point_definition::BasicPointDefinition,
         quaternion_point_definition::QuaternionPointDefinition,
+        vector3_point_definition::Vector3PointDefinition,
     },
 };
 
@@ -29,8 +33,8 @@ pub unsafe extern "C" fn tracks_make_base_point_definition(
     let point_definition: base_point_definition::BasePointDefinition = match ty {
         WrapBaseValueType::Vec3 => Vector3PointDefinition::parse(value, context).into(),
         WrapBaseValueType::Quat => QuaternionPointDefinition::parse(value, context).into(),
-        WrapBaseValueType::Vec4 => Vector4PointDefinition::parse(value, context).into(),
-        WrapBaseValueType::Float => BasicPointDefinition::parse(value, context).into(),
+        WrapBaseValueType::Vec4 => BasicPointDefinition::<Vec4>::parse(value, context).into(),
+        WrapBaseValueType::Float => BasicPointDefinition::<f32>::parse(value, context).into(),
         WrapBaseValueType::Unknown => {
             panic!("Cannot create BasePointDefinition with Unknown type");
         }

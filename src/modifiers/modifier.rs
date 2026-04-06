@@ -2,7 +2,7 @@ use super::{ModifierLike, operation::Operation};
 use super::{ModifierValues, shared_has_base_provider};
 use crate::base_provider_context::BaseProviderContext;
 use crate::providers::AbstractValueProvider;
-use crate::values::ValueType;
+use crate::value_types::ValueType;
 
 #[derive(Debug, Clone)]
 pub struct BasicModifier<T: ValueType> {

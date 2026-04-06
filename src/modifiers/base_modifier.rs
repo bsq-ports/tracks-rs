@@ -1,12 +1,12 @@
 use glam::{Quat, Vec3, Vec4};
 
 use crate::{
+    base_value::BaseValue,
     modifiers::{
         ModifierLike, modifier::BasicModifier, operation::Operation,
         quaternion_modifier::QuaternionModifier,
     },
     prelude::BaseProviderContext,
-    providers::value::BaseValue,
 };
 
 /// Modifiers are added at the end of points to allow you to do basic arithmetic on points.
@@ -47,7 +47,7 @@ impl BaseModifier {
 
 impl ModifierLike<BaseValue> for BaseModifier {
     // max of the value counts of the modifiers, used for filling values in translate
-    const VALUE_COUNT: usize = 4; 
+    const VALUE_COUNT: usize = 4;
 
     fn get_modified_point(&self, context: &BaseProviderContext) -> BaseValue {
         match self {
@@ -67,7 +67,6 @@ impl ModifierLike<BaseValue> for BaseModifier {
         }
     }
 
-
     fn get_operation(&self) -> Operation {
         match self {
             BaseModifier::Float(modifier) => modifier.get_operation(),
@@ -85,5 +84,4 @@ impl ModifierLike<BaseValue> for BaseModifier {
             BaseModifier::Quaternion(modifier) => modifier.has_base_provider(),
         }
     }
-    
 }

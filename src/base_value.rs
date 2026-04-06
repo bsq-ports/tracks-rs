@@ -12,8 +12,6 @@ use glam::Vec3;
 
 use glam::Vec4;
 
-use crate::ffi::types::WrapBaseValueType;
-
 ///
 /// Time based number
 ///
@@ -41,6 +39,17 @@ pub enum BaseValueRef<'a> {
     Vector3(&'a Vec3),
     Vector4(&'a Vec4),
     Quaternion(&'a Quat),
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, PartialEq, PartialOrd, Eq, Hash, Ord, Debug, Default)]
+pub enum WrapBaseValueType {
+    #[default]
+    Unknown = -1,
+    Vec3 = 0,
+    Quat = 1,
+    Vec4 = 2,
+    Float = 3,
 }
 
 impl BaseValue {

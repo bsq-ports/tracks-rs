@@ -381,6 +381,7 @@ mod tests {
     use crate::animation::track::ValuePropertyHandle;
     use crate::animation::tracks_holder::TracksHolder;
     use crate::base_provider_context::BaseProviderContext;
+    use crate::base_value::WrapBaseValueType;
     use crate::easings::functions::Functions;
     use crate::modifiers::ModifierValues;
     use crate::point_data::basic_point_data::BasicPointData;
@@ -1401,7 +1402,7 @@ mod tests {
         cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev);
 
         // C#-side simulation property
-        let mut prop_csharp = ValueProperty::empty(crate::ffi::types::WrapBaseValueType::Float);
+        let mut prop_csharp = ValueProperty::empty(WrapBaseValueType::Float);
 
         // C# simulation state
         let mut cs_repeat = repeat as i32;
@@ -1426,8 +1427,7 @@ mod tests {
                     let time = easing.interpolate(normalized);
                     let on_last = {
                         let (value, finished) = pd.interpolate(time, &BaseProviderContext::new());
-                        prop_csharp
-                            .set_value(Some(crate::providers::value::BaseValue::Float(value)));
+                        prop_csharp.set_value(Some(crate::base_value::BaseValue::Float(value)));
                         finished
                     };
                     cs_skip = !non_lazy && on_last;

@@ -1,6 +1,6 @@
 use glam::{Quat, Vec3, Vec4};
 
-use crate::providers::value::BaseValue;
+use crate::base_value::{BaseValue, WrapBaseValueType};
 
 #[repr(C)]
 #[derive(Copy, Clone, Default, Debug)]
@@ -26,17 +26,6 @@ pub struct WrapQuat {
     pub(crate) y: f32,
     pub(crate) z: f32,
     pub(crate) w: f32,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone, PartialEq, PartialOrd, Eq, Hash, Ord, Debug, Default)]
-pub enum WrapBaseValueType {
-    #[default]
-    Unknown = -1,
-    Vec3 = 0,
-    Quat = 1,
-    Vec4 = 2,
-    Float = 3,
 }
 
 #[repr(C)]
@@ -173,7 +162,11 @@ impl From<Option<Vec3>> for Vec3Option {
                 has_value: true,
             },
             None => Vec3Option {
-                value: WrapVec3 { x: 0.0, y: 0.0, z: 0.0 },
+                value: WrapVec3 {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
                 has_value: false,
             },
         }
@@ -193,7 +186,12 @@ impl From<Option<Quat>> for QuatOption {
                 has_value: true,
             },
             None => QuatOption {
-                value: WrapQuat { x: 0.0, y: 0.0, z: 0.0, w: 1.0 },
+                value: WrapQuat {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                    w: 1.0,
+                },
                 has_value: false,
             },
         }
@@ -213,7 +211,12 @@ impl From<Option<Vec4>> for Vec4Option {
                 has_value: true,
             },
             None => Vec4Option {
-                value: WrapVec4 { x: 0.0, y: 0.0, z: 0.0, w: 0.0 },
+                value: WrapVec4 {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                    w: 0.0,
+                },
                 has_value: false,
             },
         }
@@ -247,7 +250,11 @@ impl From<Option<BaseValue>> for Vec3Option {
                 has_value: true,
             },
             _ => Vec3Option {
-                value: WrapVec3 { x: 0.0, y: 0.0, z: 0.0 },
+                value: WrapVec3 {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
                 has_value: false,
             },
         }
@@ -280,7 +287,12 @@ impl From<Option<BaseValue>> for QuatOption {
                 has_value: true,
             },
             _ => QuatOption {
-                value: WrapQuat { x: 0.0, y: 0.0, z: 0.0, w: 1.0 },
+                value: WrapQuat {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                    w: 1.0,
+                },
                 has_value: false,
             },
         }
@@ -299,7 +311,12 @@ impl From<Option<BaseValue>> for Vec4Option {
                 has_value: true,
             },
             _ => Vec4Option {
-                value: WrapVec4 { x: 0.0, y: 0.0, z: 0.0, w: 0.0 },
+                value: WrapVec4 {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                    w: 0.0,
+                },
                 has_value: false,
             },
         }

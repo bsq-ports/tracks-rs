@@ -24,7 +24,9 @@ pub unsafe extern "C" fn tracks_make_vector3_point_definition(
     context: *mut BaseProviderContext,
 ) -> *const Vector3PointDefinition {
     let value = unsafe { json::convert_json_value_to_serde(json) };
-    let point_definition = Box::new(Vector3PointDefinition::parse(value, unsafe { &mut *context }));
+    let point_definition = Box::new(Vector3PointDefinition::parse(value, unsafe {
+        &mut *context
+    }));
 
     (Box::leak(point_definition)) as _
 }

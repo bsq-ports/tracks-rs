@@ -1,15 +1,18 @@
+use glam::{Quat, Vec3};
+use tracks_rs::base_value::BaseValue;
 use tracks_rs::providers::AbstractValueProvider;
-use tracks_rs::{base_provider_context::BaseProviderContext, providers::UpdateableValues};
-use tracks_rs::providers::value::BaseValue;
-use glam::{Vec3, Quat};
 use tracks_rs::quaternion_utils::QuaternionUtilsExt;
+use tracks_rs::{base_provider_context::BaseProviderContext, providers::UpdateableValues};
 
 #[test]
 fn swizzle_partial_provider_returns_components() {
     let mut ctx = BaseProviderContext::new();
 
     // set a Vec3 base value
-    ctx.set_values("baseHeadPosition", BaseValue::from(Vec3::new(1.0, 2.0, 3.0)));
+    ctx.set_values(
+        "baseHeadPosition",
+        BaseValue::from(Vec3::new(1.0, 2.0, 3.0)),
+    );
 
     // request a swizzled provider
     let mut provider = ctx.get_value_provider("baseHeadPosition.xy");
@@ -28,7 +31,10 @@ fn swizzle_partial_provider_returns_components() {
 fn smoothing_on_vector_reaches_target_on_full_delta() {
     let mut ctx = BaseProviderContext::new();
 
-    ctx.set_values("baseHeadPosition", BaseValue::from(Vec3::new(10.0, 20.0, 30.0)));
+    ctx.set_values(
+        "baseHeadPosition",
+        BaseValue::from(Vec3::new(10.0, 20.0, 30.0)),
+    );
 
     let mut provider = ctx.get_value_provider("baseHeadPosition.s1");
 
@@ -74,7 +80,10 @@ fn smoothing_on_quaternion_produces_expected_euler() {
 fn swizzle_three_components_returns_components() {
     let mut ctx = BaseProviderContext::new();
 
-    ctx.set_values("baseHeadPosition", BaseValue::from(Vec3::new(1.0, 2.0, 3.0)));
+    ctx.set_values(
+        "baseHeadPosition",
+        BaseValue::from(Vec3::new(1.0, 2.0, 3.0)),
+    );
 
     let mut provider = ctx.get_value_provider("baseHeadPosition.xyz");
 
@@ -92,7 +101,10 @@ fn swizzle_three_components_returns_components() {
 fn swizzle_reorder_and_duplicate_returns_expected() {
     let mut ctx = BaseProviderContext::new();
 
-    ctx.set_values("baseHeadPosition", BaseValue::from(Vec3::new(4.0, 5.0, 6.0)));
+    ctx.set_values(
+        "baseHeadPosition",
+        BaseValue::from(Vec3::new(4.0, 5.0, 6.0)),
+    );
 
     let mut provider_yx = ctx.get_value_provider("baseHeadPosition.yx");
     provider_yx.update(0.0);
@@ -107,7 +119,10 @@ fn swizzle_reorder_and_duplicate_returns_expected() {
 fn smoothing_vector_fractional_delta_moves_partway() {
     let mut ctx = BaseProviderContext::new();
 
-    ctx.set_values("baseHeadPosition", BaseValue::from(Vec3::new(10.0, 20.0, 30.0)));
+    ctx.set_values(
+        "baseHeadPosition",
+        BaseValue::from(Vec3::new(10.0, 20.0, 30.0)),
+    );
 
     // use multiplier 0.5 (s0_5) and full delta=1.0 -> t = 0.5
     let mut provider = ctx.get_value_provider("baseHeadPosition.s0_5");

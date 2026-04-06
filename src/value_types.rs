@@ -1,6 +1,6 @@
 use glam::{Vec2, Vec3, Vec4};
 
-use crate::providers::value::BaseValue;
+use crate::base_value::{BaseValue, WrapBaseValueType};
 
 pub trait ValueType:
     Default
@@ -16,6 +16,8 @@ pub trait ValueType:
     where
         [(); Self::VALUE_COUNT]:;
     const VALUE_COUNT: usize;
+
+    fn base_type() -> WrapBaseValueType;
 
     fn from_translate_slice(values: &[f32]) -> Self;
     fn from_translate_array(values: [f32; Self::VALUE_COUNT]) -> Self;
@@ -46,6 +48,15 @@ impl ValueType for f32 {
     fn from_translate_array(values: [f32; Self::VALUE_COUNT]) -> Self {
         values[0]
     }
+
+    type Array
+        = [f32; Self::VALUE_COUNT]
+    where
+        [(); Self::VALUE_COUNT]:;
+
+    fn base_type() -> WrapBaseValueType {
+        WrapBaseValueType::Float
+    }
 }
 
 impl ValueType for Vec2 {
@@ -61,6 +72,15 @@ impl ValueType for Vec2 {
 
     fn from_translate_array(values: [f32; Self::VALUE_COUNT]) -> Self {
         Vec2::from_array(values)
+    }
+
+    type Array
+        = [f32; Self::VALUE_COUNT]
+    where
+        [(); Self::VALUE_COUNT]:;
+
+    fn base_type() -> WrapBaseValueType {
+        unreachable!("Vec2 is not a valid base type for BaseValue")
     }
 }
 
@@ -78,6 +98,15 @@ impl ValueType for Vec3 {
     fn from_translate_array(values: [f32; Self::VALUE_COUNT]) -> Self {
         Vec3::from_array(values)
     }
+
+    type Array
+        = [f32; Self::VALUE_COUNT]
+    where
+        [(); Self::VALUE_COUNT]:;
+
+    fn base_type() -> WrapBaseValueType {
+        unreachable!("Vec3 is not a valid base type for BaseValue")
+    }
 }
 
 impl ValueType for Vec4 {
@@ -94,6 +123,15 @@ impl ValueType for Vec4 {
     fn from_translate_array(values: [f32; Self::VALUE_COUNT]) -> Self {
         Vec4::from_array(values)
     }
+
+    type Array
+        = [f32; Self::VALUE_COUNT]
+    where
+        [(); Self::VALUE_COUNT]:;
+
+    fn base_type() -> WrapBaseValueType {
+        WrapBaseValueType::Vec4
+    }
 }
 
 impl ValueType for BaseValue {
@@ -108,7 +146,7 @@ impl ValueType for BaseValue {
             _ => panic!("Invalid number of values for BaseValue: {}", values.len()),
         }
     }
-    fn from_translate_array(values: [f32; Self::VALUE_COUNT]) -> Self {
+    fn from_translate_array(_values: [f32; Self::VALUE_COUNT]) -> Self {
         unreachable!(
             "from_translate_array should not be called for BaseValue, as it does not have a fixed number of components"
         );
@@ -116,5 +154,14 @@ impl ValueType for BaseValue {
 
     fn from_translate_slice(values: &[f32]) -> Self {
         BaseValue::Vector4(Vec4::new(values[0], values[1], values[2], values[3]))
+    }
+
+    type Array
+        = [f32; Self::VALUE_COUNT]
+    where
+        [(); Self::VALUE_COUNT]:;
+
+    fn base_type() -> WrapBaseValueType {
+        WrapBaseValueType::Unknown
     }
 }

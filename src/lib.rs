@@ -38,7 +38,9 @@ pub mod modifiers;
 pub mod point_data;
 pub mod point_definition;
 pub mod providers;
-pub mod values;
+
+pub mod base_value;
+pub mod value_types;
 
 pub mod quaternion_utils;
 
@@ -49,7 +51,10 @@ pub mod quaternion_utils;
 pub mod prelude {
     pub use crate::base_provider_context::BaseProviderContext;
     pub use crate::point_definition::PointDefinitionLike;
-    pub use crate::providers::{ValueProvider, AbstractValueProvider, UpdateableValues, deserialize_values};
-    pub use crate::modifiers::base_modifier::BaseModifier;
+    #[cfg(feature = "json")]
+    pub use crate::providers::deserialize_values;
+    pub use crate::providers::{AbstractValueProvider, UpdateableValues, ValueProvider};
+
     pub use crate::easings::functions::Functions;
+    pub use crate::modifiers::base_modifier::BaseModifier;
 }

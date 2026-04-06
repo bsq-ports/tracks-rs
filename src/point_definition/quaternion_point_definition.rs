@@ -4,6 +4,7 @@ use glam::{Quat, Vec3, vec3};
 
 use crate::{
     base_provider_context::BaseProviderContext,
+    base_value::WrapBaseValueType,
     easings::functions::Functions,
     modifiers::{
         operation::Operation,
@@ -30,13 +31,11 @@ impl PointDefinitionLike<Quat> for QuaternionPointDefinition {
     }
 
     fn has_base_provider(&self) -> bool {
-        self.points
-            .iter()
-            .any(|p| PointDataLike::has_base_provider(p))
+        self.points.iter().any(PointDataLike::has_base_provider)
     }
 
-    fn get_type(&self) -> crate::ffi::types::WrapBaseValueType {
-        crate::ffi::types::WrapBaseValueType::Quat
+    fn get_type(&self) -> WrapBaseValueType {
+        WrapBaseValueType::Quat
     }
 
     fn create_modifier(
@@ -100,8 +99,8 @@ impl PointDefinitionLike<Quat> for QuaternionPointDefinition {
         &self,
         l: &Self::PointData,
         r: &Self::PointData,
-        l_index: usize,
-        r_index: usize,
+        _l_index: usize,
+        _r_index: usize,
         time: f32,
         context: &BaseProviderContext,
     ) -> Quat {
@@ -125,6 +124,10 @@ impl PointDefinitionLike<Quat> for QuaternionPointDefinition {
 mod tests {
     use super::*;
     use glam::{EulerRot, Quat};
+
+    #[cfg(not(feature = "json"))]
+    compile_error!("Tests for QuaternionPointDefinition require the 'json' feature to be enabled");
+
     use serde_json::json;
 
     use crate::{
@@ -158,7 +161,7 @@ mod tests {
         assert_eq!(def.get_count(), 4);
 
         // Initial (time 0.0)
-        let (q0, is_last0) = def.interpolate(0.0, &ctx);
+        let (q0, _is_last0) = def.interpolate(0.0, &ctx);
         let e0 = q0.to_unity_euler_degrees();
         assert!(approx_eq(e0.z, 0.0, 1e-3));
         assert!(approx_eq(e0.y, 0.0, 1e-3));
@@ -170,7 +173,7 @@ mod tests {
         assert!(approx_eq(q0.w, 1.0, 1e-3));
 
         // Intermediate between 0.1 and 0.2 -> t = 0.15 -> normalized 0.5 between those points
-        let (q_mid, is_last_mid) = def.interpolate(0.15, &ctx);
+        let (q_mid, _is_last_mid) = def.interpolate(0.15, &ctx);
         // Build expected by slerping the endpoint quaternions
         let q_l = Quat::from_unity_euler_degrees(&Vec3::new(0.0f32, 0.0f32, 0.0f32));
         let q_r = Quat::from_unity_euler_degrees(&Vec3::new(0.0f32, -90.0f32, 0.0f32));

@@ -2,10 +2,7 @@ use std::borrow::Cow;
 
 use super::ValueProvider;
 
-use crate::{
-    base_provider_context::BaseProviderContext,
-    quaternion_utils::{QuaternionUtilsExt, TRACKS_EULER_ROT},
-};
+use crate::{base_provider_context::BaseProviderContext, quaternion_utils::QuaternionUtilsExt};
 
 use super::AbstractValueProvider;
 

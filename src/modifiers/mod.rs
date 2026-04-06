@@ -4,20 +4,9 @@ pub mod operation;
 pub mod base_modifier;
 pub mod quaternion_modifier;
 
-use std::default;
-
-use glam::{Quat, Vec3, Vec4};
-use modifier::BasicModifier;
-use smallvec::SmallVec;
-
 use crate::base_provider_context::BaseProviderContext;
-use crate::ffi::types::WrapBaseValue;
 use crate::modifiers::operation::Operation;
-use crate::modifiers::quaternion_modifier::QuaternionModifier;
-use crate::point_data::PointDataLike;
-use crate::providers::value::BaseValue;
 use crate::providers::{AbstractValueProvider, ValueProvider};
-use crate::values::ValueType;
 
 #[derive(Clone, Debug)]
 pub enum ModifierValues<T> {

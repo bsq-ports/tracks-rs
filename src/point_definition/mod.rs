@@ -3,22 +3,23 @@ pub mod basic_point_definition;
 pub mod point_definition_interpolation;
 
 // specific handling
-pub mod vector3_point_definition;
 pub mod quaternion_point_definition;
+pub mod vector3_point_definition;
 
 use std::str::FromStr;
 
+#[cfg(feature = "json")]
 use serde_json::Value as JsonValue;
+
+#[cfg(feature = "json")]
 use serde_json::json;
 
 use crate::base_provider_context::BaseProviderContext;
-use crate::ffi::types::WrapBaseValueType;
+use crate::base_value::WrapBaseValueType;
 use crate::modifiers::ModifierLike;
 use crate::point_data::PointDataLike;
 use crate::{
-    easings::functions::Functions,
-    modifiers::operation::Operation,
-    providers::{ValueProvider, deserialize_values},
+    easings::functions::Functions, modifiers::operation::Operation, providers::ValueProvider,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
@@ -33,7 +34,10 @@ pub enum GroupType {
 /// Point definitions are used to describe what happens over the course of an animation,
 /// they are used slightly differently for different properties.
 /// They consist of a collection of points over time.
-pub trait PointDefinitionLike<T>: Default where T: Default + Clone {
+pub trait PointDefinitionLike<T>: Default
+where
+    T: Default + Clone,
+{
     type Modifier: ModifierLike<T>;
     type PointData: PointDataLike<T>;
 
@@ -80,6 +84,8 @@ pub trait PointDefinitionLike<T>: Default where T: Default + Clone {
         for group in group_values(list) {
             match group.0 {
                 GroupType::Value => {
+                    use crate::prelude::deserialize_values;
+
                     values = Some(deserialize_values(&group.1, context));
                 }
                 GroupType::Modifier => {
@@ -152,6 +158,8 @@ pub trait PointDefinitionLike<T>: Default where T: Default + Clone {
             for group in group_values(raw_point) {
                 match group.0 {
                     GroupType::Value => {
+                        use crate::prelude::deserialize_values;
+
                         vals = Some(deserialize_values(&group.1, context));
                     }
                     GroupType::Modifier => {

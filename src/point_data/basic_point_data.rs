@@ -2,8 +2,7 @@ use crate::{
     base_provider_context::BaseProviderContext,
     easings::functions::Functions,
     modifiers::{ModifierLike, ModifierValues, modifier::BasicModifier, operation::Operation},
-    providers::smooth,
-    values::ValueType,
+    value_types::ValueType,
 };
 
 use super::PointDataLike;

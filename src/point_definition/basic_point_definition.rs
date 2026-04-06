@@ -1,16 +1,15 @@
 use std::rc::Rc;
 
-use glam::{FloatExt, Vec3, Vec3A};
 use itertools::Itertools;
-use smallvec::SmallVec;
 
 use crate::{
     base_provider_context::BaseProviderContext,
+    base_value::WrapBaseValueType,
     easings::functions::Functions,
-    modifiers::{ModifierLike, ModifierValues, modifier::BasicModifier, operation::Operation},
+    modifiers::{ModifierValues, modifier::BasicModifier, operation::Operation},
     point_data::{PointDataLike, basic_point_data::BasicPointData},
     prelude::{AbstractValueProvider, ValueProvider},
-    values::ValueType,
+    value_types::ValueType,
 };
 
 use super::PointDefinitionLike;
@@ -55,7 +54,7 @@ where
                 if static_val.values.len() <= T::VALUE_COUNT + 1 =>
             {
                 let values = &static_val.values;
-                ModifierValues::Static(T::from_slice(&values))
+                ModifierValues::Static(T::from_slice(values))
             }
             // Any other case
             _ => {
@@ -122,16 +121,16 @@ where
         &self.points
     }
 
-    fn get_type(&self) -> crate::ffi::types::WrapBaseValueType {
-        crate::ffi::types::WrapBaseValueType::Float
+    fn get_type(&self) -> WrapBaseValueType {
+        T::base_type()
     }
 
     fn interpolate_points(
         &self,
         l: &Self::PointData,
         r: &Self::PointData,
-        l_index: usize,
-        r_index: usize,
+        _l_index: usize,
+        _r_index: usize,
         time: f32,
         context: &BaseProviderContext,
     ) -> T {

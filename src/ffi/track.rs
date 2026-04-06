@@ -196,9 +196,7 @@ pub extern "C" fn track_create_named(name: *const c_char) -> *mut Track {
     let name = if name.is_null() {
         ""
     } else {
-        unsafe { CStr::from_ptr(name) }
-            .to_str()
-            .unwrap_or_default()
+        unsafe { CStr::from_ptr(name) }.to_str().unwrap_or_default()
     };
     let mut track = Track::default();
     track.name = name.to_string();
@@ -575,9 +573,9 @@ pub unsafe extern "C" fn track_get_properties_values(track: *mut Track) -> CProp
 /// Safety:
 /// - `track` must be a valid, non-null pointer to a `Track`.
 /// - `ctx` must be a valid, non-null pointer to a `BaseProviderContext`.
-/// 
+///
 /// - The returned struct contains copies of the interpolated property values.
-/// 
+///
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn track_get_path_properties_values(
     track: *mut Track,
@@ -593,9 +591,17 @@ pub unsafe extern "C" fn track_get_path_properties_values(
 
     CPathPropertiesValues {
         position: track.path_properties.position.interpolate(time, ctx).into(),
-        offset_position: track.path_properties.offset_position.interpolate(time, ctx).into(),
+        offset_position: track
+            .path_properties
+            .offset_position
+            .interpolate(time, ctx)
+            .into(),
         rotation: track.path_properties.rotation.interpolate(time, ctx).into(),
-        offset_rotation: track.path_properties.offset_rotation.interpolate(time, ctx).into(),
+        offset_rotation: track
+            .path_properties
+            .offset_rotation
+            .interpolate(time, ctx)
+            .into(),
         scale: track.path_properties.scale.interpolate(time, ctx).into(),
         local_rotation: track
             .path_properties

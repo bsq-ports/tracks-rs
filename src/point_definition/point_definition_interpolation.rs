@@ -1,6 +1,6 @@
 use crate::{
-    base_provider_context::BaseProviderContext, ffi::types::WrapBaseValueType,
-    providers::value::BaseValue,
+    base_provider_context::BaseProviderContext,
+    base_value::{BaseValue, WrapBaseValueType},
 };
 
 use super::{PointDefinitionLike, base_point_definition::BasePointDefinition};
@@ -79,7 +79,6 @@ impl PointDefinitionInterpolation {
 mod tests {
     use super::*;
     use crate::easings::functions::Functions;
-    use crate::ffi::types::WrapBaseValueType;
     use crate::modifiers::quaternion_modifier::QuaternionValues;
     use crate::point_data::basic_point_data::BasicPointData;
     use crate::point_data::quaternion_point_data::QuaternionPointData;
@@ -185,10 +184,8 @@ mod tests {
             ),
         ]);
 
-        let prev_bp_v3 =
-            BasePointDefinition::Vector3(prev_v3);
-        let next_bp_v3 =
-            BasePointDefinition::Vector3(next_v3);
+        let prev_bp_v3 = BasePointDefinition::Vector3(prev_v3);
+        let next_bp_v3 = BasePointDefinition::Vector3(next_v3);
 
         let mut interp_v3 =
             PointDefinitionInterpolation::new(Some(next_bp_v3), WrapBaseValueType::Vec3);

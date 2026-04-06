@@ -13,7 +13,7 @@ use crate::providers::ValueProvider;
 
 use crate::base_provider_context::BaseProviderContext;
 
-use crate::providers::value::BaseValue;
+use crate::base_value::{BaseValue, WrapBaseValueType};
 
 use super::PointDefinitionLike;
 
@@ -120,12 +120,12 @@ impl PointDefinitionLike<BaseValue> for BasePointDefinition {
         )
     }
 
-    fn get_type(&self) -> crate::ffi::types::WrapBaseValueType {
+    fn get_type(&self) -> WrapBaseValueType {
         match self {
-            BasePointDefinition::Float(_) => crate::ffi::types::WrapBaseValueType::Float,
-            BasePointDefinition::Vector3(_) => crate::ffi::types::WrapBaseValueType::Vec3,
-            BasePointDefinition::Vector4(_) => crate::ffi::types::WrapBaseValueType::Vec4,
-            BasePointDefinition::Quaternion(_) => crate::ffi::types::WrapBaseValueType::Quat,
+            BasePointDefinition::Float(_) => WrapBaseValueType::Float,
+            BasePointDefinition::Vector3(_) => WrapBaseValueType::Vec3,
+            BasePointDefinition::Vector4(_) => WrapBaseValueType::Vec4,
+            BasePointDefinition::Quaternion(_) => WrapBaseValueType::Quat,
         }
     }
 

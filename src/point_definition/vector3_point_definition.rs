@@ -1,16 +1,16 @@
 use std::rc::Rc;
 
-use glam::{FloatExt, Vec3, Vec3A};
+use glam::{Vec3, Vec3A};
 use itertools::Itertools;
-use smallvec::SmallVec;
 
 use crate::{
     base_provider_context::BaseProviderContext,
+    base_value::WrapBaseValueType,
     easings::functions::Functions,
-    modifiers::{ModifierLike, ModifierValues, modifier::BasicModifier, operation::Operation},
+    modifiers::{ModifierValues, modifier::BasicModifier, operation::Operation},
     point_data::{PointDataLike, basic_point_data::BasicPointData},
     prelude::{AbstractValueProvider, ValueProvider},
-    values::ValueType,
+    value_types::ValueType,
 };
 
 use super::PointDefinitionLike;
@@ -30,7 +30,7 @@ impl Vector3PointDefinition {
         r_add_1: Option<Vec3A>,
 
         time: f32,
-        context: &BaseProviderContext,
+        _context: &BaseProviderContext,
     ) -> Vec3 {
         // Convert to Vec3A for SIMD-friendly spline interpolation, convert back at the end
         // let point_a_a = glam::Vec3A::from(points[l].get_point(context));
@@ -76,9 +76,7 @@ impl PointDefinitionLike<Vec3> for Vector3PointDefinition {
     }
 
     fn has_base_provider(&self) -> bool {
-        self.points
-            .iter()
-            .any(|p| PointDataLike::has_base_provider(p))
+        self.points.iter().any(PointDataLike::has_base_provider)
     }
 
     fn new(points: Vec<Self::PointData>) -> Self {
@@ -99,7 +97,7 @@ impl PointDefinitionLike<Vec3> for Vector3PointDefinition {
                 if static_val.values.len() <= Vec3::VALUE_COUNT + 1 =>
             {
                 let values = &static_val.values;
-                ModifierValues::Static(Vec3::from_slice(&values))
+                ModifierValues::Static(Vec3::from_slice(values))
             }
             // Any other case
             _ => {
@@ -166,8 +164,8 @@ impl PointDefinitionLike<Vec3> for Vector3PointDefinition {
         &self.points
     }
 
-    fn get_type(&self) -> crate::ffi::types::WrapBaseValueType {
-        crate::ffi::types::WrapBaseValueType::Float
+    fn get_type(&self) -> WrapBaseValueType {
+        Vec3::base_type()
     }
 
     fn interpolate_points(

@@ -1,8 +1,8 @@
-use super::{BasicModifier, ModifierLike, operation::Operation, shared_has_base_provider};
+use super::{ModifierLike, operation::Operation, shared_has_base_provider};
 use crate::prelude::{AbstractValueProvider, ValueProvider};
 use crate::{base_provider_context::BaseProviderContext, quaternion_utils::QuaternionUtilsExt};
 use glam::Vec3A;
-use glam::{EulerRot, Quat, Vec3};
+use glam::{Quat, Vec3};
 
 #[derive(Debug, Clone)]
 pub enum QuaternionValues {

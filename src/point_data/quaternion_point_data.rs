@@ -2,7 +2,9 @@ use crate::{
     base_provider_context::BaseProviderContext,
     easings::functions::Functions,
     modifiers::{
-        ModifierLike, modifier::BasicModifier, operation::Operation, quaternion_modifier::{QuaternionModifier, QuaternionValues}
+        ModifierLike,
+        operation::Operation,
+        quaternion_modifier::{QuaternionModifier, QuaternionValues},
     },
 };
 use glam::Quat;

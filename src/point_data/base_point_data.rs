@@ -1,12 +1,11 @@
 use glam::{Quat, Vec3, Vec4};
 
 use crate::{
+    base_value::BaseValue,
     point_data::{
         PointDataLike, basic_point_data::BasicPointData, quaternion_point_data::QuaternionPointData,
     },
     prelude::{BaseProviderContext, Functions},
-    providers::value::BaseValue,
-    values::ValueType,
 };
 
 #[derive(Debug, Clone)]
