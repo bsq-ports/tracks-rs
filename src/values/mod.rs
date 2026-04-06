@@ -10,7 +10,7 @@ pub mod quat;
 pub mod smooth;
 pub mod smooth_rot;
 pub mod r#static;
-pub mod updatable;
+pub mod partial;
 pub mod value;
 
 /// Abstract value provider
@@ -18,6 +18,9 @@ pub mod value;
 /// based on the context
 /// and the values
 pub trait AbstractValueProvider {
+    // TODO: make this return a value instead of a reference
+    // we can theoretically limit this to [f32; 4],
+    // or a Cow<'a, [f32; 4]> to avoid allocations
     fn values<'a>(&'a self, context: &BaseProviderContext) -> Cow<'a, [f32]>;
 }
 
@@ -38,7 +41,7 @@ pub enum ValueProvider {
     Static(r#static::StaticValues),
     BaseProvider(base::BaseProviderValues),
     QuaternionProvider(quat::QuaternionProviderValues),
-    PartialProvider(updatable::PartialProviderValues),
+    PartialProvider(partial::PartialProviderValues),
     SmoothProviders(smooth::SmoothProvidersValues),
     SmoothRotationProviders(smooth_rot::SmoothRotationProvidersValues),
 }
@@ -62,7 +65,7 @@ impl UpdateableValues for ValueProvider {
             ValueProvider::Static(_) => {}
             ValueProvider::BaseProvider(_) => {}
             ValueProvider::QuaternionProvider(_) => {}
-            ValueProvider::PartialProvider(v) => v.update(delta),
+            ValueProvider::PartialProvider(v) => {},
             ValueProvider::SmoothProviders(v) => v.update(delta),
             ValueProvider::SmoothRotationProviders(v) => v.update(delta),
         }

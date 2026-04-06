@@ -342,7 +342,7 @@ impl BaseProviderContext {
             .collect();
 
         let src = source.values(self).to_vec();
-        ValueProvider::PartialProvider(crate::values::updatable::PartialProviderValues::new(
+        ValueProvider::PartialProvider(crate::values::partial::PartialProviderValues::new(
             src, parts,
         ))
     }
