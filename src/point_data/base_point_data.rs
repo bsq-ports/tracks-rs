@@ -73,6 +73,34 @@ impl BasePointData {
             _ => None,
         }
     }
+
+    pub fn as_float_value(&self) -> Option<&BasicPointData<f32>> {
+        match self {
+            BasePointData::Float(point_data) => Some(point_data),
+            _ => None,
+        }
+    }
+
+    pub fn as_vector3_value(&self) -> Option<&BasicPointData<Vec3>> {
+        match self {
+            BasePointData::Vector3(point_data) => Some(point_data),
+            _ => None,
+        }
+    }
+
+    pub fn as_vector4_value(&self) -> Option<&BasicPointData<Vec4>> {
+        match self {
+            BasePointData::Vector4(point_data) => Some(point_data),
+            _ => None,
+        }
+    }
+
+    pub fn as_quaternion_value(&self) -> Option<&QuaternionPointData> {
+        match self {
+            BasePointData::Quaternion(point_data) => Some(point_data),
+            _ => None,
+        }
+    }
 }
 
 impl PointDataLike<BaseValue> for BasePointData {

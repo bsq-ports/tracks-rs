@@ -1,4 +1,4 @@
-use glam::{Quat, Vec3, Vec4};
+use glam::Vec4;
 
 use crate::easings::functions::Functions;
 
@@ -13,10 +13,7 @@ use crate::providers::ValueProvider;
 
 use crate::base_provider_context::BaseProviderContext;
 
-use crate::point_data::PointDataLike;
-
 use crate::providers::value::BaseValue;
-use crate::values::ValueType;
 
 use super::PointDefinitionLike;
 
@@ -34,6 +31,27 @@ pub enum BasePointDefinition {
 impl PointDefinitionLike<BaseValue> for BasePointDefinition {
     type PointData = BasePointData;
     type Modifier = BaseModifier;
+
+    fn interpolate(&self, time: f32, context: &BaseProviderContext) -> (BaseValue, bool) {
+        match self {
+            BasePointDefinition::Float(def) => {
+                let (v, done) = def.interpolate(time, context);
+                (BaseValue::Float(v), done)
+            }
+            BasePointDefinition::Vector3(def) => {
+                let (v, done) = def.interpolate(time, context);
+                (BaseValue::Vector3(v), done)
+            }
+            BasePointDefinition::Vector4(def) => {
+                let (v, done) = def.interpolate(time, context);
+                (BaseValue::Vector4(v), done)
+            }
+            BasePointDefinition::Quaternion(def) => {
+                let (v, done) = def.interpolate(time, context);
+                (BaseValue::Quaternion(v), done)
+            }
+        }
+    }
 
     fn get_count(&self) -> usize {
         match self {
@@ -93,20 +111,13 @@ impl PointDefinitionLike<BaseValue> for BasePointDefinition {
     }
 
     fn get_points(&self) -> &[BasePointData] {
-        match self {
-            BasePointDefinition::Float(float_point_definition) => {
-                float_point_definition.get_points()
-            }
-            BasePointDefinition::Vector3(vector3_point_definition) => {
-                vector3_point_definition.get_points()
-            }
-            BasePointDefinition::Vector4(vector4_point_definition) => {
-                vector4_point_definition.get_points()
-            }
-            BasePointDefinition::Quaternion(quaternion_point_definition) => {
-                quaternion_point_definition.get_points()
-            }
-        }
+        // BasePointDefinition stores typed point definitions internally, so there is no
+        // zero-copy way to expose a unified &[BasePointData] view here.
+        // This type provides its own interpolate() implementation, so default
+        // PointDefinitionLike::interpolate() should never call this.
+        panic!(
+            "BasePointDefinition::get_points is unsupported; use BasePointDefinition::interpolate/get_count"
+        )
     }
 
     fn get_type(&self) -> crate::ffi::types::WrapBaseValueType {
@@ -128,10 +139,49 @@ impl PointDefinitionLike<BaseValue> for BasePointDefinition {
         &self,
         l: &Self::PointData,
         r: &Self::PointData,
+        l_index: usize,
+        r_index: usize,
         time: f32,
         context: &BaseProviderContext,
     ) -> BaseValue {
-        BaseValue::value_lerp(l.get_point(context), r.get_point(context), time)
+        match (self, l, r) {
+            (
+                BasePointDefinition::Float(float_point_definition),
+                BasePointData::Float(l_data),
+                BasePointData::Float(r_data),
+            ) => BaseValue::Float(
+                float_point_definition
+                    .interpolate_points(l_data, r_data, l_index, r_index, time, context),
+            ),
+            (
+                BasePointDefinition::Vector3(vector3_point_definition),
+                BasePointData::Vector3(l_data),
+                BasePointData::Vector3(r_data),
+            ) => BaseValue::Vector3(
+                vector3_point_definition
+                    .interpolate_points(l_data, r_data, l_index, r_index, time, context),
+            ),
+            (
+                BasePointDefinition::Vector4(vector4_point_definition),
+                BasePointData::Vector4(l_data),
+                BasePointData::Vector4(r_data),
+            ) => BaseValue::Vector4(
+                vector4_point_definition
+                    .interpolate_points(l_data, r_data, l_index, r_index, time, context),
+            ),
+            (
+                BasePointDefinition::Quaternion(quaternion_point_definition),
+                BasePointData::Quaternion(l_data),
+                BasePointData::Quaternion(r_data),
+            ) => BaseValue::Quaternion(
+                quaternion_point_definition
+                    .interpolate_points(l_data, r_data, l_index, r_index, time, context),
+            ),
+            _ => panic!(
+                "Mismatched PointDefinition and PointData types during interpolation {:?} {:?} {:?}",
+                self, l, r
+            ),
+        }
     }
 }
 
