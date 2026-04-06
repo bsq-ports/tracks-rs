@@ -11,6 +11,10 @@ pub trait ValueType:
     + std::ops::Div<Output = Self>
     + std::ops::Mul<f32, Output = Self>
 {
+    type Array
+        = [f32; Self::VALUE_COUNT]
+    where
+        [(); Self::VALUE_COUNT]:;
     const VALUE_COUNT: usize;
 
     fn from_translate_slice(values: &[f32]) -> Self;

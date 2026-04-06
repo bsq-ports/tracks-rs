@@ -25,6 +25,8 @@
 #![feature(trait_alias)]
 #![feature(unboxed_closures)]
 #![feature(generic_const_exprs)]
+#![feature(generic_const_items)]
+#![feature(associated_type_defaults)]
 
 #[cfg(feature = "ffi")]
 pub mod ffi;

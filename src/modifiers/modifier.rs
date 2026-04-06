@@ -1,6 +1,7 @@
 use super::{ModifierLike, operation::Operation};
 use super::{ModifierValues, shared_has_base_provider};
 use crate::base_provider_context::BaseProviderContext;
+use crate::providers::AbstractValueProvider;
 use crate::values::ValueType;
 
 #[derive(Debug, Clone)]
@@ -11,7 +12,10 @@ pub struct BasicModifier<T: ValueType> {
     operation: Operation,
 }
 
-impl<T: ValueType> BasicModifier<T> {
+impl<T: ValueType> BasicModifier<T>
+where
+    [(); T::VALUE_COUNT]:,
+{
     pub fn new(
         point: ModifierValues<T>,
         modifiers: Vec<BasicModifier<T>>,
@@ -28,14 +32,27 @@ impl<T: ValueType> BasicModifier<T> {
     }
 }
 
-impl<T: ValueType> ModifierLike<T> for BasicModifier<T> {
+impl<T: ValueType> ModifierLike<T> for BasicModifier<T>
+where
+    [(); T::VALUE_COUNT]:,
+{
     const VALUE_COUNT: usize = T::VALUE_COUNT;
 
     fn get_modified_point(&self, context: &BaseProviderContext) -> T {
         let original_point = match &self.values {
             ModifierValues::Static(s) => *s,
             ModifierValues::Dynamic(value_providers) => {
-                let values: [f32; Self::VALUE_COUNT] = self.apply(value_providers, context);
+                let mut values = [0.0; T::VALUE_COUNT];
+                let mut i = 0;
+                for value in value_providers {
+                    for v in value.values(context).iter().copied() {
+                        if i >= T::VALUE_COUNT {
+                            break;
+                        }
+                        values[i] = v;
+                        i += 1;
+                    }
+                }
                 T::from_translate_array(values)
             }
         };
