@@ -69,3 +69,55 @@ fn smoothing_on_quaternion_produces_expected_euler() {
     assert!((slice[1] - euler.y).abs() <= eps, "y mismatch");
     assert!((slice[2] - euler.z).abs() <= eps, "z mismatch");
 }
+
+#[test]
+fn swizzle_three_components_returns_components() {
+    let mut ctx = BaseProviderContext::new();
+
+    ctx.set_values("baseHeadPosition", BaseValue::from(Vec3::new(1.0, 2.0, 3.0)));
+
+    let mut provider = ctx.get_value_provider("baseHeadPosition.xyz");
+
+    assert!(provider.is_updateable());
+
+    provider.update(1.0);
+
+    let vals = provider.values(&ctx);
+    let slice = vals.as_ref();
+
+    assert_eq!(slice, &[1.0_f32, 2.0_f32, 3.0_f32]);
+}
+
+#[test]
+fn swizzle_reorder_and_duplicate_returns_expected() {
+    let mut ctx = BaseProviderContext::new();
+
+    ctx.set_values("baseHeadPosition", BaseValue::from(Vec3::new(4.0, 5.0, 6.0)));
+
+    let mut provider_yx = ctx.get_value_provider("baseHeadPosition.yx");
+    provider_yx.update(0.0);
+    assert_eq!(provider_yx.values(&ctx).as_ref(), &[5.0_f32, 4.0_f32]);
+
+    let mut provider_xx = ctx.get_value_provider("baseHeadPosition.xx");
+    provider_xx.update(0.0);
+    assert_eq!(provider_xx.values(&ctx).as_ref(), &[4.0_f32, 4.0_f32]);
+}
+
+#[test]
+fn smoothing_vector_fractional_delta_moves_partway() {
+    let mut ctx = BaseProviderContext::new();
+
+    ctx.set_values("baseHeadPosition", BaseValue::from(Vec3::new(10.0, 20.0, 30.0)));
+
+    // use multiplier 0.5 (s0_5) and full delta=1.0 -> t = 0.5
+    let mut provider = ctx.get_value_provider("baseHeadPosition.s0_5");
+
+    assert!(provider.is_updateable());
+
+    provider.update(1.0);
+
+    let vals = provider.values(&ctx);
+    let slice = vals.as_ref();
+
+    assert_eq!(slice, &[5.0_f32, 10.0_f32, 15.0_f32]);
+}

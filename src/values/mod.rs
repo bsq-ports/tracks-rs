@@ -1,16 +1,15 @@
 use crate::base_provider_context::BaseProviderContext;
-use base::BaseProviderValues;
 use serde_json::Value as JsonValue;
-use std::borrow::Cow;
+use std::{borrow::Cow, cell::RefCell, rc::Rc};
 
 pub mod base;
 #[cfg(feature = "ffi")]
 pub mod base_ffi;
+pub mod partial;
 pub mod quat;
 pub mod smooth;
 pub mod smooth_rot;
 pub mod r#static;
-pub mod partial;
 pub mod value;
 
 /// Abstract value provider
@@ -42,8 +41,8 @@ pub enum ValueProvider {
     BaseProvider(base::BaseProviderValues),
     QuaternionProvider(quat::QuaternionProviderValues),
     PartialProvider(partial::PartialProviderValues),
-    SmoothProviders(smooth::SmoothProvidersValues),
-    SmoothRotationProviders(smooth_rot::SmoothRotationProvidersValues),
+    SmoothProviders(Rc<RefCell<smooth::SmoothProvidersValues>>),
+    SmoothRotationProviders(Rc<RefCell<smooth_rot::SmoothRotationProvidersValues>>),
 }
 
 impl AbstractValueProvider for ValueProvider {
@@ -53,8 +52,14 @@ impl AbstractValueProvider for ValueProvider {
             ValueProvider::BaseProvider(v) => v.values(context),
             ValueProvider::QuaternionProvider(v) => v.values(context),
             ValueProvider::PartialProvider(v) => v.values(context),
-            ValueProvider::SmoothProviders(v) => v.values(context),
-            ValueProvider::SmoothRotationProviders(v) => v.values(context),
+            ValueProvider::SmoothProviders(v) => {
+                let borrow = v.borrow();
+                Cow::Owned(borrow.values(context).clone().into_owned())
+            }
+            ValueProvider::SmoothRotationProviders(v) => {
+                let borrow = v.borrow();
+                Cow::Owned(borrow.values(context).clone().into_owned())
+            }
         }
     }
 }
@@ -65,9 +70,9 @@ impl UpdateableValues for ValueProvider {
             ValueProvider::Static(_) => {}
             ValueProvider::BaseProvider(_) => {}
             ValueProvider::QuaternionProvider(_) => {}
-            ValueProvider::PartialProvider(v) => {},
-            ValueProvider::SmoothProviders(v) => v.update(delta),
-            ValueProvider::SmoothRotationProviders(v) => v.update(delta),
+            ValueProvider::PartialProvider(v) => {}
+            ValueProvider::SmoothProviders(v) => v.borrow_mut().update(delta),
+            ValueProvider::SmoothRotationProviders(v) => v.borrow_mut().update(delta),
         }
     }
 }
@@ -88,7 +93,6 @@ impl ValueProvider {
 fn clamp_lerp(start: f32, end: f32, t: f32) -> f32 {
     start + (end - start) * t.clamp(0.0, 1.0)
 }
-
 
 // Values deserialization
 /// Creates a new instance of [`BaseProviderValues`] using the provided base values.

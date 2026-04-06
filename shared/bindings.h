@@ -424,6 +424,11 @@ enum WrapBaseValueType base_provider_context_get_type(const struct BaseProviderC
                                                       const char *base);
 
 /**
+ * Call `update_providers` on the `BaseProviderContext` with a delta time.
+ */
+void base_provider_context_update(struct BaseProviderContext *ctx, float delta);
+
+/**
  * Creates a new CoroutineManager instance and returns a raw pointer to it.
  * The caller is responsible for freeing the memory using destroy_coroutine_manager.
  */
@@ -812,6 +817,16 @@ struct CTimeUnit get_time(void);
  * - This function is FFI-safe but the returned pointer is not thread-safe; use from the same thread unless synchronized.
  */
 struct Track *track_create(void);
+
+/**
+ * Create a new `Track` and return a raw pointer to it.
+ *
+ * # Safety
+ * - The returned pointer is owned by the caller and must be freed with `track_destroy`.
+ * - The caller must not free the pointer by other means or use it after calling `track_destroy`.
+ * - This function is FFI-safe but the returned pointer is not thread-safe; use from the same thread unless synchronized.
+ */
+struct Track *track_create_named(const char *name);
 
 /**
  * Consumes the track and frees its memory.

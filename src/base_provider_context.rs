@@ -4,10 +4,7 @@ use glam::{Quat, Vec3, Vec4};
 use log::{error, warn};
 
 use crate::values::{
-    AbstractValueProvider, UpdateableValues, ValueProvider,
-    base::BaseProviderValues,
-    quat::QuaternionProviderValues,
-    value::{BaseValue, BaseValueRef},
+    AbstractValueProvider, UpdateableValues, ValueProvider, base::BaseProviderValues, quat::QuaternionProviderValues, smooth::SmoothProvidersValues, smooth_rot::SmoothRotationProvidersValues, value::{BaseValue, BaseValueRef}
 };
 
 /// Context for base value providers
@@ -60,7 +57,7 @@ pub struct BaseProviderContext {
     right_hand_position: Vec3,
     right_hand_rotation: Quat,
 
-    updatable_providers: Vec<Rc<RefCell<Box<dyn UpdateableValues>>>>,
+    updatable_providers: Vec<Rc<RefCell<dyn UpdateableValues>>>,
     provider_cache: HashMap<String, ValueProvider>,
 }
 
@@ -293,8 +290,7 @@ impl BaseProviderContext {
 
             // If updateable, register it so it will be ticked via `update_providers`
             if updateable_values.is_updateable() {
-                unimplemented!("unimplemented handling updateable providers");
-                // self.register_updatable_provider(rc);
+                self.register_updatable_provider(&updateable_values);
             }
 
             result = updateable_values;
@@ -305,9 +301,19 @@ impl BaseProviderContext {
 
     pub fn register_updatable_provider(
         &mut self,
-        provider: Rc<RefCell<Box<dyn UpdateableValues>>>,
-    ) {
-        self.updatable_providers.push(provider);
+        provider: &ValueProvider,
+    )  {
+        match provider {
+            ValueProvider::SmoothProviders(v) => {
+                self.updatable_providers.push(v.clone() as Rc<RefCell<dyn UpdateableValues>>);
+            }
+            ValueProvider::SmoothRotationProviders(v) => {
+                self.updatable_providers.push(v.clone() as Rc<RefCell<dyn UpdateableValues>>);
+            }
+            _ => {
+                return;
+            }
+        };
     }
 
     pub fn update_providers(&self, delta: f32) {
@@ -382,15 +388,17 @@ impl BaseProviderContext {
                     ])
                 };
 
-                ValueProvider::SmoothRotationProviders(
-                    crate::values::smooth_rot::SmoothRotationProvidersValues::new(quat, mult),
-                )
+                ValueProvider::SmoothRotationProviders(Rc::new(RefCell::new(
+                    SmoothRotationProvidersValues::new(quat, mult),
+                )))
             }
             _ => {
                 let src = source.values(self).to_vec();
-                ValueProvider::SmoothProviders(crate::values::smooth::SmoothProvidersValues::new(
-                    src, mult,
-                ))
+                ValueProvider::SmoothProviders(Rc::new(RefCell::new(
+                    SmoothProvidersValues::new(
+                        src, mult,
+                    )
+                )))
             }
         }
     }
