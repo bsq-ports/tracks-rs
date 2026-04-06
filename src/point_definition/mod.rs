@@ -1,7 +1,7 @@
-pub mod basic_point_definition;
-pub mod quaternion_point_definition;
 pub mod base_point_definition;
+pub mod basic_point_definition;
 pub mod point_definition_interpolation;
+pub mod quaternion_point_definition;
 
 use std::str::FromStr;
 
@@ -33,7 +33,7 @@ pub enum GroupType {
 /// They consist of a collection of points over time.
 pub trait PointDefinitionLike: std::default::Default {
     type Value: Default + Clone;
-    type Modifer: ModifierLike<Value = Self::Value>;
+    type Modifier: ModifierLike<Value = Self::Value>;
     type PointData: PointDataLike<Self::Value>;
 
     // Required methods common to all definitions
@@ -41,22 +41,21 @@ pub trait PointDefinitionLike: std::default::Default {
     fn has_base_provider(&self) -> bool;
     fn interpolate_points(
         &self,
-        points: &[Self::PointData],
-        l: usize,
-        r: usize,
+        l: &Self::PointData,
+        r: &Self::PointData,
         time: f32,
         context: &BaseProviderContext,
     ) -> Self::Value;
     fn create_modifier(
         values: Vec<ValueProvider>,
-        modifiers: Vec<Self::Modifer>,
+        modifiers: Vec<Self::Modifier>,
         operation: Operation,
         context: &BaseProviderContext,
-    ) -> Self::Modifer;
+    ) -> Self::Modifier;
     fn create_point_data(
         values: Vec<ValueProvider>,
         flags: Vec<String>,
-        modifiers: Vec<Self::Modifer>,
+        modifiers: Vec<Self::Modifier>,
         easing: Functions,
         context: &BaseProviderContext,
     ) -> Self::PointData;
@@ -70,8 +69,8 @@ pub trait PointDefinitionLike: std::default::Default {
 
     /// Deserializes a JSON value into a Modifier. This is used for parsing modifiers from JSON.
     #[cfg(feature = "json")]
-    fn deserialize_modifier(list: &JsonValue, context: &mut BaseProviderContext) -> Self::Modifer {
-        let mut modifiers: Option<Vec<Self::Modifer>> = None;
+    fn deserialize_modifier(list: &JsonValue, context: &mut BaseProviderContext) -> Self::Modifier {
+        let mut modifiers: Option<Vec<Self::Modifier>> = None;
         let mut operation: Option<Operation> = None;
         let mut values: Option<Vec<ValueProvider>> = None;
 
@@ -232,14 +231,14 @@ pub trait PointDefinitionLike: std::default::Default {
 
         let eased_time = point_r.get_easing().interpolate(normal_time);
         (
-            self.interpolate_points(points, l, r, eased_time, context),
+            self.interpolate_points(point_l, point_r, eased_time, context),
             false,
         )
     }
 }
 
 // Binary search algorithm to find the relevant interval
-fn search_index<P: PointDataLike<T>, T>(points: &[T], time: f32) -> (usize, usize) {
+fn search_index<P: PointDataLike<T>, T>(points: &[P], time: f32) -> (usize, usize) {
     let mut l = 0;
     let mut r = points.len();
 

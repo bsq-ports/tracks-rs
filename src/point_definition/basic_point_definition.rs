@@ -20,7 +20,7 @@ pub struct BasicPointDefinition<T: ValueType> {
 
 impl<T: ValueType> PointDefinitionLike for BasicPointDefinition<T> {
     type Value = T;
-    type Modifer = BasicModifier<T>;
+    type Modifier = BasicModifier<T>;
     type PointData = BasicPointData<T>;
 
     fn get_count(&self) -> usize {
@@ -43,10 +43,11 @@ impl<T: ValueType> PointDefinitionLike for BasicPointDefinition<T> {
         operation: Operation,
         context: &BaseProviderContext,
     ) -> BasicModifier<T> {
-        let val = match values.as_slice() {
+        let val: ModifierValues<T> = match values.as_slice() {
             // Single static value
-            [ValueProvider::Static(static_val)] if static_val.values(context).len() == 1 => {
-                ModifierValues::Static(static_val.values(context))
+            [ValueProvider::Static(static_val)] if static_val.values(context).len() <= T::VALUE_COUNT => {
+                let values = static_val.values(context);
+                ModifierValues::Static(T::from_slice(&values))
             }
             // Any other case
             _ => {
@@ -55,13 +56,13 @@ impl<T: ValueType> PointDefinitionLike for BasicPointDefinition<T> {
                 ModifierValues::Dynamic(values)
             }
         };
-        Self::Modifer::new(val, modifiers, operation)
+        Self::Modifier::new(val, modifiers, operation)
     }
 
     fn create_point_data(
         values: Vec<ValueProvider>,
         _flags: Vec<String>,
-        modifiers: Vec<Self::Modifer>,
+        modifiers: Vec<Self::Modifier>,
         easing: Functions,
         context: &BaseProviderContext,
     ) -> Self::PointData {
@@ -71,7 +72,7 @@ impl<T: ValueType> PointDefinitionLike for BasicPointDefinition<T> {
             // [x, y]
             [ValueProvider::Static(static_val)] if static_val.values(context).len() == 2 => {
                 let values = static_val.values(context);
-                let point = &values[0..T::VALUE_COUNT - 1];
+                let point = T::from_slice(&values[0..T::VALUE_COUNT - 1]);
                 (ModifierValues::Static(point), values[T::VALUE_COUNT])
             }
 
@@ -95,29 +96,29 @@ impl<T: ValueType> PointDefinitionLike for BasicPointDefinition<T> {
         BasicPointData::new(value, time, modifiers, easing)
     }
 
-    fn interpolate_points(
-        &self,
-        points: &[Self::PointData],
-        l: usize,
-        r: usize,
-        time: f32,
-        context: &BaseProviderContext,
-    ) -> T {
-        let point_l = points[l].get_point(context);
-        let point_r = points[r].get_point(context);
-
-        T::lerp(point_l, point_r, time)
-    }
 
     fn get_points(&self) -> &[Self::PointData] {
         &self.points
     }
 
     fn get_point(&self, point: &Self::PointData, context: &BaseProviderContext) -> T {
-        point.get_point(context)
+        PointDataLike::get_point(point, context)
     }
 
     fn get_type(&self) -> crate::ffi::types::WrapBaseValueType {
         crate::ffi::types::WrapBaseValueType::Float
+    }
+    
+    fn interpolate_points(
+        &self,
+        l: &Self::PointData,
+        r: &Self::PointData,
+        time: f32,
+        context: &BaseProviderContext,
+    ) -> Self::Value {
+        let point_l = PointDataLike::get_point(l, context);
+        let point_r = PointDataLike::get_point(r, context);
+
+        T::value_lerp(point_l, point_r, time)
     }
 }

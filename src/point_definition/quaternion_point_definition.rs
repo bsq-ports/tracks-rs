@@ -3,10 +3,15 @@ use std::rc::Rc;
 use glam::{Quat, Vec3, vec3};
 
 use crate::{
-    base_provider_context::BaseProviderContext, easings::functions::Functions, modifiers::{
+    base_provider_context::BaseProviderContext,
+    easings::functions::Functions,
+    modifiers::{
         operation::Operation,
         quaternion_modifier::{QuaternionModifier, QuaternionValues},
-    }, point_data::{BasePointData, quaternion_point_data::QuaternionPointData}, prelude::ValueProvider, quaternion_utils::QuaternionUtilsExt
+    },
+    point_data::{BasePointData, PointDataLike, quaternion_point_data::QuaternionPointData},
+    prelude::{AbstractValueProvider, ValueProvider},
+    quaternion_utils::QuaternionUtilsExt,
 };
 
 use super::PointDefinitionLike;
@@ -18,7 +23,7 @@ pub struct QuaternionPointDefinition {
 
 impl PointDefinitionLike for QuaternionPointDefinition {
     type Value = Quat;
-    type Modifer = QuaternionModifier;
+    type Modifier = QuaternionModifier;
     type PointData = QuaternionPointData;
 
     fn get_count(&self) -> usize {
@@ -26,7 +31,9 @@ impl PointDefinitionLike for QuaternionPointDefinition {
     }
 
     fn has_base_provider(&self) -> bool {
-        self.points.iter().any(|p| p.has_base_provider())
+        self.points
+            .iter()
+            .any(|p| PointDataLike::has_base_provider(p))
     }
 
     fn get_type(&self) -> crate::ffi::types::WrapBaseValueType {
@@ -35,10 +42,10 @@ impl PointDefinitionLike for QuaternionPointDefinition {
 
     fn create_modifier(
         values: Vec<ValueProvider>,
-        modifiers: Vec<Self::Modifer>,
+        modifiers: Vec<Self::Modifier>,
         operation: Operation,
         context: &BaseProviderContext,
-    ) -> Self::Modifer {
+    ) -> Self::Modifier {
         let val = match values.as_slice() {
             [ValueProvider::Static(static_val)] if static_val.values(context).len() == 3 => {
                 let values = static_val.values(context);
@@ -60,7 +67,7 @@ impl PointDefinitionLike for QuaternionPointDefinition {
     fn create_point_data(
         values: Vec<ValueProvider>,
         _flags: Vec<String>,
-        modifiers: Vec<Self::Modifer>,
+        modifiers: Vec<Self::Modifier>,
         easing: Functions,
         context: &BaseProviderContext,
     ) -> Self::PointData {
@@ -87,24 +94,18 @@ impl PointDefinitionLike for QuaternionPointDefinition {
             }
         };
 
-        QuaternionPointData::new(
-            base_values,
-            time,
-            modifiers,
-            easing,
-        )
+        QuaternionPointData::new(base_values, time, modifiers, easing)
     }
 
     fn interpolate_points(
         &self,
-        points: &[Self::PointData],
-        l: usize,
-        r: usize,
+        l: &Self::PointData,
+        r: &Self::PointData,
         time: f32,
         context: &BaseProviderContext,
     ) -> Quat {
-        let point_l = points[l].get_quaternion(context);
-        let point_r = points[r].get_quaternion(context);
+        let point_l = PointDataLike::get_point(l, context);
+        let point_r = PointDataLike::get_point(r, context);
         point_l.slerp(point_r, time)
     }
 
@@ -113,7 +114,7 @@ impl PointDefinitionLike for QuaternionPointDefinition {
     }
 
     fn get_point(&self, point: &Self::PointData, context: &BaseProviderContext) -> Quat {
-        point.get_quaternion(context)
+        point.get_point(context)
     }
 
     fn new(points: Vec<Self::PointData>) -> Self {
@@ -121,7 +122,6 @@ impl PointDefinitionLike for QuaternionPointDefinition {
             points: Rc::from(points),
         }
     }
-
 }
 
 #[cfg(test)]
@@ -132,7 +132,8 @@ mod tests {
 
     use crate::{
         base_provider_context::BaseProviderContext,
-        point_data::quaternion_point_data::QuaternionPointData, point_definition::PointDefinitionLike,
+        point_data::quaternion_point_data::QuaternionPointData,
+        point_definition::PointDefinitionLike,
     };
 
     // Use Unity's Euler rotation order (ZXY(Ex)) for expected values in tests

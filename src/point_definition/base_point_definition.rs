@@ -12,9 +12,10 @@ use crate::providers::ValueProvider;
 
 use crate::base_provider_context::BaseProviderContext;
 
-use crate::point_data::BasePointData;
+use crate::point_data::{BasePointData, PointDataLike};
 
 use crate::providers::value::BaseValue;
+use crate::values::ValueType;
 
 use super::PointDefinitionLike;
 
@@ -29,12 +30,10 @@ pub enum BasePointDefinition {
     Quaternion(QuaternionPointDefinition),
 }
 
-
-
 impl PointDefinitionLike for BasePointDefinition {
     type Value = BaseValue;
     type PointData = BasePointData;
-    type Modifer = BaseModifier;
+    type Modifier = BaseModifier;
 
     fn get_count(&self) -> usize {
         match self {
@@ -66,35 +65,6 @@ impl PointDefinitionLike for BasePointDefinition {
             }
             BasePointDefinition::Quaternion(quaternion_point_definition) => {
                 quaternion_point_definition.has_base_provider()
-            }
-        }
-    }
-
-    fn interpolate_points(
-        &self,
-        points: &[BasePointData],
-        l: usize,
-        r: usize,
-        time: f32,
-        context: &BaseProviderContext,
-    ) -> Self::Value {
-        
-        match self {
-            BasePointDefinition::Float(float_point_definition) => {
-                let v = float_point_definition.interpolate_points(points, l, r, time, context);
-                BaseValue::Float(v)
-            }
-            BasePointDefinition::Vector3(vector3_point_definition) => {
-                let v = vector3_point_definition.interpolate_points(points, l, r, time, context);
-                BaseValue::Vector3(v)
-            }
-            BasePointDefinition::Vector4(vector4_point_definition) => {
-                let v = vector4_point_definition.interpolate_points(points, l, r, time, context);
-                BaseValue::Vector4(v)
-            }
-            BasePointDefinition::Quaternion(quaternion_point_definition) => {
-                let v = quaternion_point_definition.interpolate_points(points, l, r, time, context);
-                BaseValue::Quaternion(v)
             }
         }
     }
@@ -168,6 +138,20 @@ impl PointDefinitionLike for BasePointDefinition {
     fn new(_points: Vec<BasePointData>) -> Self {
         unimplemented!(
             "Cannot create BasePointDefinition directly; use specific point definition types instead."
+        )
+    }
+    
+    fn interpolate_points(
+        &self,
+        l: &Self::PointData,
+        r: &Self::PointData,
+        time: f32,
+        context: &BaseProviderContext,
+    ) -> Self::Value {
+        BaseValue::value_lerp(
+            l.get_point(context),
+            r.get_point(context),
+            time,
         )
     }
 }

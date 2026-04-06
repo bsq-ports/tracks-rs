@@ -382,13 +382,10 @@ mod tests {
     use crate::animation::tracks_holder::TracksHolder;
     use crate::base_provider_context::BaseProviderContext;
     use crate::easings::functions::Functions;
-    use crate::modifiers::float_modifier::FloatValues;
-    use crate::modifiers::vector3_modifier::Vector3Values;
+    use crate::modifiers::ModifierValues;
     use crate::point_data::BasePointData;
     use crate::point_data::point_data::BasicPointData;
-    use crate::point_data::vector3_point_data::Vector3PointData;
     use crate::point_definition::basic_point_definition::BasicPointDefinition;
-    use crate::point_definition::vector3_point_definition::Vector3PointDefinition;
     use glam::Vec3;
     use glam::Vec4;
 
@@ -435,18 +432,18 @@ mod tests {
 
         // construct a simple float point definition with two points (0 -> 10 over time 0..1)
         let pd = BasicPointDefinition::new(vec![
-            BasePointData::Float(BasicPointData::new(
-                FloatValues::Static(0.0),
+            BasicPointData::new(
+                ModifierValues::Static(0.0),
                 0.0,
                 vec![],
                 Functions::EaseLinear,
-            )),
-            BasePointData::Float(BasicPointData::new(
-                FloatValues::Static(10.0),
+            ),
+            BasicPointData::new(
+                ModifierValues::Static(10.0),
                 1.0,
                 vec![],
                 Functions::EaseLinear,
-            )),
+            ),
         ]);
 
         let ev = EventData {
@@ -456,7 +453,7 @@ mod tests {
             start_song_time: 0.0,
             property: EventType::AnimateTrack(ValuePropertyHandle::new("dissolve")),
             track_key: key,
-            point_data: Some(pd.into()),
+            point_data: Some(pd),
         };
 
         // bpm 60 => duration = 1.0 for raw_duration 1.0
@@ -491,13 +488,13 @@ mod tests {
         // initial coroutine on track A (should be cancelled later)
         let pd_a1 = BasicPointDefinition::new(vec![
             BasePointData::Float(BasicPointData::new(
-                FloatValues::Static(0.0),
+                ModifierValues::Static(0.0),
                 0.0,
                 vec![],
                 Functions::EaseLinear,
             )),
             BasePointData::Float(BasicPointData::new(
-                FloatValues::Static(10.0),
+                ModifierValues::Static(10.0),
                 1.0,
                 vec![],
                 Functions::EaseLinear,
@@ -518,18 +515,18 @@ mod tests {
 
         // start a coroutine on track B same property - should NOT be cancelled by later A
         let pd_b = BasicPointDefinition::new(vec![
-            BasePointData::Float(BasicPointData::new(
-                FloatValues::Static(5.0),
+            BasicPointData::new(
+                ModifierValues::Static(5.0),
                 0.0,
                 vec![],
                 Functions::EaseLinear,
-            )),
-            BasePointData::Float(BasicPointData::new(
-                FloatValues::Static(15.0),
+            ),
+            BasicPointData::new(
+                ModifierValues::Static(15.0),
                 1.0,
                 vec![],
                 Functions::EaseLinear,
-            )),
+            ),
         ]);
 
         let ev_b = EventData {

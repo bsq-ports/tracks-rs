@@ -53,6 +53,37 @@ impl BasePointData {
             _ => panic!("PointData is not a QuaternionPointData"),
         }
     }
+
+    pub fn into_float_value(self, context: &BaseProviderContext) -> Option<BasicPointData<f32>> {
+        match self {
+            BasePointData::Float(point_data) => Some(point_data),
+            _ => None,
+        }
+    }
+
+    pub fn into_vector3_value(self, context: &BaseProviderContext) -> Option<BasicPointData<Vec3>> {
+        match self {
+            BasePointData::Vector3(point_data) => Some(point_data),
+            _ => None,
+        }
+    }
+
+    pub fn into_vector4_value(self, context: &BaseProviderContext) -> Option<BasicPointData<Vec4>> {
+        match self {
+            BasePointData::Vector4(point_data) => Some(point_data),
+            _ => None,
+        }
+    }
+
+    pub fn into_quaternion_value(
+        self,
+        context: &BaseProviderContext,
+    ) -> Option<QuaternionPointData> {
+        match self {
+            BasePointData::Quaternion(point_data) => Some(point_data),
+            _ => None,
+        }
+    }
 }
 
 impl PointDataLike<BaseValue> for BasePointData {
