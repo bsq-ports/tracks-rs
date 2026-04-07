@@ -1,59 +1,21 @@
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
-use glam::{Quat, Vec3, Vec4};
+use serde_json::json;
 use tracks_rs::animation::coroutine_manager::CoroutineManager;
 use tracks_rs::animation::events::{EventData, EventType};
 use tracks_rs::animation::track::{Track, V2_POSITION, ValuePropertyHandle};
 use tracks_rs::animation::tracks_holder::TracksHolder;
 use tracks_rs::base_provider_context::BaseProviderContext;
 use tracks_rs::easings::functions::Functions;
-use tracks_rs::modifiers::vector3_modifier::Vector3Values;
-use tracks_rs::point_data::BasePointData;
-use tracks_rs::point_data::vector3_point_data::Vector3PointData;
-use tracks_rs::point_definition::PointDefinitionLike;
-use tracks_rs::point_definition::vector3_point_definition::Vector3PointDefinition;
+use tracks_rs::point_definition::{
+    parse_quaternion_point_definition, parse_vector3_point_definition,
+    parse_vector4_point_definition,
+};
 
 use tracks_rs::animation::track::{V2_COLOR, V2_LOCAL_ROTATION, V2_SCALE};
-use tracks_rs::modifiers::quaternion_modifier::QuaternionValues;
-use tracks_rs::modifiers::vector4_modifier::Vector4Values;
-use tracks_rs::point_data::quaternion_point_data::QuaternionPointData;
-use tracks_rs::point_data::vector4_point_data::Vector4PointData;
-use tracks_rs::point_definition::quaternion_point_definition::QuaternionPointDefinition;
-use tracks_rs::point_definition::vector4_point_definition::Vector4PointDefinition;
-use tracks_rs::quaternion_utils::QuaternionUtilsExt;
-
-fn make_vec3_point(x: f32, y: f32, z: f32, time: f32) -> BasePointData {
-    BasePointData::Vector3(Vector3PointData::new(
-        Vector3Values::Static(Vec3::new(x, y, z)),
-        false,
-        time,
-        vec![],
-        Functions::EaseLinear,
-    ))
-}
-
-fn make_vec4_point(r: f32, g: f32, b: f32, a: f32, time: f32) -> BasePointData {
-    BasePointData::Vector4(Vector4PointData::new(
-        Vector4Values::Static(Vec4::new(r, g, b, a)),
-        false,
-        time,
-        vec![],
-        Functions::EaseLinear,
-    ))
-}
-
-fn make_quat_point(x: f32, y: f32, z: f32, time: f32) -> BasePointData {
-    let raw_vec = Vec3::new(x, y, z);
-    let quat = Quat::from_unity_euler_degrees(&raw_vec);
-    BasePointData::Quaternion(QuaternionPointData::new(
-        QuaternionValues::Static(raw_vec, quat),
-        time,
-        vec![],
-        Functions::EaseLinear,
-    ))
-}
 
 fn make_event(
     track_key: tracks_rs::animation::tracks_holder::TrackKey,
+    context: &mut BaseProviderContext,
     duration: f32,
     start: f32,
 ) -> EventData {
@@ -65,19 +27,21 @@ fn make_event(
         property: EventType::AnimateTrack(ValuePropertyHandle::new(V2_POSITION)),
         track_key,
         point_data: Some(
-            Vector3PointDefinition::new(vec![
-                make_vec3_point(0.0, 0.0, 0.0, 0.0),
-                make_vec3_point(1.0, 0.0, 1.0, 1.0),
-            ])
+            parse_vector3_point_definition(
+                json!([[0.0, 0.0, 0.0, 0.0], [1.0, 0.0, 1.0, 1.0]]),
+                context,
+            )
             .into(),
         ),
     }
 }
 
-fn make_event2(
+fn make_event_vec3(
     track_key: tracks_rs::animation::tracks_holder::TrackKey,
+    context: &mut BaseProviderContext,
     property: &str,
-    data: BasePointData,
+    values: [f32; 3],
+    time: f32,
     duration: f32,
     start: f32,
 ) -> EventData {
@@ -88,12 +52,65 @@ fn make_event2(
         start_song_time: start,
         property: EventType::AnimateTrack(ValuePropertyHandle::new(property)),
         track_key,
-        point_data: Some(match data {
-            BasePointData::Vector3(_) => Vector3PointDefinition::new(vec![data]).into(),
-            BasePointData::Vector4(_) => Vector4PointDefinition::new(vec![data]).into(),
-            BasePointData::Quaternion(_) => QuaternionPointDefinition::new(vec![data]).into(),
-            _ => panic!("Unsupported point data for bench"),
-        }),
+        point_data: Some(
+            parse_vector3_point_definition(
+                json!([[values[0], values[1], values[2], time]]),
+                context,
+            )
+            .into(),
+        ),
+    }
+}
+
+fn make_event_vec4(
+    track_key: tracks_rs::animation::tracks_holder::TrackKey,
+    context: &mut BaseProviderContext,
+    property: &str,
+    values: [f32; 4],
+    time: f32,
+    duration: f32,
+    start: f32,
+) -> EventData {
+    EventData {
+        raw_duration: duration,
+        easing: Functions::EaseLinear,
+        repeat: 0,
+        start_song_time: start,
+        property: EventType::AnimateTrack(ValuePropertyHandle::new(property)),
+        track_key,
+        point_data: Some(
+            parse_vector4_point_definition(
+                json!([[values[0], values[1], values[2], values[3], time]]),
+                context,
+            )
+            .into(),
+        ),
+    }
+}
+
+fn make_event_quat(
+    track_key: tracks_rs::animation::tracks_holder::TrackKey,
+    context: &mut BaseProviderContext,
+    property: &str,
+    euler_deg: [f32; 3],
+    time: f32,
+    duration: f32,
+    start: f32,
+) -> EventData {
+    EventData {
+        raw_duration: duration,
+        easing: Functions::EaseLinear,
+        repeat: 0,
+        start_song_time: start,
+        property: EventType::AnimateTrack(ValuePropertyHandle::new(property)),
+        track_key,
+        point_data: Some(
+            parse_quaternion_point_definition(
+                json!([[euler_deg[0], euler_deg[1], euler_deg[2], time]]),
+                context,
+            )
+            .into(),
+        ),
     }
 }
 
@@ -118,7 +135,7 @@ fn bench_start_and_poll(c: &mut Criterion) {
                         keys.push(key);
                     }
 
-                    let ctx = BaseProviderContext::new();
+                    let mut ctx = BaseProviderContext::new();
                     let bpm = 120.0_f32;
                     let song_time = 0.0_f32;
 
@@ -126,7 +143,7 @@ fn bench_start_and_poll(c: &mut Criterion) {
                     let mut events = Vec::with_capacity(keys.len());
                     let mut max_end = 0.0_f32;
                     for &key in &keys {
-                        let ev = make_event(key, 2.0, 0.0);
+                        let ev = make_event(key, &mut ctx, 2.0, 0.0);
                         max_end = max_end.max(ev.start_song_time + ev.raw_duration);
                         events.push(ev);
                     }
@@ -172,7 +189,7 @@ fn bench_multi_props(c: &mut Criterion) {
                         keys.push(key);
                     }
 
-                    let ctx = BaseProviderContext::new();
+                    let mut ctx = BaseProviderContext::new();
                     let bpm = 120.0_f32;
                     let song_time = 0.0_f32;
 
@@ -182,24 +199,30 @@ fn bench_multi_props(c: &mut Criterion) {
 
                     for &key in &keys {
                         // position: 3 events
-                        let ev1 = make_event2(
+                        let ev1 = make_event_vec3(
                             key,
+                            &mut ctx,
                             V2_POSITION,
-                            make_vec3_point(0.0, 0.0, 0.0, 0.0),
+                            [0.0, 0.0, 0.0],
+                            0.0,
                             0.5,
                             0.0,
                         );
-                        let ev2 = make_event2(
+                        let ev2 = make_event_vec3(
                             key,
+                            &mut ctx,
                             V2_POSITION,
-                            make_vec3_point(1.0, 0.0, 1.0, 1.0),
+                            [1.0, 0.0, 1.0],
+                            1.0,
                             1.0,
                             0.3,
                         );
-                        let ev3 = make_event2(
+                        let ev3 = make_event_vec3(
                             key,
+                            &mut ctx,
                             V2_POSITION,
-                            make_vec3_point(2.0, 0.0, 0.0, 2.0),
+                            [2.0, 0.0, 0.0],
+                            2.0,
                             0.8,
                             0.8,
                         );
@@ -211,17 +234,21 @@ fn bench_multi_props(c: &mut Criterion) {
                         events.push(ev3);
 
                         // local rotation: 2 events
-                        let r1 = make_event2(
+                        let r1 = make_event_quat(
                             key,
+                            &mut ctx,
                             V2_LOCAL_ROTATION,
-                            make_quat_point(0.0, 0.0, 0.0, 0.0),
+                            [0.0, 0.0, 0.0],
+                            0.0,
                             0.6,
                             0.0,
                         );
-                        let r2 = make_event2(
+                        let r2 = make_event_quat(
                             key,
+                            &mut ctx,
                             V2_LOCAL_ROTATION,
-                            make_quat_point(0.0, 90.0, 0.0, 1.0),
+                            [0.0, 90.0, 0.0],
+                            1.0,
                             1.2,
                             0.5,
                         );
@@ -231,17 +258,21 @@ fn bench_multi_props(c: &mut Criterion) {
                         events.push(r2);
 
                         // scale: 2 events
-                        let s1 = make_event2(
+                        let s1 = make_event_vec3(
                             key,
+                            &mut ctx,
                             V2_SCALE,
-                            make_vec3_point(1.0, 1.0, 1.0, 0.0),
+                            [1.0, 1.0, 1.0],
+                            0.0,
                             0.4,
                             0.0,
                         );
-                        let s2 = make_event2(
+                        let s2 = make_event_vec3(
                             key,
+                            &mut ctx,
                             V2_SCALE,
-                            make_vec3_point(2.0, 2.0, 2.0, 0.8),
+                            [2.0, 2.0, 2.0],
+                            0.8,
                             0.9,
                             0.6,
                         );
@@ -251,17 +282,21 @@ fn bench_multi_props(c: &mut Criterion) {
                         events.push(s2);
 
                         // color: 2 events
-                        let c1 = make_event2(
+                        let c1 = make_event_vec4(
                             key,
+                            &mut ctx,
                             V2_COLOR,
-                            make_vec4_point(1.0, 0.0, 0.0, 1.0, 0.0),
+                            [1.0, 0.0, 0.0, 1.0],
+                            0.0,
                             0.7,
                             0.0,
                         );
-                        let c2 = make_event2(
+                        let c2 = make_event_vec4(
                             key,
+                            &mut ctx,
                             V2_COLOR,
-                            make_vec4_point(0.0, 1.0, 0.0, 1.0, 1.0),
+                            [0.0, 1.0, 0.0, 1.0],
+                            1.0,
                             1.1,
                             0.4,
                         );
