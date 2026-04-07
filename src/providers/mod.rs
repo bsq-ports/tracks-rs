@@ -1,5 +1,5 @@
 use crate::base_provider_context::BaseProviderContext;
-use std::{borrow::Cow, cell::RefCell, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 
 pub mod base;
 #[cfg(feature = "ffi")]
@@ -19,9 +19,8 @@ use smallvec::SmallVec;
 /// based on the context
 /// and the values
 pub trait AbstractValueProvider {
-    // TODO: make this return a value instead of a reference
-    // we can theoretically limit this to [f32; 4],
-    // or a Cow<'a, [f32; 4]> to avoid allocations
+    /// Get an array of values
+    /// the values are [T, time] e.g for a Vec3 it would be [x, y, z, time]
     fn values(&self, context: &BaseProviderContext) -> SmallVec<[f32; 4]>;
 }
 

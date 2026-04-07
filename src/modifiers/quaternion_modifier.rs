@@ -43,11 +43,11 @@ impl QuaternionModifier {
         let mut count = 0usize;
         'outer: for provider in values {
             let vals = provider.values(context);
-            for v in vals.iter() {
+            for v in vals {
                 if count >= Self::VALUE_COUNT {
                     break 'outer;
                 }
-                vec3[count] = *v;
+                vec3[count] = v;
                 count += 1;
             }
         }

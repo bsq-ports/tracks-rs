@@ -45,7 +45,7 @@ where
                 let mut values = [0.0; T::VALUE_COUNT];
                 let mut i = 0;
                 for value in value_providers {
-                    for v in value.values(context).iter().copied() {
+                    for v in value.values(context) {
                         if i >= T::VALUE_COUNT {
                             break;
                         }

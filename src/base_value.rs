@@ -118,9 +118,9 @@ impl BaseValue {
         }
     }
 
-    pub fn as_small_vec(&self) -> SmallVec<[f32; 4]> {
+    pub fn into_small_vec(self) -> SmallVec<[f32; 4]> {
         match self {
-            BaseValue::Float(v) => smallvec::smallvec![*v],
+            BaseValue::Float(v) => smallvec::smallvec![v],
             BaseValue::Vector3(v) => smallvec::smallvec![v.x, v.y, v.z],
             BaseValue::Vector4(v) => smallvec::smallvec![v.x, v.y, v.z, v.w],
             BaseValue::Quaternion(v) => smallvec::smallvec![v.x, v.y, v.z, v.w],

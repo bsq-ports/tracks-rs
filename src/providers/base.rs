@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 
 use smallvec::SmallVec;
 
@@ -18,7 +17,7 @@ impl BaseProviderValues {
 }
 
 impl AbstractValueProvider for BaseProviderValues {
-    fn values<'a>(&'a self, context: &BaseProviderContext) -> SmallVec<[f32; 4]> {
+    fn values(&self, context: &BaseProviderContext) -> SmallVec<[f32; 4]> {
         let value = context.get_values(&self.base);
         value.as_small_vec()
     }

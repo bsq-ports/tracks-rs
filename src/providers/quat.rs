@@ -1,8 +1,9 @@
-use std::borrow::Cow;
-
 use super::ValueProvider;
 
-use crate::{base_provider_context::BaseProviderContext, quaternion_utils::QuaternionUtilsExt};
+use crate::{
+    base_provider_context::BaseProviderContext, quaternion_utils::QuaternionUtilsExt,
+    value_types::ValueType,
+};
 
 use super::AbstractValueProvider;
 
@@ -31,6 +32,6 @@ impl AbstractValueProvider for QuaternionProviderValues {
         let rotation = Quat::from_xyzw(source[0], source[1], source[2], source[3]);
         let euler = rotation.to_unity_euler_degrees();
 
-        SmallVec::from(euler.to_array().as_slice())
+        SmallVec::from_slice(&[euler.x, euler.y, euler.z])
     }
 }

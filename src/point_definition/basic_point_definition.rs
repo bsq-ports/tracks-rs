@@ -95,9 +95,9 @@ where
                     .iter()
                     .map(|v| v.values(context))
                     .fold_while([0.0; T::VALUE_COUNT + 1], |mut acc, v| {
-                        for (i, val) in v.iter().enumerate() {
+                        for (i, val) in v.into_iter().enumerate() {
                             if i < T::VALUE_COUNT {
-                                acc[i] = *val;
+                                acc[i] = val;
                             }
                         }
                         itertools::FoldWhile::Continue(acc)

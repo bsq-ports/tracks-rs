@@ -1,7 +1,14 @@
-use glam::{Vec2, Vec3, Vec4};
+use glam::{Vec3, Vec4};
+use smallvec::SmallVec;
 
 use crate::base_value::{BaseValue, WrapBaseValueType};
 
+/// Represents a type that can be used as a value in the system, such as a float, vector, or quaternion.
+/// This trait defines the necessary operations and conversions for these types, allowing them to be used
+/// interchangeably in the animation system.
+///
+/// This is what allows us to have a unified way of handling different types of values (like float, vec3, vec4) in the system,
+/// and to perform operations like interpolation, addition, etc. on them without needing to know the specific type
 pub trait ValueType:
     Default
     + Copy
@@ -27,6 +34,11 @@ pub trait ValueType:
     fn value_lerp(a: Self, b: Self, t: f32) -> Self {
         a + (b - a) * t
     }
+
+    fn to_smallvec(self) -> SmallVec<[f32; Self::VALUE_COUNT]>
+    where
+        [(); Self::VALUE_COUNT]:,
+        [f32; Self::VALUE_COUNT]: smallvec::Array;
 }
 
 // impl ValueType for  {
@@ -57,30 +69,12 @@ impl ValueType for f32 {
     fn base_type() -> WrapBaseValueType {
         WrapBaseValueType::Float
     }
-}
 
-impl ValueType for Vec2 {
-    const VALUE_COUNT: usize = 2;
-
-    fn from_slice(values: &[f32]) -> Self {
-        Vec2::from_slice(values)
-    }
-
-    fn from_translate_slice(values: &[f32]) -> Self {
-        Vec2::from_slice(values)
-    }
-
-    fn from_translate_array(values: [f32; Self::VALUE_COUNT]) -> Self {
-        Vec2::from_array(values)
-    }
-
-    type Array
-        = [f32; Self::VALUE_COUNT]
+    fn to_smallvec(self) -> SmallVec<[f32; Self::VALUE_COUNT]>
     where
-        [(); Self::VALUE_COUNT]:;
-
-    fn base_type() -> WrapBaseValueType {
-        unreachable!("Vec2 is not a valid base type for BaseValue")
+        [(); Self::VALUE_COUNT]:,
+    {
+        SmallVec::from([self])
     }
 }
 
@@ -107,6 +101,14 @@ impl ValueType for Vec3 {
     fn base_type() -> WrapBaseValueType {
         unreachable!("Vec3 is not a valid base type for BaseValue")
     }
+
+    fn to_smallvec(self) -> SmallVec<[f32; Self::VALUE_COUNT]>
+    where
+        [(); Self::VALUE_COUNT]:,
+        [f32; Self::VALUE_COUNT]: smallvec::Array,
+    {
+        SmallVec::from([self.x, self.y, self.z])
+    }
 }
 
 impl ValueType for Vec4 {
@@ -131,6 +133,14 @@ impl ValueType for Vec4 {
 
     fn base_type() -> WrapBaseValueType {
         WrapBaseValueType::Vec4
+    }
+
+    fn to_smallvec(self) -> SmallVec<[f32; Self::VALUE_COUNT]>
+    where
+        [(); Self::VALUE_COUNT]:,
+        [f32; Self::VALUE_COUNT]: smallvec::Array,
+    {
+        SmallVec::from([self.x, self.y, self.z, self.w])
     }
 }
 
@@ -163,5 +173,18 @@ impl ValueType for BaseValue {
 
     fn base_type() -> WrapBaseValueType {
         WrapBaseValueType::Unknown
+    }
+
+    fn to_smallvec(self) -> SmallVec<[f32; Self::VALUE_COUNT]>
+    where
+        [(); Self::VALUE_COUNT]:,
+        [f32; Self::VALUE_COUNT]: smallvec::Array,
+    {
+        match self {
+            BaseValue::Float(f) => SmallVec::from([f, 0.0, 0.0, 0.0]),
+            BaseValue::Vector3(v) => SmallVec::from([v.x, v.y, v.z, 0.0]),
+            BaseValue::Vector4(v) => SmallVec::from([v.x, v.y, v.z, v.w]),
+            BaseValue::Quaternion(q) => SmallVec::from([q.x, q.y, q.z, q.w]),
+        }
     }
 }

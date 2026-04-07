@@ -1,4 +1,4 @@
-use std::{borrow::Cow, ffi::c_void, slice};
+use std::{ffi::c_void, slice};
 
 use smallvec::SmallVec;
 
@@ -24,6 +24,6 @@ impl AbstractValueProvider for BaseFFIProviderValues {
         let c_values: WrappedValues = unsafe { (*self.fetch)(context, self.user_data) };
         // move to owned values
         let arr = unsafe { slice::from_raw_parts(c_values.values, c_values.length) };
-        arr.iter().copied().collect()
+        SmallVec::from_slice(arr)
     }
 }

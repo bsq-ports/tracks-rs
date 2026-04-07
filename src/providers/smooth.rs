@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 
 use smallvec::{SmallVec, smallvec};
 
@@ -28,7 +27,7 @@ impl SmoothProvidersValues {
 }
 
 impl AbstractValueProvider for SmoothProvidersValues {
-    fn values<'a>(&'a self, _context: &BaseProviderContext) -> SmallVec<[f32; 4]> {
+    fn values(&self, _context: &BaseProviderContext) -> SmallVec<[f32; 4]> {
         SmallVec::from(self.values.as_slice())
     }
 }

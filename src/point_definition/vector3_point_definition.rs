@@ -94,7 +94,7 @@ impl PointDefinitionLike<Vec3> for Vector3PointDefinition {
         let val: ModifierValues<Vec3> = match values.as_slice() {
             // Single static value [T, time]
             [ValueProvider::Static(static_val)]
-                if static_val.values.len() <= Vec3::VALUE_COUNT + 1 =>
+                if static_val.values.len() <= Vec3::VALUE_COUNT =>
             {
                 let values = &static_val.values;
                 ModifierValues::Static(Vec3::from_slice(values))
@@ -104,9 +104,9 @@ impl PointDefinitionLike<Vec3> for Vector3PointDefinition {
                 let count: usize = values.iter().map(|v| v.values(context).len()).sum();
                 assert_eq!(
                     count,
-                    Vec3::VALUE_COUNT + 1,
+                    Vec3::VALUE_COUNT,
                     "modifier point must have {} numbers",
-                    Vec3::VALUE_COUNT + 1
+                    Vec3::VALUE_COUNT
                 );
                 ModifierValues::Dynamic(values)
             }
@@ -137,10 +137,11 @@ impl PointDefinitionLike<Vec3> for Vector3PointDefinition {
                 let collected_values = values
                     .iter()
                     .map(|v| v.values(context))
+                    // + 1 for time value
                     .fold_while([0.0; Vec3::VALUE_COUNT + 1], |mut acc, v| {
-                        for (i, val) in v.iter().enumerate() {
+                        for (i, val) in v.into_iter().enumerate() {
                             if i < Vec3::VALUE_COUNT {
-                                acc[i] = *val;
+                                acc[i] = val;
                             }
                         }
                         itertools::FoldWhile::Continue(acc)

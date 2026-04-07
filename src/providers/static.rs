@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 
 use smallvec::SmallVec;
 
@@ -20,7 +19,7 @@ impl StaticValues {
 }
 
 impl AbstractValueProvider for StaticValues {
-    fn values<'a>(&'a self, _context: &BaseProviderContext) -> SmallVec<[f32; 4]> {
+    fn values(&self, _context: &BaseProviderContext) -> SmallVec<[f32; 4]> {
         self.values.clone()
     }
 }

@@ -44,17 +44,20 @@ impl PointDefinitionLike<Quat> for QuaternionPointDefinition {
         operation: Operation,
         context: &BaseProviderContext,
     ) -> Self::Modifier {
+        // values are stored as euler angles in the point definition, 
+        // but we want to convert them to quaternions for the modifier
+
         let val = match values.as_slice() {
             [ValueProvider::Static(static_val)] if static_val.values(context).len() == 3 => {
                 let values = static_val.values(context);
                 let raw_vector = vec3(values[0], values[1], values[2]);
                 let quat =
-                    Quat::from_unity_euler_degrees(&Vec3::new(values[0], values[1], values[2]));
+                    Quat::from_unity_euler_degrees(&raw_vector);
                 QuaternionValues::Static(raw_vector, quat)
             }
             _ => {
                 let count: usize = values.iter().map(|v| v.values(context).len()).sum();
-                assert_eq!(count, 3, "Vector3 modifier point must have 3 numbers");
+                assert_eq!(count, 3, "Quaternion modifier point must have 3 numbers");
                 QuaternionValues::Dynamic(values)
             }
         };
@@ -74,7 +77,7 @@ impl PointDefinitionLike<Quat> for QuaternionPointDefinition {
                 let values = static_val.values(context);
                 let raw_vector_point = Vec3::new(values[0], values[1], values[2]);
                 let quat =
-                    Quat::from_unity_euler_degrees(&Vec3::new(values[0], values[1], values[2]));
+                    Quat::from_unity_euler_degrees(&raw_vector_point);
 
                 (QuaternionValues::Static(raw_vector_point, quat), values[3])
             }

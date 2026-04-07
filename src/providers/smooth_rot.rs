@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 
 use super::UpdateableValues;
 
@@ -29,7 +28,7 @@ impl SmoothRotationProvidersValues {
 }
 
 impl AbstractValueProvider for SmoothRotationProvidersValues {
-    fn values<'a>(&'a self, _context: &BaseProviderContext) -> SmallVec<[f32; 4]> {
+    fn values(&self, _context: &BaseProviderContext) -> SmallVec<[f32; 4]> {
         SmallVec::from(self.values.to_array().as_slice())
     }
 }

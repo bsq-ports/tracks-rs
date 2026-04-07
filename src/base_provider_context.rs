@@ -349,7 +349,7 @@ impl BaseProviderContext {
             })
             .collect();
 
-        let src = source.values(self).to_vec();
+        let src = source.values(self);
         ValueProvider::PartialProvider(crate::providers::partial::PartialProviderValues::new(
             src, parts,
         ))
@@ -395,7 +395,7 @@ impl BaseProviderContext {
                 )))
             }
             _ => {
-                let src = source.values(self).to_vec();
+                let src = source.values(self);
                 ValueProvider::SmoothProviders(Rc::new(RefCell::new(SmoothProvidersValues::new(
                     src, mult,
                 ))))

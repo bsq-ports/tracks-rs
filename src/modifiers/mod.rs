@@ -15,7 +15,7 @@ pub enum ModifierValues<T> {
 }
 
 impl<T> ModifierValues<T> {
-    pub fn static_values(self) -> Option<T> {
+    pub fn into_static_values(self) -> Option<T> {
         match self {
             ModifierValues::Static(s) => Some(s),
             _ => None,
