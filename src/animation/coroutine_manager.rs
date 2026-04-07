@@ -29,6 +29,9 @@ struct CoroutineTask {
     event_type: EventType,
     repeat: u32,
     duration_song_time: f32,
+    /// Whether the point definition has a base provider, which affects whether we can skip interpolation when finished
+    /// this is here to avoid repeatedly calling has_base_provider on the point definition during interpolation, which can be expensive for complex definitions with many modifiers
+    has_base_provider: bool,
     easing: Functions,
     start_song_time: f32,
     track_key: TrackKey,
@@ -88,7 +91,9 @@ impl CoroutineManager {
         if let Some(pos) = self.coroutines.iter().position(|x| {
             x.track_key == event_group_data.track_key && x.event_type == event_group_data.property
         }) {
-            self.coroutines.remove(pos);
+            // order does not matter for coroutine execution semantics, so use swap_remove
+            // to avoid O(n) shifts on cancellation-heavy paths
+            self.coroutines.swap_remove(pos);
         }
 
         // iterate entire list and remove all matching (in case of repeats)
@@ -132,6 +137,7 @@ impl CoroutineManager {
         tracks_holder: &mut TracksHolder,
     ) -> Option<CoroutineTask> {
         let mut repeat = data.repeat;
+        let mut has_base_provider = false;
 
         let no_duration = duration_song_time == 0.0
             || data.start_song_time + (duration_song_time * (repeat as f32 + 1.0))
@@ -158,8 +164,8 @@ impl CoroutineManager {
 
                 let point_data = point_data.as_ref().unwrap();
 
-                let has_base = point_data.has_base_provider();
-                if no_duration || (point_data.get_count() <= 1 && !has_base) {
+                has_base_provider = point_data.has_base_provider();
+                if no_duration || (point_data.get_count() <= 1 && !has_base_provider) {
                     set_property_value(point_data, property, 1.0, provider_context);
                     return None;
                 }
@@ -171,7 +177,7 @@ impl CoroutineManager {
                     data.start_song_time,
                     current_song_time,
                     data.easing,
-                    has_base,
+                    has_base_provider,
                     provider_context,
                 );
                 if result == CoroutineResult::Break {
@@ -210,6 +216,7 @@ impl CoroutineManager {
             easing: data.easing,
             track_key,
             event_type: property,
+            has_base_provider,
 
             point_definition: point_data,
 
@@ -225,10 +232,18 @@ impl CoroutineManager {
         context: &BaseProviderContext,
         tracks_holder: &mut TracksHolder,
     ) {
-        // Yield and remove coroutines that are finished
-        self.coroutines.retain_mut(|event| {
-            Self::poll_event(song_time, context, event, tracks_holder) == CoroutineResult::Yield
-        });
+        // Poll in-place and remove completed coroutines with swap_remove to avoid
+        // compaction costs from retain_mut when many entries complete each frame.
+        let mut i = 0;
+        while i < self.coroutines.len() {
+            let result =
+                Self::poll_event(song_time, context, &mut self.coroutines[i], tracks_holder);
+            if result == CoroutineResult::Yield {
+                i += 1;
+            } else {
+                self.coroutines.swap_remove(i);
+            }
+        }
     }
 
     fn poll_event(
@@ -251,7 +266,7 @@ impl CoroutineManager {
                         return CoroutineResult::Break;
                     }
                 };
-                let has_base = point_def.has_base_provider();
+                let has_base = event_data.has_base_provider;
                 let value_property = track
                     .properties
                     .get_by_handle_mut(value_property_handle)
