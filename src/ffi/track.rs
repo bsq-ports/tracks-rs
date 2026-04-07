@@ -3,7 +3,11 @@ use slotmap::{Key, KeyData};
 use crate::{
     animation::{
         game_object::GameObject,
-        property::{PathProperty, ValueProperty},
+        property::{
+            BasePathProperty, BaseValueProperty, FloatPathProperty, FloatValueProperty,
+            QuatPathProperty, QuatValueProperty, Vec3PathProperty, Vec3ValueProperty,
+            Vec4PathProperty, Vec4ValueProperty,
+        },
         track::{PropertyNames, Track},
         tracks_holder::TrackKey,
     },
@@ -55,40 +59,40 @@ pub struct CPropertiesMap {
     // to 112 bytes from 312 bytes
 
     // Noodle
-    pub position: *mut ValueProperty,
-    pub offset_position: *mut ValueProperty,
-    pub rotation: *mut ValueProperty,
-    pub offset_rotation: *mut ValueProperty,
-    pub scale: *mut ValueProperty,
-    pub local_rotation: *mut ValueProperty,
-    pub local_position: *mut ValueProperty,
-    pub dissolve: *mut ValueProperty,
-    pub dissolve_arrow: *mut ValueProperty,
-    pub time: *mut ValueProperty,
-    pub cuttable: *mut ValueProperty,
+    pub position: *mut Vec3ValueProperty,
+    pub offset_position: *mut Vec3ValueProperty,
+    pub rotation: *mut QuatValueProperty,
+    pub offset_rotation: *mut QuatValueProperty,
+    pub scale: *mut Vec3ValueProperty,
+    pub local_rotation: *mut QuatValueProperty,
+    pub local_position: *mut Vec3ValueProperty,
+    pub dissolve: *mut FloatValueProperty,
+    pub dissolve_arrow: *mut FloatValueProperty,
+    pub time: *mut FloatValueProperty,
+    pub cuttable: *mut FloatValueProperty,
 
     // Chroma
-    pub color: *mut ValueProperty,
-    pub attentuation: *mut ValueProperty, // PropertyType::linear
-    pub fog_offset: *mut ValueProperty,   // PropertyType::linear
-    pub height_fog_start_y: *mut ValueProperty, // PropertyType::linear
-    pub height_fog_height: *mut ValueProperty, // PropertyType::linear
+    pub color: *mut Vec4ValueProperty,
+    pub attentuation: *mut FloatValueProperty, // PropertyType::linear
+    pub fog_offset: *mut FloatValueProperty,   // PropertyType::linear
+    pub height_fog_start_y: *mut FloatValueProperty, // PropertyType::linear
+    pub height_fog_height: *mut FloatValueProperty, // PropertyType::linear
 }
 
 #[repr(C)]
 pub struct CPathPropertiesMap {
-    pub position: *mut PathProperty,
-    pub offset_position: *mut PathProperty,
-    pub rotation: *mut PathProperty,
-    pub offset_rotation: *mut PathProperty,
-    pub scale: *mut PathProperty,
-    pub local_rotation: *mut PathProperty,
-    pub local_position: *mut PathProperty,
-    pub definite_position: *mut PathProperty,
-    pub dissolve: *mut PathProperty,
-    pub dissolve_arrow: *mut PathProperty,
-    pub cuttable: *mut PathProperty,
-    pub color: *mut PathProperty,
+    pub position: *mut Vec3PathProperty,
+    pub offset_position: *mut Vec3PathProperty,
+    pub rotation: *mut QuatPathProperty,
+    pub offset_rotation: *mut QuatPathProperty,
+    pub scale: *mut Vec3PathProperty,
+    pub local_rotation: *mut QuatPathProperty,
+    pub local_position: *mut Vec3PathProperty,
+    pub definite_position: *mut Vec3PathProperty,
+    pub dissolve: *mut FloatPathProperty,
+    pub dissolve_arrow: *mut FloatPathProperty,
+    pub cuttable: *mut FloatPathProperty,
+    pub color: *mut Vec4PathProperty,
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -339,7 +343,7 @@ pub unsafe extern "C" fn track_get_game_objects(
 pub unsafe extern "C" fn track_register_property(
     track: *mut Track,
     id: *const c_char,
-    property: *mut ValueProperty,
+    property: *mut BaseValueProperty,
 ) {
     if track.is_null() || id.is_null() || property.is_null() {
         return;
@@ -364,7 +368,7 @@ pub unsafe extern "C" fn track_register_property(
 pub unsafe extern "C" fn track_get_property(
     track: *mut Track,
     id: *const c_char,
-) -> *mut ValueProperty {
+) -> *mut BaseValueProperty {
     if track.is_null() || id.is_null() {
         return ptr::null_mut();
     }
@@ -374,7 +378,7 @@ pub unsafe extern "C" fn track_get_property(
         let Ok(str_id) = c_str.to_str() else {
             return ptr::null_mut();
         };
-        match (*track).properties.get_mut(str_id) {
+        match (*track).properties.properties.get_mut(str_id) {
             Some(property) => property,
             None => ptr::null_mut(),
         }
@@ -389,7 +393,7 @@ pub unsafe extern "C" fn track_get_property(
 pub unsafe extern "C" fn track_get_property_by_name(
     track: *mut Track,
     id: PropertyNames,
-) -> *mut ValueProperty {
+) -> *mut std::ffi::c_void {
     if track.is_null() {
         return ptr::null_mut();
     }
@@ -397,7 +401,7 @@ pub unsafe extern "C" fn track_get_property_by_name(
     let track = unsafe { &mut *track };
 
     match track.properties.get_property_by_name_mut(id) {
-        Some(property) => property,
+        Some(property) => property as *mut _ as *mut std::ffi::c_void,
         None => ptr::null_mut(),
     }
 }
@@ -409,7 +413,7 @@ pub unsafe extern "C" fn track_get_property_by_name(
 pub unsafe extern "C" fn track_get_path_property_by_name(
     track: *mut Track,
     id: PropertyNames,
-) -> *mut PathProperty {
+) -> *mut std::ffi::c_void {
     if track.is_null() {
         return ptr::null_mut();
     }
@@ -417,7 +421,7 @@ pub unsafe extern "C" fn track_get_path_property_by_name(
     let track = unsafe { &mut *track };
 
     match track.path_properties.get_property_by_name_mut(id) {
-        Some(property) => property,
+        Some(property) => property as *mut _ as *mut std::ffi::c_void,
         None => ptr::null_mut(),
     }
 }
@@ -433,7 +437,7 @@ pub unsafe extern "C" fn track_get_path_property_by_name(
 pub unsafe extern "C" fn track_register_path_property(
     track: *mut Track,
     id: *const c_char,
-    property: *const PathProperty,
+    property: *const BasePathProperty,
 ) {
     if track.is_null() || id.is_null() || property.is_null() {
         return;
@@ -458,7 +462,7 @@ pub unsafe extern "C" fn track_register_path_property(
 pub unsafe extern "C" fn track_get_path_property(
     track: *mut Track,
     id: *const c_char,
-) -> *mut PathProperty {
+) -> *mut BasePathProperty {
     if track.is_null() || id.is_null() {
         return ptr::null_mut();
     }
@@ -468,7 +472,7 @@ pub unsafe extern "C" fn track_get_path_property(
         let Ok(str_id) = c_str.to_str() else {
             return ptr::null_mut();
         };
-        match (*track).path_properties.get_mut(str_id) {
+        match (*track).path_properties.path_properties.get_mut(str_id) {
             Some(property) => property,
             None => ptr::null_mut(),
         }
@@ -489,22 +493,22 @@ pub unsafe extern "C" fn track_get_properties_map(track: *mut Track) -> CPropert
     let track = unsafe { &mut *track };
 
     CPropertiesMap {
-        position: &mut track.properties.position as *mut ValueProperty,
-        offset_position: &mut track.properties.offset_position as *mut ValueProperty,
-        rotation: &mut track.properties.rotation as *mut ValueProperty,
-        offset_rotation: &mut track.properties.offset_rotation as *mut ValueProperty,
-        scale: &mut track.properties.scale as *mut ValueProperty,
-        local_rotation: &mut track.properties.local_rotation as *mut ValueProperty,
-        local_position: &mut track.properties.local_position as *mut ValueProperty,
-        dissolve: &mut track.properties.dissolve as *mut ValueProperty,
-        dissolve_arrow: &mut track.properties.dissolve_arrow as *mut ValueProperty,
-        time: &mut track.properties.time as *mut ValueProperty,
-        cuttable: &mut track.properties.cuttable as *mut ValueProperty,
-        color: &mut track.properties.color as *mut ValueProperty,
-        attentuation: &mut track.properties.attentuation as *mut ValueProperty,
-        fog_offset: &mut track.properties.fog_offset as *mut ValueProperty,
-        height_fog_start_y: &mut track.properties.height_fog_start_y as *mut ValueProperty,
-        height_fog_height: &mut track.properties.height_fog_height as *mut ValueProperty,
+        position: &mut track.properties.position as *mut Vec3ValueProperty,
+        offset_position: &mut track.properties.offset_position as *mut Vec3ValueProperty,
+        rotation: &mut track.properties.rotation as *mut QuatValueProperty,
+        offset_rotation: &mut track.properties.offset_rotation as *mut QuatValueProperty,
+        scale: &mut track.properties.scale as *mut Vec3ValueProperty,
+        local_rotation: &mut track.properties.local_rotation as *mut QuatValueProperty,
+        local_position: &mut track.properties.local_position as *mut Vec3ValueProperty,
+        dissolve: &mut track.properties.dissolve as *mut FloatValueProperty,
+        dissolve_arrow: &mut track.properties.dissolve_arrow as *mut FloatValueProperty,
+        time: &mut track.properties.time as *mut FloatValueProperty,
+        cuttable: &mut track.properties.cuttable as *mut FloatValueProperty,
+        color: &mut track.properties.color as *mut Vec4ValueProperty,
+        attentuation: &mut track.properties.attentuation as *mut FloatValueProperty,
+        fog_offset: &mut track.properties.fog_offset as *mut FloatValueProperty,
+        height_fog_start_y: &mut track.properties.height_fog_start_y as *mut FloatValueProperty,
+        height_fog_height: &mut track.properties.height_fog_height as *mut FloatValueProperty,
     }
 }
 
@@ -521,18 +525,18 @@ pub unsafe extern "C" fn track_get_path_properties_map(track: *mut Track) -> CPa
     let track = unsafe { &mut *track };
 
     CPathPropertiesMap {
-        position: &mut track.path_properties.position as *mut PathProperty,
-        offset_position: &mut track.path_properties.offset_position as *mut PathProperty,
-        rotation: &mut track.path_properties.rotation as *mut PathProperty,
-        offset_rotation: &mut track.path_properties.offset_rotation as *mut PathProperty,
-        scale: &mut track.path_properties.scale as *mut PathProperty,
-        local_rotation: &mut track.path_properties.local_rotation as *mut PathProperty,
-        local_position: &mut track.path_properties.local_position as *mut PathProperty,
-        definite_position: &mut track.path_properties.definite_position as *mut PathProperty,
-        dissolve: &mut track.path_properties.dissolve as *mut PathProperty,
-        dissolve_arrow: &mut track.path_properties.dissolve_arrow as *mut PathProperty,
-        cuttable: &mut track.path_properties.cuttable as *mut PathProperty,
-        color: &mut track.path_properties.color as *mut PathProperty,
+        position: &mut track.path_properties.position as *mut Vec3PathProperty,
+        offset_position: &mut track.path_properties.offset_position as *mut Vec3PathProperty,
+        rotation: &mut track.path_properties.rotation as *mut QuatPathProperty,
+        offset_rotation: &mut track.path_properties.offset_rotation as *mut QuatPathProperty,
+        scale: &mut track.path_properties.scale as *mut Vec3PathProperty,
+        local_rotation: &mut track.path_properties.local_rotation as *mut QuatPathProperty,
+        local_position: &mut track.path_properties.local_position as *mut Vec3PathProperty,
+        definite_position: &mut track.path_properties.definite_position as *mut Vec3PathProperty,
+        dissolve: &mut track.path_properties.dissolve as *mut FloatPathProperty,
+        dissolve_arrow: &mut track.path_properties.dissolve_arrow as *mut FloatPathProperty,
+        cuttable: &mut track.path_properties.cuttable as *mut FloatPathProperty,
+        color: &mut track.path_properties.color as *mut Vec4PathProperty,
     }
 }
 

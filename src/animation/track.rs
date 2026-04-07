@@ -1,7 +1,9 @@
 use std::{fmt::Display, rc::Rc, str::FromStr};
 
 use crate::{
-    animation::property::{PathProperty, ValueProperty},
+    animation::property::{
+        BasePathProperty, BaseValueProperty, FloatPathProperty, FloatValueProperty, PathProperty, PathPropertyLike, QuatPathProperty, QuatValueProperty, ValueProperty, ValuePropertyLike, Vec3PathProperty, Vec3ValueProperty, Vec4PathProperty, Vec4ValueProperty
+    },
     base_value::WrapBaseValueType,
 };
 
@@ -107,49 +109,49 @@ pub enum PropertyNames {
 /// Fast access to common path properties is provided via dedicated fields.
 #[derive(Clone)]
 pub struct PathPropertiesMap {
-    pub path_properties: ahash::AHashMap<String, PathProperty>,
+    pub path_properties: ahash::AHashMap<String, BasePathProperty>,
 
-    pub position: PathProperty,
-    pub offset_position: PathProperty,
-    pub rotation: PathProperty,
-    pub offset_rotation: PathProperty,
-    pub scale: PathProperty,
-    pub local_rotation: PathProperty,
-    pub local_position: PathProperty,
-    pub definite_position: PathProperty,
-    pub dissolve: PathProperty,
-    pub dissolve_arrow: PathProperty,
-    pub cuttable: PathProperty,
-    pub color: PathProperty,
+    pub position: Vec3PathProperty,
+    pub offset_position: Vec3PathProperty,
+    pub rotation: QuatPathProperty,
+    pub offset_rotation: QuatPathProperty,
+    pub scale: Vec3PathProperty,
+    pub local_rotation: QuatPathProperty,
+    pub local_position: Vec3PathProperty,
+    pub definite_position: Vec3PathProperty,
+    pub dissolve: FloatPathProperty,
+    pub dissolve_arrow: FloatPathProperty,
+    pub cuttable: FloatPathProperty,
+    pub color: Vec4PathProperty,
 }
 
 /// A PropertiesMap holds a collection of ValueProperties associated with a Track.
 /// Fast access to common properties is provided via dedicated fields.
 #[derive(Clone)]
 pub struct PropertiesMap {
-    pub properties: ahash::AHashMap<String, ValueProperty>,
+    pub properties: ahash::AHashMap<String, BaseValueProperty>,
 
     // hard defined properties
 
     // Noodle
-    pub position: ValueProperty,
-    pub offset_position: ValueProperty,
-    pub rotation: ValueProperty,
-    pub offset_rotation: ValueProperty,
-    pub scale: ValueProperty,
-    pub local_rotation: ValueProperty,
-    pub local_position: ValueProperty,
-    pub dissolve: ValueProperty,
-    pub dissolve_arrow: ValueProperty,
-    pub time: ValueProperty,
-    pub cuttable: ValueProperty,
+    pub position: Vec3ValueProperty,
+    pub offset_position: Vec3ValueProperty,
+    pub rotation: QuatValueProperty,
+    pub offset_rotation: QuatValueProperty,
+    pub scale: Vec3ValueProperty,
+    pub local_rotation: QuatValueProperty,
+    pub local_position: Vec3ValueProperty,
+    pub dissolve: FloatValueProperty,
+    pub dissolve_arrow: FloatValueProperty,
+    pub time: FloatValueProperty,
+    pub cuttable: FloatValueProperty,
 
     // Chroma
-    pub color: ValueProperty,
-    pub attentuation: ValueProperty,       // PropertyType::linear
-    pub fog_offset: ValueProperty,         // PropertyType::linear
-    pub height_fog_start_y: ValueProperty, // PropertyType::linear
-    pub height_fog_height: ValueProperty,  // PropertyType::linear
+    pub color: Vec4ValueProperty,
+    pub attentuation: FloatValueProperty, // PropertyType::linear
+    pub fog_offset: FloatValueProperty,   // PropertyType::linear
+    pub height_fog_start_y: FloatValueProperty, // PropertyType::linear
+    pub height_fog_height: FloatValueProperty, // PropertyType::linear
 }
 
 /// A GameObjectCallback is a function that gets called when a game object is added or removed from a Track.
@@ -171,11 +173,11 @@ pub struct Track {
 }
 
 impl Track {
-    pub fn register_property(&mut self, id: String, property: ValueProperty) {
+    pub fn register_property(&mut self, id: String, property: BaseValueProperty) {
         self.properties.insert(id, property);
     }
 
-    pub fn register_path_property(&mut self, id: String, property: PathProperty) {
+    pub fn register_path_property(&mut self, id: String, property: BasePathProperty) {
         self.path_properties.insert(id, property);
     }
 
@@ -240,23 +242,23 @@ impl Default for PropertiesMap {
     fn default() -> Self {
         Self {
             properties: Default::default(),
-            position: ValueProperty::empty(WrapBaseValueType::Vec3),
-            offset_position: ValueProperty::empty(WrapBaseValueType::Vec3),
-            rotation: ValueProperty::empty(WrapBaseValueType::Quat),
-            offset_rotation: ValueProperty::empty(WrapBaseValueType::Quat),
-            scale: ValueProperty::empty(WrapBaseValueType::Vec3),
-            local_rotation: ValueProperty::empty(WrapBaseValueType::Quat),
-            local_position: ValueProperty::empty(WrapBaseValueType::Vec3),
-            dissolve: ValueProperty::empty(WrapBaseValueType::Float),
-            dissolve_arrow: ValueProperty::empty(WrapBaseValueType::Float),
-            time: ValueProperty::empty(WrapBaseValueType::Float),
-            cuttable: ValueProperty::empty(WrapBaseValueType::Float),
-            color: ValueProperty::empty(WrapBaseValueType::Vec4),
-            attentuation: ValueProperty::empty(WrapBaseValueType::Float),
+            position: ValueProperty::empty(),
+            offset_position: ValueProperty::empty(),
+            rotation: ValueProperty::empty(),
+            offset_rotation: ValueProperty::empty(),
+            scale: ValueProperty::empty(),
+            local_rotation: ValueProperty::empty(),
+            local_position: ValueProperty::empty(),
+            dissolve: ValueProperty::empty(),
+            dissolve_arrow: ValueProperty::empty(),
+            time: ValueProperty::empty(),
+            cuttable: ValueProperty::empty(),
+            color: ValueProperty::empty(),
+            attentuation: ValueProperty::empty(),
 
-            fog_offset: ValueProperty::empty(WrapBaseValueType::Float),
-            height_fog_start_y: ValueProperty::empty(WrapBaseValueType::Float),
-            height_fog_height: ValueProperty::empty(WrapBaseValueType::Float),
+            fog_offset: ValueProperty::empty(),
+            height_fog_start_y: ValueProperty::empty(),
+            height_fog_height: ValueProperty::empty(),
         }
     }
 }
@@ -265,18 +267,18 @@ impl Default for PathPropertiesMap {
     fn default() -> Self {
         Self {
             path_properties: Default::default(),
-            position: PathProperty::empty(WrapBaseValueType::Vec3),
-            offset_position: PathProperty::empty(WrapBaseValueType::Vec3),
-            rotation: PathProperty::empty(WrapBaseValueType::Quat),
-            offset_rotation: PathProperty::empty(WrapBaseValueType::Quat),
-            scale: PathProperty::empty(WrapBaseValueType::Vec3),
-            local_rotation: PathProperty::empty(WrapBaseValueType::Quat),
-            local_position: PathProperty::empty(WrapBaseValueType::Vec3),
-            definite_position: PathProperty::empty(WrapBaseValueType::Vec3),
-            dissolve: PathProperty::empty(WrapBaseValueType::Float),
-            dissolve_arrow: PathProperty::empty(WrapBaseValueType::Float),
-            cuttable: PathProperty::empty(WrapBaseValueType::Float),
-            color: PathProperty::empty(WrapBaseValueType::Vec4),
+            position: PathProperty::empty(),
+            offset_position: PathProperty::empty(),
+            rotation: PathProperty::empty(),
+            offset_rotation: PathProperty::empty(),
+            scale: PathProperty::empty(),
+            local_rotation: PathProperty::empty(),
+            local_position: PathProperty::empty(),
+            definite_position: PathProperty::empty(),
+            dissolve: PathProperty::empty(),
+            dissolve_arrow: PathProperty::empty(),
+            cuttable: PathProperty::empty(),
+            color: PathProperty::empty(),
         }
     }
 }
@@ -294,16 +296,16 @@ impl Default for Track {
 }
 
 impl PropertiesMap {
-    pub fn insert(&mut self, id: String, property: ValueProperty) {
+    pub fn insert(&mut self, id: String, property: BaseValueProperty) {
         match self.get_mut(&id) {
-            Some(prop) => *prop = property,
+            Some(prop) => prop.copy_from(&property),
             None => {
                 self.properties.insert(id, property);
             }
         }
     }
 
-    pub fn get_property_by_name(&self, name: PropertyNames) -> Option<&ValueProperty> {
+    pub fn get_property_by_name(&self, name: PropertyNames) -> Option<&dyn ValuePropertyLike> {
         match name {
             PropertyNames::Position => Some(&self.position),
             PropertyNames::OffsetPosition => Some(&self.offset_position),
@@ -325,7 +327,10 @@ impl PropertiesMap {
         }
     }
 
-    pub fn get_property_by_name_mut(&mut self, name: PropertyNames) -> Option<&mut ValueProperty> {
+    pub fn get_property_by_name_mut(
+        &mut self,
+        name: PropertyNames,
+    ) -> Option<&mut dyn ValuePropertyLike> {
         match name {
             PropertyNames::Position => Some(&mut self.position),
             PropertyNames::OffsetPosition => Some(&mut self.offset_position),
@@ -347,24 +352,24 @@ impl PropertiesMap {
         }
     }
 
-    pub fn get(&self, id: &str) -> Option<&ValueProperty> {
+    pub fn get(&self, id: &str) -> Option<&dyn ValuePropertyLike> {
         match PropertyNames::from_str(id) {
             Ok(name) => self.get_property_by_name(name),
-            _ => self.properties.get(id),
+            _ => self.properties.get(id).map(|s| s as _),
         }
     }
 
-    pub fn get_mut(&mut self, id: &str) -> Option<&mut ValueProperty> {
+    pub fn get_mut(&mut self, id: &str) -> Option<&mut dyn ValuePropertyLike> {
         match PropertyNames::from_str(id) {
             Ok(name) => self.get_property_by_name_mut(name),
-            _ => self.properties.get_mut(id),
+            _ => self.properties.get_mut(id).map(|p| p as _),
         }
     }
 
     // faster access via handle
-    pub fn get_by_handle(&self, handle: &ValuePropertyHandle) -> Option<&ValueProperty> {
+    pub fn get_by_handle(&self, handle: &ValuePropertyHandle) -> Option<&dyn ValuePropertyLike> {
         match handle {
-            ValuePropertyHandle::ByName(id) => self.properties.get(id),
+            ValuePropertyHandle::ByName(id) => self.properties.get(id).map(|p| p as _),
             ValuePropertyHandle::ById(name) => self.get_property_by_name(*name),
         }
     }
@@ -372,25 +377,25 @@ impl PropertiesMap {
     pub fn get_by_handle_mut(
         &mut self,
         handle: &ValuePropertyHandle,
-    ) -> Option<&mut ValueProperty> {
+    ) -> Option<&mut dyn ValuePropertyLike> {
         match handle {
-            ValuePropertyHandle::ByName(id) => self.properties.get_mut(id),
+            ValuePropertyHandle::ByName(id) => self.properties.get_mut(id).map(|p| p as _),
             ValuePropertyHandle::ById(name) => self.get_property_by_name_mut(*name),
         }
     }
 }
 
 impl PathPropertiesMap {
-    pub fn insert(&mut self, id: String, property: PathProperty) {
+    pub fn insert(&mut self, id: String, property: BasePathProperty) {
         match self.get_mut(&id) {
-            Some(prop) => *prop = property,
+            Some(prop) => *prop.copy_from(property),
             None => {
                 self.path_properties.insert(id, property);
             }
         }
     }
 
-    pub fn get_property_by_name(&self, name: PropertyNames) -> Option<&PathProperty> {
+    pub fn get_property_by_name(&self, name: PropertyNames) -> Option<&PathPropertyLike> {
         match name {
             PropertyNames::Position => Some(&self.position),
             PropertyNames::OffsetPosition => Some(&self.offset_position),
@@ -409,7 +414,7 @@ impl PathPropertiesMap {
         }
     }
 
-    pub fn get_property_by_name_mut(&mut self, name: PropertyNames) -> Option<&mut PathProperty> {
+    pub fn get_property_by_name_mut(&mut self, name: PropertyNames) -> Option<&mut PathPropertyLike> {
         match name {
             PropertyNames::Position => Some(&mut self.position),
             PropertyNames::OffsetPosition => Some(&mut self.offset_position),
@@ -427,14 +432,14 @@ impl PathPropertiesMap {
         }
     }
 
-    pub fn get(&self, id: &str) -> Option<&PathProperty> {
+    pub fn get(&self, id: &str) -> Option<&PathPropertyLike> {
         match PropertyNames::from_str(id) {
             Ok(name) => self.get_property_by_name(name),
             _ => self.path_properties.get(id),
         }
     }
 
-    pub fn get_mut(&mut self, id: &str) -> Option<&mut PathProperty> {
+    pub fn get_mut(&mut self, id: &str) -> Option<&mut PathPropertyLike> {
         match PropertyNames::from_str(id) {
             Ok(name) => self.get_property_by_name_mut(name),
             _ => self.path_properties.get_mut(id),
@@ -442,14 +447,14 @@ impl PathPropertiesMap {
     }
 
     // faster access via handle
-    pub fn get_by_handle(&self, handle: &PathPropertyHandle) -> Option<&PathProperty> {
+    pub fn get_by_handle(&self, handle: &PathPropertyHandle) -> Option<&PathPropertyLike> {
         match handle {
             PathPropertyHandle::ByName(id) => self.path_properties.get(id),
             PathPropertyHandle::ById(name) => self.get_property_by_name(*name),
         }
     }
 
-    pub fn get_by_handle_mut(&mut self, handle: &PathPropertyHandle) -> Option<&mut PathProperty> {
+    pub fn get_by_handle_mut(&mut self, handle: &PathPropertyHandle) -> Option<&mut PathPropertyLike> {
         match handle {
             PathPropertyHandle::ByName(id) => self.path_properties.get_mut(id),
             PathPropertyHandle::ById(name) => self.get_property_by_name_mut(*name),
@@ -566,25 +571,25 @@ mod tests {
         let mut props = PropertiesMap::default();
 
         // Linear / float (dissolve)
-        props.dissolve.set_value(Some(BaseValue::from(3.15_f32)));
+        props.dissolve.set_value(Some((3.15_f32)));
         let f = props.dissolve.get_value().unwrap().as_float().unwrap();
         assert!((f - 3.15).abs() < 1e-6, "float value mismatch");
 
         // Vec3 (scale) - user requested one test must be scale
         let scale = Vec3::new(1.0, 2.0, 3.0);
-        props.scale.set_value(Some(BaseValue::from(scale)));
+        props.scale.set_value(Some((scale)));
         let got_scale = props.scale.get_value().unwrap().as_vec3().unwrap();
         assert_eq!(got_scale, scale, "scale Vec3 mismatch");
 
         // Vec4 (color)
         let color = Vec4::new(0.1, 0.2, 0.3, 0.4);
-        props.color.set_value(Some(BaseValue::from(color)));
+        props.color.set_value(Some((color)));
         let got_color = props.color.get_value().unwrap().as_vec4().unwrap();
         assert_eq!(got_color, color, "color Vec4 mismatch");
 
         // Quat (rotation)
         let quat = Quat::from_array([0.0, 0.0, 0.0, 1.0]);
-        props.rotation.set_value(Some(BaseValue::from(quat)));
+        props.rotation.set_value(Some((quat)));
         let got_quat = props.rotation.get_value().unwrap().as_quat().unwrap();
         assert_eq!(got_quat, quat, "rotation Quat mismatch");
     }
@@ -611,7 +616,7 @@ mod tests {
         let mut props = PropertiesMap::default();
 
         // create a custom float property and insert it under a custom id
-        let mut custom_prop = ValueProperty::empty(WrapBaseValueType::Float);
+        let mut custom_prop = ValueProperty::empty();
         custom_prop.set_value(Some(BaseValue::from(9.99_f32)));
 
         props.insert("custom_prop".to_string(), custom_prop);
@@ -659,7 +664,7 @@ mod tests {
         sleep(Duration::from_millis(1));
 
         // Set dissolve to an initial value
-        props.dissolve.set_value(Some(BaseValue::from(0.1_f32)));
+        props.dissolve.set_value(Some((0.1_f32)));
         let first = props
             .dissolve
             .get_value()
@@ -677,7 +682,7 @@ mod tests {
         );
 
         // Update dissolve to a new value
-        props.dissolve.set_value(Some(BaseValue::from(0.2_f32)));
+        props.dissolve.set_value(Some((0.2_f32)));
         let second = props
             .dissolve
             .get_value()

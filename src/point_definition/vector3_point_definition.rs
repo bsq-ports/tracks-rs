@@ -10,7 +10,7 @@ use crate::{
     modifiers::{ModifierValues, modifier::BasicModifier, operation::Operation},
     point_data::{PointDataLike, basic_point_data::BasicPointData},
     prelude::{AbstractValueProvider, ValueProvider},
-    value_types::ValueType,
+    value_types::{Lerpable, ValueType},
 };
 
 use super::PointDefinitionLike;

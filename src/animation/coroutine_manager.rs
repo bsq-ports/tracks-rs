@@ -2,8 +2,7 @@ use log::debug;
 
 use crate::{
     animation::{
-        track::Track,
-        tracks_holder::{TrackKey, TracksHolder},
+        property::ValuePropertyLike, track::Track, tracks_holder::{TrackKey, TracksHolder}
     },
     base_provider_context::BaseProviderContext,
     easings::functions::Functions,
@@ -11,6 +10,7 @@ use crate::{
         PointDefinitionLike,
         base_point_definition::{self},
     },
+    value_types::{Lerpable, ValueType},
 };
 
 use super::{
@@ -301,16 +301,19 @@ impl CoroutineManager {
 }
 
 #[allow(clippy::too_many_arguments)]
-fn animate_track(
-    points: &base_point_definition::BasePointDefinition,
-    property: &mut ValueProperty,
+fn animate_track<T>(
+    points: &impl PointDefinitionLike<T>,
+    property: &mut ValuePropertyLike,
     duration: f32,
     start_song_time: f32,
     current_song_time: f32,
     easing: Functions,
     non_lazy: bool,
     context: &BaseProviderContext,
-) -> CoroutineResult {
+) -> CoroutineResult
+where
+    T: ValueType + std::cmp::PartialEq,
+{
     let elapsed_time = current_song_time - start_song_time;
 
     // clamped normalized time
@@ -336,13 +339,19 @@ fn animate_track(
     CoroutineResult::Break
 }
 
-fn assign_path_animation(
-    interpolation: &mut PathProperty,
+fn assign_path_animation<PDL, V>(
+    interpolation: &mut PathProperty<PDL, V>,
     duration: f32,
     start_time: f32,
     easing: Functions,
     song_time: f32,
-) -> CoroutineResult {
+) -> CoroutineResult
+where
+    PDL: PointDefinitionLike<V>,
+    V: std::clone::Clone,
+    V: std::default::Default,
+    V: Lerpable + ValueType,
+{
     let elapsed_time = song_time - start_time;
     let normalized_time = (elapsed_time / duration).min(1.0);
     interpolation.interpolate_time = easing.interpolate(normalized_time);
@@ -356,12 +365,16 @@ fn assign_path_animation(
 }
 /// Sets the value of a property based on the points defined in the BasePointDefinition.
 /// Returns true if the property was set to the last point's value. aka finished
-fn set_property_value(
-    points: &base_point_definition::BasePointDefinition,
-    property: &mut ValueProperty,
+fn set_property_value<T>(
+    points: &impl PointDefinitionLike<T>,
+    property: &mut ValuePropertyLike,
     time: f32,
     context: &BaseProviderContext,
-) -> bool {
+) -> bool
+where
+    T: std::cmp::PartialEq,
+    T: ValueType,
+{
     let (value, finished) = points.interpolate(time, context);
 
     if Some(value) == property.get_value() {
@@ -1402,7 +1415,7 @@ mod tests {
         cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev);
 
         // C#-side simulation property
-        let mut prop_csharp = ValueProperty::empty(WrapBaseValueType::Float);
+        let mut prop_csharp = ValueProperty::empty();
 
         // C# simulation state
         let mut cs_repeat = repeat as i32;

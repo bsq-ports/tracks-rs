@@ -141,7 +141,27 @@ typedef struct EventData EventData;
 /**
  * A structure to manage interpolation between two point definitions over time.
  */
-typedef struct PointDefinitionInterpolation PointDefinitionInterpolation;
+typedef struct PointDefinitionInterpolation_BasePointDefinition__BaseValue PointDefinitionInterpolation_BasePointDefinition__BaseValue;
+
+/**
+ * A structure to manage interpolation between two point definitions over time.
+ */
+typedef struct PointDefinitionInterpolation_FloatPointDefinition__f32 PointDefinitionInterpolation_FloatPointDefinition__f32;
+
+/**
+ * A structure to manage interpolation between two point definitions over time.
+ */
+typedef struct PointDefinitionInterpolation_QuaternionPointDefinition__Quat PointDefinitionInterpolation_QuaternionPointDefinition__Quat;
+
+/**
+ * A structure to manage interpolation between two point definitions over time.
+ */
+typedef struct PointDefinitionInterpolation_Vector3PointDefinition__Vec3 PointDefinitionInterpolation_Vector3PointDefinition__Vec3;
+
+/**
+ * A structure to manage interpolation between two point definitions over time.
+ */
+typedef struct PointDefinitionInterpolation_Vector4PointDefinition__Vec4 PointDefinitionInterpolation_Vector4PointDefinition__Vec4;
 
 typedef struct QuaternionPointDefinition QuaternionPointDefinition;
 
@@ -153,7 +173,15 @@ typedef struct Track Track;
 
 typedef struct TracksHolder TracksHolder;
 
-typedef struct ValueProperty ValueProperty;
+typedef struct ValueProperty_BaseValue ValueProperty_BaseValue;
+
+typedef struct ValueProperty_Quat ValueProperty_Quat;
+
+typedef struct ValueProperty_Vec3 ValueProperty_Vec3;
+
+typedef struct ValueProperty_Vec4 ValueProperty_Vec4;
+
+typedef struct ValueProperty_f32 ValueProperty_f32;
 
 typedef struct Vector3PointDefinition Vector3PointDefinition;
 
@@ -264,8 +292,6 @@ typedef struct Vector4InterpolationResult {
   bool is_last;
 } Vector4InterpolationResult;
 
-typedef struct PointDefinitionInterpolation PathProperty;
-
 typedef struct CValueNullable {
   bool has_value;
   struct WrapBaseValue value;
@@ -285,38 +311,68 @@ typedef struct GameObject {
   const void *ptr;
 } GameObject;
 
+typedef struct ValueProperty_BaseValue BaseValueProperty;
+
+typedef struct PointDefinitionInterpolation_BasePointDefinition__BaseValue PathProperty_BasePointDefinition__BaseValue;
+
+typedef PathProperty_BasePointDefinition__BaseValue BasePathProperty;
+
+typedef struct ValueProperty_Vec3 Vec3ValueProperty;
+
+typedef struct ValueProperty_Quat QuatValueProperty;
+
+typedef struct ValueProperty_f32 FloatValueProperty;
+
+typedef struct ValueProperty_Vec4 Vec4ValueProperty;
+
 typedef struct CPropertiesMap {
-  struct ValueProperty *position;
-  struct ValueProperty *offset_position;
-  struct ValueProperty *rotation;
-  struct ValueProperty *offset_rotation;
-  struct ValueProperty *scale;
-  struct ValueProperty *local_rotation;
-  struct ValueProperty *local_position;
-  struct ValueProperty *dissolve;
-  struct ValueProperty *dissolve_arrow;
-  struct ValueProperty *time;
-  struct ValueProperty *cuttable;
-  struct ValueProperty *color;
-  struct ValueProperty *attentuation;
-  struct ValueProperty *fog_offset;
-  struct ValueProperty *height_fog_start_y;
-  struct ValueProperty *height_fog_height;
+  Vec3ValueProperty *position;
+  Vec3ValueProperty *offset_position;
+  QuatValueProperty *rotation;
+  QuatValueProperty *offset_rotation;
+  Vec3ValueProperty *scale;
+  QuatValueProperty *local_rotation;
+  Vec3ValueProperty *local_position;
+  FloatValueProperty *dissolve;
+  FloatValueProperty *dissolve_arrow;
+  FloatValueProperty *time;
+  FloatValueProperty *cuttable;
+  Vec4ValueProperty *color;
+  FloatValueProperty *attentuation;
+  FloatValueProperty *fog_offset;
+  FloatValueProperty *height_fog_start_y;
+  FloatValueProperty *height_fog_height;
 } CPropertiesMap;
 
+typedef struct PointDefinitionInterpolation_Vector3PointDefinition__Vec3 PathProperty_Vector3PointDefinition__Vec3;
+
+typedef PathProperty_Vector3PointDefinition__Vec3 Vec3PathProperty;
+
+typedef struct PointDefinitionInterpolation_QuaternionPointDefinition__Quat PathProperty_QuaternionPointDefinition__Quat;
+
+typedef PathProperty_QuaternionPointDefinition__Quat QuatPathProperty;
+
+typedef struct PointDefinitionInterpolation_FloatPointDefinition__f32 PathProperty_FloatPointDefinition__f32;
+
+typedef PathProperty_FloatPointDefinition__f32 FloatPathProperty;
+
+typedef struct PointDefinitionInterpolation_Vector4PointDefinition__Vec4 PathProperty_Vector4PointDefinition__Vec4;
+
+typedef PathProperty_Vector4PointDefinition__Vec4 Vec4PathProperty;
+
 typedef struct CPathPropertiesMap {
-  PathProperty *position;
-  PathProperty *offset_position;
-  PathProperty *rotation;
-  PathProperty *offset_rotation;
-  PathProperty *scale;
-  PathProperty *local_rotation;
-  PathProperty *local_position;
-  PathProperty *definite_position;
-  PathProperty *dissolve;
-  PathProperty *dissolve_arrow;
-  PathProperty *cuttable;
-  PathProperty *color;
+  Vec3PathProperty *position;
+  Vec3PathProperty *offset_position;
+  QuatPathProperty *rotation;
+  QuatPathProperty *offset_rotation;
+  Vec3PathProperty *scale;
+  QuatPathProperty *local_rotation;
+  Vec3PathProperty *local_position;
+  Vec3PathProperty *definite_position;
+  FloatPathProperty *dissolve;
+  FloatPathProperty *dissolve_arrow;
+  FloatPathProperty *cuttable;
+  Vec4PathProperty *color;
 } CPathPropertiesMap;
 
 typedef struct Vec3Option {
@@ -796,19 +852,19 @@ enum WrapBaseValueType path_property_get_type(const PathProperty *ptr);
  * # Safety
  * - `ptr` may be null; if non-null it must point to a valid `PathProperty`.
  */
-enum WrapBaseValueType property_get_type(const struct ValueProperty *ptr);
+enum WrapBaseValueType property_get_type(const ValueProperty *ptr);
 
 /**
  * # Safety
  * - `ptr` may be null; if non-null it must point to a valid `ValueProperty`.
  */
-struct CValueProperty property_get_value(const struct ValueProperty *ptr);
+struct CValueProperty property_get_value(const ValueProperty *ptr);
 
 /**
  * # Safety
  * - `ptr` may be null; if non-null it must point to a valid `ValueProperty`.
  */
-struct CTimeUnit property_get_last_updated(const struct ValueProperty *ptr);
+struct CTimeUnit property_get_last_updated(const ValueProperty *ptr);
 
 struct CTimeUnit get_time(void);
 
@@ -907,7 +963,7 @@ const struct GameObject *track_get_game_objects(const struct Track *track,
  * - `id` must be a valid null-terminated C string.
  * - `property` must be a valid pointer to a `ValueProperty`; the function clones the value.
  */
-void track_register_property(struct Track *track, const char *id, struct ValueProperty *property);
+void track_register_property(struct Track *track, const char *id, BaseValueProperty *property);
 
 /**
  * Get a mutable pointer to a registered `ValueProperty` by id.
@@ -917,8 +973,8 @@ void track_register_property(struct Track *track, const char *id, struct ValuePr
  * - `id` must be a valid null-terminated C string.
  * - The returned pointer is valid while the property remains registered and the `Track` is not mutated in a way that invalidates it.
  */
-struct ValueProperty *track_get_property(struct Track *track,
-                                         const char *id);
+BaseValueProperty *track_get_property(struct Track *track,
+                                      const char *id);
 
 /**
  * Get a mutable pointer to a predefined property by `PropertyNames`.
@@ -927,8 +983,8 @@ struct ValueProperty *track_get_property(struct Track *track,
  * - `track` must be a valid, non-null pointer to a `Track`.
  * - The returned pointer is valid while the property remains registered; do not hold it across mutating operations.
  */
-struct ValueProperty *track_get_property_by_name(struct Track *track,
-                                                 PropertyNames id);
+void *track_get_property_by_name(struct Track *track,
+                                 PropertyNames id);
 
 /**
  * Get a mutable pointer to a predefined path property by `PropertyNames`.
@@ -936,7 +992,7 @@ struct ValueProperty *track_get_property_by_name(struct Track *track,
  * # Safety
  * - `track` must be a valid, non-null pointer to a `Track`.
  */
-PathProperty *track_get_path_property_by_name(struct Track *track, PropertyNames id);
+void *track_get_path_property_by_name(struct Track *track, PropertyNames id);
 
 /**
  * Register a path property on the track.
@@ -948,7 +1004,7 @@ PathProperty *track_get_path_property_by_name(struct Track *track, PropertyNames
  */
 void track_register_path_property(struct Track *track,
                                   const char *id,
-                                  const PathProperty *property);
+                                  const BasePathProperty *property);
 
 /**
  * Get a mutable pointer to a path property by id.
@@ -957,7 +1013,7 @@ void track_register_path_property(struct Track *track,
  * - `track` must be a valid pointer to a `Track`.
  * - `id` must be a valid C string.
  */
-PathProperty *track_get_path_property(struct Track *track, const char *id);
+BasePathProperty *track_get_path_property(struct Track *track, const char *id);
 
 /**
  * Return a `CPropertiesMap` with pointers into the track's registered properties.
