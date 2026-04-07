@@ -4,7 +4,7 @@ use crate::{
         json::{self, FFIJsonValue},
         types::WrapVec4,
     },
-    point_definition::{PointDefinition, vector4_point_definition::Vector4PointDefinition},
+    point_definition::{PointDefinitionLike, Vector4PointDefinition},
 };
 
 #[repr(C)]
@@ -24,7 +24,9 @@ pub unsafe extern "C" fn tracks_make_vector4_point_definition(
     context: *mut BaseProviderContext,
 ) -> *const Vector4PointDefinition {
     let value = unsafe { json::convert_json_value_to_serde(json) };
-    let point_definition = Box::new(Vector4PointDefinition::parse(value, unsafe { &mut *context }));
+    let point_definition = Box::new(Vector4PointDefinition::parse(value, unsafe {
+        &mut *context
+    }));
 
     (Box::leak(point_definition)) as _
 }

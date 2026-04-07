@@ -8,7 +8,7 @@ name = "tracks_rs"
 crate-type = ["cdylib", "staticlib", "lib"]
 
 [workspace]
-members = ["tracks-window"]
+# members = ["tracks-window"]
 
 
 [[bench]]
@@ -28,6 +28,10 @@ harness = false
 
 [[bench]]
 name = "coroutine_manager"
+harness = false
+
+[[bench]]
+name = "json_parsing"
 harness = false
 
 [dev-dependencies]

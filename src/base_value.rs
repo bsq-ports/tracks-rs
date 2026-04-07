@@ -1,16 +1,17 @@
 use glam::FloatExt;
 
+use std::fmt::Display;
+use std::ops::Add;
 use std::ops::Div;
 use std::ops::Index;
 use std::ops::IndexMut;
 use std::ops::Mul;
+use std::ops::Sub;
 
 use glam::Quat;
 use glam::Vec3;
 
 use glam::Vec4;
-
-use crate::ffi::types::WrapBaseValueType;
 
 ///
 /// Time based number
@@ -39,6 +40,29 @@ pub enum BaseValueRef<'a> {
     Vector3(&'a Vec3),
     Vector4(&'a Vec4),
     Quaternion(&'a Quat),
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, PartialEq, PartialOrd, Eq, Hash, Ord, Debug, Default)]
+pub enum WrapBaseValueType {
+    #[default]
+    Unknown = -1,
+    Vec3 = 0,
+    Quat = 1,
+    Vec4 = 2,
+    Float = 3,
+}
+
+impl Display for WrapBaseValueType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            WrapBaseValueType::Unknown => write!(f, "Unknown"),
+            WrapBaseValueType::Vec3 => write!(f, "Vec3"),
+            WrapBaseValueType::Quat => write!(f, "Quat"),
+            WrapBaseValueType::Vec4 => write!(f, "Vec4"),
+            WrapBaseValueType::Float => write!(f, "Float"),
+        }
+    }
 }
 
 impl BaseValue {
@@ -203,6 +227,78 @@ impl From<Vec4> for BaseValue {
 impl From<Quat> for BaseValue {
     fn from(v: Quat) -> Self {
         BaseValue::Quaternion(v)
+    }
+}
+
+impl Add<BaseValue> for BaseValue {
+    type Output = BaseValue;
+
+    fn add(self, rhs: BaseValue) -> Self::Output {
+        match (self, rhs) {
+            (BaseValue::Float(v1), BaseValue::Float(v2)) => BaseValue::Float(v1 + v2),
+            (BaseValue::Vector3(v1), BaseValue::Vector3(v2)) => BaseValue::Vector3(v1 + v2),
+            (BaseValue::Vector4(v1), BaseValue::Vector4(v2)) => BaseValue::Vector4(v1 + v2),
+            (BaseValue::Quaternion(v1), BaseValue::Quaternion(v2)) => {
+                // Add or multiply quaternions?
+
+                BaseValue::Quaternion((v1 * v2).normalize())
+            }
+            _ => panic!("Invalid addition"),
+        }
+    }
+}
+
+impl Sub<BaseValue> for BaseValue {
+    type Output = BaseValue;
+
+    fn sub(self, rhs: BaseValue) -> Self::Output {
+        match (self, rhs) {
+            (BaseValue::Float(v1), BaseValue::Float(v2)) => BaseValue::Float(v1 - v2),
+            (BaseValue::Vector3(v1), BaseValue::Vector3(v2)) => BaseValue::Vector3(v1 - v2),
+            (BaseValue::Vector4(v1), BaseValue::Vector4(v2)) => BaseValue::Vector4(v1 - v2),
+            (BaseValue::Quaternion(v1), BaseValue::Quaternion(v2)) => {
+                // Subtract or divide quaternions?
+
+                BaseValue::Quaternion((v1 * v2.inverse()).normalize())
+            }
+            _ => panic!("Invalid subtraction"),
+        }
+    }
+}
+
+impl Mul<BaseValue> for BaseValue {
+    type Output = BaseValue;
+
+    fn mul(self, rhs: BaseValue) -> Self::Output {
+        match (self, rhs) {
+            (BaseValue::Float(v1), BaseValue::Float(v2)) => BaseValue::Float(v1 * v2),
+            (BaseValue::Vector3(v1), BaseValue::Vector3(v2)) => BaseValue::Vector3(v1 * v2),
+            (BaseValue::Vector4(v1), BaseValue::Vector4(v2)) => BaseValue::Vector4(v1 * v2),
+            (BaseValue::Quaternion(v1), BaseValue::Quaternion(v2)) => {
+                // Multiply or slerp quaternions?
+
+                BaseValue::Quaternion((v1 * v2).normalize())
+            }
+            _ => panic!("Invalid multiplication"),
+        }
+    }
+}
+
+impl Div<BaseValue> for BaseValue {
+    type Output = BaseValue;
+
+    fn div(self, rhs: BaseValue) -> Self::Output {
+        match (self, rhs) {
+            (BaseValue::Float(v1), BaseValue::Float(v2)) => BaseValue::Float(v1 / v2),
+            (BaseValue::Vector3(v1), BaseValue::Vector3(v2)) => BaseValue::Vector3(v1 / v2),
+            (BaseValue::Vector4(v1), BaseValue::Vector4(v2)) => BaseValue::Vector4(v1 / v2),
+            (BaseValue::Quaternion(v1), BaseValue::Quaternion(v2)) => {
+                // Divide or slerp quaternions?
+                // TODO: Quaternion division is not well defined, we can either do v1 * v2.inverse() or slerp between identity and v1 * v2.inverse() based on the length of v2
+                BaseValue::Quaternion((v1 * v2.inverse()).normalize())
+            }
+            _ => panic!("Invalid division"),
+        }
     }
 }
 

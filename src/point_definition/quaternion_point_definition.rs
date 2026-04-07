@@ -4,45 +4,46 @@ use glam::{Quat, Vec3, vec3};
 
 use crate::{
     base_provider_context::BaseProviderContext,
+    base_value::WrapBaseValueType,
     easings::functions::Functions,
     modifiers::{
-        Modifier,
         operation::Operation,
         quaternion_modifier::{QuaternionModifier, QuaternionValues},
     },
-    point_data::{PointData, quaternion_point_data::QuaternionPointData},
+    point_data::{PointDataLike, quaternion_point_data::QuaternionPointData},
+    prelude::{AbstractValueProvider, ValueProvider},
     quaternion_utils::QuaternionUtilsExt,
-    values::{AbstractValueProvider, ValueProvider},
 };
 
-use super::PointDefinition;
+use super::PointDefinitionLike;
 
 #[derive(Default, Debug, Clone)]
 pub struct QuaternionPointDefinition {
-    points: Rc<[PointData]>,
+    points: Rc<[QuaternionPointData]>,
 }
 
-impl PointDefinition for QuaternionPointDefinition {
-    type Value = Quat;
+impl PointDefinitionLike<Quat> for QuaternionPointDefinition {
+    type Modifier = QuaternionModifier;
+    type PointData = QuaternionPointData;
 
     fn get_count(&self) -> usize {
         self.points.len()
     }
 
     fn has_base_provider(&self) -> bool {
-        self.points.iter().any(|p| p.has_base_provider())
+        self.points.iter().any(PointDataLike::has_base_provider)
     }
 
-    fn get_type(&self) -> crate::ffi::types::WrapBaseValueType {
-        crate::ffi::types::WrapBaseValueType::Quat
+    fn get_type(&self) -> WrapBaseValueType {
+        WrapBaseValueType::Quat
     }
 
     fn create_modifier(
         values: Vec<ValueProvider>,
-        modifiers: Vec<Modifier>,
+        modifiers: Vec<Self::Modifier>,
         operation: Operation,
         context: &BaseProviderContext,
-    ) -> Modifier {
+    ) -> Self::Modifier {
         let val = match values.as_slice() {
             [ValueProvider::Static(static_val)] if static_val.values(context).len() == 3 => {
                 let values = static_val.values(context);
@@ -58,16 +59,16 @@ impl PointDefinition for QuaternionPointDefinition {
             }
         };
 
-        Modifier::Quaternion(QuaternionModifier::new(val, modifiers, operation))
+        QuaternionModifier::new(val, modifiers, operation)
     }
 
     fn create_point_data(
         values: Vec<ValueProvider>,
         _flags: Vec<String>,
-        modifiers: Vec<Modifier>,
+        modifiers: Vec<Self::Modifier>,
         easing: Functions,
         context: &BaseProviderContext,
-    ) -> PointData {
+    ) -> Self::PointData {
         let (base_values, time) = match values.as_slice() {
             [ValueProvider::Static(static_val)] if static_val.values(context).len() == 4 => {
                 let values = static_val.values(context);
@@ -91,36 +92,28 @@ impl PointDefinition for QuaternionPointDefinition {
             }
         };
 
-        PointData::Quaternion(QuaternionPointData::new(
-            base_values,
-            time,
-            modifiers,
-            easing,
-        ))
+        QuaternionPointData::new(base_values, time, modifiers, easing)
     }
 
     fn interpolate_points(
         &self,
-        points: &[PointData],
-        l: usize,
-        r: usize,
+        l: &Self::PointData,
+        r: &Self::PointData,
+        _l_index: usize,
+        _r_index: usize,
         time: f32,
         context: &BaseProviderContext,
     ) -> Quat {
-        let point_l = points[l].get_quaternion(context);
-        let point_r = points[r].get_quaternion(context);
+        let point_l = PointDataLike::get_point(l, context);
+        let point_r = PointDataLike::get_point(r, context);
         point_l.slerp(point_r, time)
     }
 
-    fn get_points(&self) -> &[PointData] {
+    fn get_points(&self) -> &[Self::PointData] {
         &self.points
     }
 
-    fn get_point(&self, point: &PointData, context: &BaseProviderContext) -> Quat {
-        point.get_quaternion(context)
-    }
-
-    fn new(points: Vec<PointData>) -> Self {
+    fn new(points: Vec<Self::PointData>) -> Self {
         Self {
             points: Rc::from(points),
         }
@@ -131,11 +124,16 @@ impl PointDefinition for QuaternionPointDefinition {
 mod tests {
     use super::*;
     use glam::{EulerRot, Quat};
+
+    #[cfg(not(feature = "json"))]
+    compile_error!("Tests for QuaternionPointDefinition require the 'json' feature to be enabled");
+
     use serde_json::json;
 
     use crate::{
         base_provider_context::BaseProviderContext,
-        point_data::quaternion_point_data::QuaternionPointData, point_definition::PointDefinition,
+        point_data::quaternion_point_data::QuaternionPointData,
+        point_definition::PointDefinitionLike,
     };
 
     // Use Unity's Euler rotation order (ZXY(Ex)) for expected values in tests
@@ -163,7 +161,7 @@ mod tests {
         assert_eq!(def.get_count(), 4);
 
         // Initial (time 0.0)
-        let (q0, is_last0) = def.interpolate(0.0, &ctx);
+        let (q0, _is_last0) = def.interpolate(0.0, &ctx);
         let e0 = q0.to_unity_euler_degrees();
         assert!(approx_eq(e0.z, 0.0, 1e-3));
         assert!(approx_eq(e0.y, 0.0, 1e-3));
@@ -175,7 +173,7 @@ mod tests {
         assert!(approx_eq(q0.w, 1.0, 1e-3));
 
         // Intermediate between 0.1 and 0.2 -> t = 0.15 -> normalized 0.5 between those points
-        let (q_mid, is_last_mid) = def.interpolate(0.15, &ctx);
+        let (q_mid, _is_last_mid) = def.interpolate(0.15, &ctx);
         // Build expected by slerping the endpoint quaternions
         let q_l = Quat::from_unity_euler_degrees(&Vec3::new(0.0f32, 0.0f32, 0.0f32));
         let q_r = Quat::from_unity_euler_degrees(&Vec3::new(0.0f32, -90.0f32, 0.0f32));
@@ -228,30 +226,30 @@ mod tests {
         let q2 = Quat::from_unity_euler_degrees(&Vec3::new(0.0f32, -90.0f32, 0.0f32));
         let q3 = Quat::from_unity_euler_degrees(&Vec3::new(-90.0f32, -90.0f32, 0.0f32));
 
-        let p0 = PointData::Quaternion(QuaternionPointData::new(
+        let p0 = QuaternionPointData::new(
             QuaternionValues::Static(Vec3::new(0.0, 0.0, 0.0), q0),
             0.0,
             vec![],
             Functions::EaseLinear,
-        ));
-        let p1 = PointData::Quaternion(QuaternionPointData::new(
+        );
+        let p1 = QuaternionPointData::new(
             QuaternionValues::Static(Vec3::new(0.0, 0.0, 0.0), q1),
             0.1,
             vec![],
             Functions::EaseLinear,
-        ));
-        let p2 = PointData::Quaternion(QuaternionPointData::new(
+        );
+        let p2 = QuaternionPointData::new(
             QuaternionValues::Static(Vec3::new(0.0, -90.0, 0.0), q2),
             0.2,
             vec![],
             Functions::EaseLinear,
-        ));
-        let p3 = PointData::Quaternion(QuaternionPointData::new(
+        );
+        let p3 = QuaternionPointData::new(
             QuaternionValues::Static(Vec3::new(-90.0, -90.0, 0.0), q3),
             0.3,
             vec![],
             Functions::EaseLinear,
-        ));
+        );
 
         let def = QuaternionPointDefinition::new(vec![p0, p1, p2, p3]);
 

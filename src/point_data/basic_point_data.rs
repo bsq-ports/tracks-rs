@@ -1,51 +1,52 @@
 use crate::{
     base_provider_context::BaseProviderContext,
     easings::functions::Functions,
-    modifiers::{
-        ModifierLike,
-        operation::Operation,
-        quaternion_modifier::{QuaternionModifier, QuaternionValues},
-    },
+    modifiers::{ModifierLike, ModifierValues, modifier::BasicModifier, operation::Operation},
+    value_types::{LinearValueType, ValueType},
 };
-use glam::Quat;
 
 use super::PointDataLike;
 
 #[derive(Debug, Clone)]
-pub struct QuaternionPointData {
-    base_modifier: QuaternionModifier,
+pub struct BasicPointData<T: LinearValueType> {
+    base_modifier: BasicModifier<T>,
+    pub smooth: bool,
     easing: Functions,
     time: f32,
 }
 
-impl QuaternionPointData {
+impl<T: LinearValueType> BasicPointData<T>
+where
+    [(); T::VALUE_COUNT]:,
+{
     pub fn new(
-        point: QuaternionValues,
+        point: ModifierValues<T>,
         time: f32,
-        modifiers: Vec<QuaternionModifier>,
+        smooth: bool,
+        modifiers: Vec<BasicModifier<T>>,
         easing: Functions,
     ) -> Self {
         Self {
-            base_modifier: QuaternionModifier::new(point, modifiers, Operation::None),
+            base_modifier: BasicModifier::new(point, modifiers, Operation::None),
+            smooth,
             easing,
             time,
         }
     }
 }
 
-// impl ModifierLike for QuaternionPointData {
-//     type Value = Quat;
-//     const VALUE_COUNT: usize = 3;
+// impl<T: ValueType> ModifierLike for BasicPointData<T> {
+//     const VALUE_COUNT: usize = T::VALUE_COUNT;
 
-//     fn get_modified_point(&self, context: &BaseProviderContext) -> Quat {
+//     fn get_modified_point(&self, context: &BaseProviderContext) -> T {
 //         self.base_modifier.get_modified_point(context)
 //     }
 
-//     fn get_raw_point(&self) -> Quat {
+//     fn get_raw_point(&self) -> T {
 //         self.base_modifier.get_raw_point()
 //     }
 
-//     fn translate(&self, values: &[f32]) -> Quat {
+//     fn translate(&self, values: &[f32]) -> T {
 //         self.base_modifier.translate(values)
 //     }
 
@@ -58,7 +59,10 @@ impl QuaternionPointData {
 //     }
 // }
 
-impl PointDataLike<Quat> for QuaternionPointData {
+impl<T: LinearValueType> PointDataLike<T> for BasicPointData<T>
+where
+    [(); T::VALUE_COUNT]:,
+{
     fn get_easing(&self) -> Functions {
         self.easing
     }
@@ -66,12 +70,11 @@ impl PointDataLike<Quat> for QuaternionPointData {
     fn get_time(&self) -> f32 {
         self.time
     }
-
     fn has_base_provider(&self) -> bool {
         self.base_modifier.has_base_provider()
     }
 
-    fn get_point(&self, context: &BaseProviderContext) -> Quat {
+    fn get_point(&self, context: &BaseProviderContext) -> T {
         self.base_modifier.get_modified_point(context)
     }
 }

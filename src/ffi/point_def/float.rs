@@ -1,7 +1,7 @@
 use crate::{
     base_provider_context::BaseProviderContext,
     ffi::json::{self, FFIJsonValue},
-    point_definition::{PointDefinition, float_point_definition::FloatPointDefinition},
+    point_definition::{FloatPointDefinition, PointDefinitionLike},
 };
 
 #[repr(C)]

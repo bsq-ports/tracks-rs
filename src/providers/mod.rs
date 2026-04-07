@@ -1,5 +1,4 @@
 use crate::base_provider_context::BaseProviderContext;
-use serde_json::Value as JsonValue;
 use std::{borrow::Cow, cell::RefCell, rc::Rc};
 
 pub mod base;
@@ -10,7 +9,9 @@ pub mod quat;
 pub mod smooth;
 pub mod smooth_rot;
 pub mod r#static;
-pub mod value;
+
+#[cfg(feature = "json")]
+use serde_json::Value as JsonValue;
 
 /// Abstract value provider
 /// that provides values
@@ -70,7 +71,7 @@ impl UpdateableValues for ValueProvider {
             ValueProvider::Static(_) => {}
             ValueProvider::BaseProvider(_) => {}
             ValueProvider::QuaternionProvider(_) => {}
-            ValueProvider::PartialProvider(v) => {}
+            ValueProvider::PartialProvider(_v) => {}
             ValueProvider::SmoothProviders(v) => v.borrow_mut().update(delta),
             ValueProvider::SmoothRotationProviders(v) => v.borrow_mut().update(delta),
         }

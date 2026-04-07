@@ -1,51 +1,58 @@
 use std::rc::Rc;
 
-use glam::Vec3;
-use log::error;
+use glam::{Vec3, Vec3A};
+use itertools::Itertools;
 
 use crate::{
     base_provider_context::BaseProviderContext,
+    base_value::WrapBaseValueType,
     easings::functions::Functions,
-    modifiers::{
-        Modifier,
-        operation::Operation,
-        vector3_modifier::{Vector3Modifier, Vector3Values},
-    },
-    point_data::{PointData, vector3_point_data::Vector3PointData},
-    values::{AbstractValueProvider, ValueProvider},
+    modifiers::{ModifierValues, modifier::BasicModifier, operation::Operation},
+    point_data::{PointDataLike, basic_point_data::BasicPointData},
+    prelude::{AbstractValueProvider, ValueProvider},
+    value_types::{Lerpable, ValueType},
 };
 
-use super::PointDefinition;
+use super::PointDefinitionLike;
 
 #[derive(Default, Debug, Clone)]
 pub struct Vector3PointDefinition {
-    points: Rc<[PointData]>,
+    points: Rc<[BasicPointData<Vec3>]>,
 }
 
 impl Vector3PointDefinition {
     fn smooth_vector_lerp(
         &self,
-        points: &[PointData],
-        l: usize,
-        r: usize,
+
+        l_0: Vec3A,
+        l_sub_1: Option<Vec3A>,
+        r_0: Vec3A,
+        r_add_1: Option<Vec3A>,
+
         time: f32,
-        context: &BaseProviderContext,
+        _context: &BaseProviderContext,
     ) -> Vec3 {
         // Convert to Vec3A for SIMD-friendly spline interpolation, convert back at the end
-        let point_a_a = glam::Vec3A::from(points[l].get_vector3(context));
-        let point_b_a = glam::Vec3A::from(points[r].get_vector3(context));
+        // let point_a_a = glam::Vec3A::from(points[l].get_point(context));
+        // let point_b_a = glam::Vec3A::from(points[r].get_point(context));
 
         // Catmull-Rom Spline
-        let p0_a = if l > 0 {
-            glam::Vec3A::from(points[l - 1].get_vector3(context))
-        } else {
-            point_a_a
-        };
-        let p3_a = if r + 1 < points.len() {
-            glam::Vec3A::from(points[r + 1].get_vector3(context))
-        } else {
-            point_b_a
-        };
+        // let p0_a = if l > 0 {
+        //     glam::Vec3A::from(points[l - 1].get_point(context))
+        // } else {
+        //     point_a_a
+        // };
+        // let p3_a = if r + 1 < len {
+        // // let p3_a = if r + 1 < points.len() {
+        //     glam::Vec3A::from(points[r + 1].get_point(context))
+        // } else {
+        //     point_b_a
+        // };
+
+        let point_a_a = l_0;
+        let point_b_a = r_0;
+        let p0_a = l_sub_1.unwrap_or(l_0);
+        let p3_a = r_add_1.unwrap_or(r_0);
 
         let tt = time * time;
         let ttt = tt * time;
@@ -60,113 +67,143 @@ impl Vector3PointDefinition {
     }
 }
 
-impl PointDefinition for Vector3PointDefinition {
-    type Value = Vec3;
-
-    fn new(points: Vec<PointData>) -> Self {
-        Self {
-            points: Rc::from(points),
-        }
-    }
+impl PointDefinitionLike<Vec3> for Vector3PointDefinition {
+    type Modifier = BasicModifier<Vec3>;
+    type PointData = BasicPointData<Vec3>;
 
     fn get_count(&self) -> usize {
         self.points.len()
     }
 
-    fn get_type(&self) -> crate::ffi::types::WrapBaseValueType {
-        crate::ffi::types::WrapBaseValueType::Vec3
+    fn has_base_provider(&self) -> bool {
+        self.points.iter().any(PointDataLike::has_base_provider)
     }
 
-    fn has_base_provider(&self) -> bool {
-        self.points.iter().any(|p| p.has_base_provider())
+    fn new(points: Vec<Self::PointData>) -> Self {
+        Self {
+            points: Rc::from(points),
+        }
     }
 
     fn create_modifier(
         values: Vec<ValueProvider>,
-        modifiers: Vec<Modifier>,
+        modifiers: Vec<BasicModifier<Vec3>>,
         operation: Operation,
         context: &BaseProviderContext,
-    ) -> Modifier {
-        let value = match values.as_slice() {
-            [ValueProvider::Static(static_val)] if static_val.values.len() == 4 => {
-                let vals = &static_val.values;
-
-                Vector3Values::Static(Vec3::new(vals[0], vals[1], vals[2]))
+    ) -> BasicModifier<Vec3> {
+        let val: ModifierValues<Vec3> = match values.as_slice() {
+            // Single static value [T, time]
+            [ValueProvider::Static(static_val)]
+                if static_val.values.len() <= Vec3::VALUE_COUNT + 1 =>
+            {
+                let values = &static_val.values;
+                ModifierValues::Static(Vec3::from_slice(values))
             }
+            // Any other case
             _ => {
                 let count: usize = values.iter().map(|v| v.values(context).len()).sum();
-                if count != 3 {
-                    error!("Vector3 modifier point must have 3 numbers");
-                }
-                Vector3Values::Dynamic(values)
+                assert_eq!(
+                    count,
+                    Vec3::VALUE_COUNT + 1,
+                    "modifier point must have {} numbers",
+                    Vec3::VALUE_COUNT + 1
+                );
+                ModifierValues::Dynamic(values)
             }
         };
-
-        Modifier::Vector3(Vector3Modifier::new(value, modifiers, operation))
+        Self::Modifier::new(val, modifiers, operation)
     }
 
     fn create_point_data(
         values: Vec<ValueProvider>,
         flags: Vec<String>,
-        modifiers: Vec<Modifier>,
+        modifiers: Vec<Self::Modifier>,
         easing: Functions,
         context: &BaseProviderContext,
-    ) -> PointData {
-        let (values, time) = match values.as_slice() {
-            [ValueProvider::Static(static_val)] if static_val.values(context).len() == 4 => {
+    ) -> Self::PointData {
+        // If one value is present and it contains two floats, the first is the point value and the second is time.
+
+        let (value, time) = match &values[..] {
+            // [x, ..., y]
+            [ValueProvider::Static(static_val)] => {
                 let values = static_val.values(context);
-                let point = Vec3::new(values[0], values[1], values[2]);
-                (Vector3Values::Static(point), values[3])
+                let point = Vec3::from_slice(&values[0..Vec3::VALUE_COUNT]);
+                let time = values[Vec3::VALUE_COUNT];
+                (ModifierValues::Static(point), time)
             }
+
             _ => {
-                let values_len: usize = values.iter().map(|v| v.values(context).len()).sum();
+                // validate and get time
+                let collected_values = values
+                    .iter()
+                    .map(|v| v.values(context))
+                    .fold_while([0.0; Vec3::VALUE_COUNT + 1], |mut acc, v| {
+                        for (i, val) in v.iter().enumerate() {
+                            if i < Vec3::VALUE_COUNT {
+                                acc[i] = *val;
+                            }
+                        }
+                        itertools::FoldWhile::Continue(acc)
+                    })
+                    .into_inner();
 
-                let time = if values_len == 4 {
-                    values
-                        .last()
-                        .and_then(|v| v.values(context).last().copied())
-                        .unwrap_or(0.0)
-                } else {
-                    0.0
-                };
+                // TODO: I don't know if this is the best way to get time
+                // or if we should collect all values then get time from the last value provider
+                let time = collected_values[Vec3::VALUE_COUNT];
 
-                (Vector3Values::Dynamic(values), time)
+                (ModifierValues::Dynamic(values), time)
             }
         };
-        PointData::Vector3(Vector3PointData::new(
-            values,
-            flags.iter().any(|f| f == "splineCatmullRom"),
-            time,
-            modifiers,
-            easing,
-        ))
+
+        let smooth = flags.iter().any(|f| f == "splineCatmullRom");
+
+        BasicPointData::new(value, time, smooth, modifiers, easing)
+    }
+
+    fn get_points(&self) -> &[Self::PointData] {
+        &self.points
+    }
+
+    fn get_type(&self) -> WrapBaseValueType {
+        Vec3::base_type()
     }
 
     fn interpolate_points(
         &self,
-        points: &[PointData],
-        l: usize,
-        r: usize,
+        l: &Self::PointData,
+        r: &Self::PointData,
+        l_index: usize,
+        r_index: usize,
         time: f32,
         context: &BaseProviderContext,
     ) -> Vec3 {
-        if let PointData::Vector3(vector3_point) = &points[r]
-            && vector3_point.smooth
-        {
-            self.smooth_vector_lerp(points, l, r, time, context)
-        } else {
-            let point_l = points[l].get_vector3(context);
-            let point_r = points[r].get_vector3(context);
-            // Use Vec3A lerp internally for better throughput
-            Vec3::from(glam::Vec3A::from(point_l).lerp(glam::Vec3A::from(point_r), time))
+        if r.smooth {
+            let point_a_a = PointDataLike::get_point(l, context);
+            let point_b_a = PointDataLike::get_point(r, context);
+            let l_sub_1 = self
+                .points
+                .get(l_index - 1)
+                .map(|p| p.get_point(context))
+                .map(Vec3A::from);
+            let r_add_1 = self
+                .points
+                .get(r_index + 1)
+                .map(|p| p.get_point(context))
+                .map(Vec3A::from);
+
+            return self.smooth_vector_lerp(
+                point_a_a.into(),
+                l_sub_1,
+                point_b_a.into(),
+                r_add_1,
+                time,
+                context,
+            );
         }
-    }
 
-    fn get_points(&self) -> &[PointData] {
-        &self.points
-    }
+        let point_l = PointDataLike::get_point(l, context);
+        let point_r = PointDataLike::get_point(r, context);
 
-    fn get_point(&self, point: &PointData, context: &BaseProviderContext) -> Vec3 {
-        point.get_vector3(context)
+        Vec3::value_lerp(point_l, point_r, time)
     }
 }

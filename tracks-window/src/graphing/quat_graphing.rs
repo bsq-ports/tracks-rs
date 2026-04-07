@@ -14,7 +14,7 @@ use serde_json::json;
 
 use tracks_rs::{
     base_provider_context::BaseProviderContext,
-    point_definition::{PointDefinition, quaternion_point_definition::QuaternionPointDefinition},
+    point_definition::{PointDefinitionLike, quaternion_point_definition::QuaternionPointDefinition},
 };
 
 pub struct QuatContext {

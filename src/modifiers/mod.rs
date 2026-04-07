@@ -1,86 +1,17 @@
-pub mod float_modifier;
+pub mod modifier;
 pub mod operation;
-pub mod quaternion_modifier;
-pub mod vector3_modifier;
-pub mod vector4_modifier;
 
-use float_modifier::FloatModifier;
-use glam::{Quat, Vec3, Vec4};
-use quaternion_modifier::QuaternionModifier;
-use smallvec::SmallVec;
-use vector3_modifier::Vector3Modifier;
-use vector4_modifier::Vector4Modifier;
+pub mod base_modifier;
+pub mod quaternion_modifier;
 
 use crate::base_provider_context::BaseProviderContext;
 use crate::modifiers::operation::Operation;
-use crate::values::{AbstractValueProvider, ValueProvider};
+use crate::providers::{AbstractValueProvider, ValueProvider};
 
 #[derive(Clone, Debug)]
 pub enum ModifierValues<T> {
     Static(T),
     Dynamic(Vec<ValueProvider>),
-}
-
-/// Modifiers are added at the end of points to allow you to do basic arithmetic on points.
-///  How these modifiers interact can be defined using operations, all of which are done componentwise.
-#[derive(Debug)]
-pub enum Modifier {
-    Float(FloatModifier),
-    Vector3(Vector3Modifier),
-    Vector4(Vector4Modifier),
-    Quaternion(QuaternionModifier),
-}
-
-impl Modifier {
-    pub fn get_float(&self, context: &BaseProviderContext) -> f32 {
-        if let Modifier::Float(modifier) = self {
-            modifier.get_point(context)
-        } else {
-            panic!("Invalid modifier type");
-        }
-    }
-
-    pub fn get_vector3(&self, context: &BaseProviderContext) -> Vec3 {
-        if let Modifier::Vector3(modifier) = self {
-            modifier.get_point(context)
-        } else {
-            panic!("Invalid modifier type");
-        }
-    }
-
-    pub fn get_vector4(&self, context: &BaseProviderContext) -> Vec4 {
-        if let Modifier::Vector4(modifier) = self {
-            modifier.get_point(context)
-        } else {
-            panic!("Invalid modifier type");
-        }
-    }
-
-    pub fn get_quaternion(&self, context: &BaseProviderContext) -> Quat {
-        if let Modifier::Quaternion(modifier) = self {
-            modifier.get_point(context)
-        } else {
-            panic!("Invalid modifier type");
-        }
-    }
-
-    pub fn get_operation(&self) -> Operation {
-        match self {
-            Modifier::Float(modifier) => modifier.get_operation(),
-            Modifier::Vector3(modifier) => modifier.get_operation(),
-            Modifier::Vector4(modifier) => modifier.get_operation(),
-            Modifier::Quaternion(modifier) => modifier.get_operation(),
-        }
-    }
-
-    pub fn has_base_provider(&self) -> bool {
-        match self {
-            Modifier::Float(modifier) => modifier.has_base_provider(),
-            Modifier::Vector3(modifier) => modifier.has_base_provider(),
-            Modifier::Vector4(modifier) => modifier.has_base_provider(),
-            Modifier::Quaternion(modifier) => modifier.has_base_provider(),
-        }
-    }
 }
 
 impl<T> ModifierValues<T> {
@@ -99,39 +30,36 @@ impl<T> ModifierValues<T> {
     }
 }
 
-pub trait ModifierBase {
-    type Value;
+pub trait ModifierLike<T> {
     const VALUE_COUNT: usize;
 
-    fn get_point(&self, context: &BaseProviderContext) -> Self::Value;
-    fn get_raw_point(&self) -> Self::Value;
-    fn translate(&self, values: &[f32]) -> Self::Value;
-    fn get_operation(&self) -> Operation;
-    fn has_base_provider(&self) -> bool;
+    fn get_raw_point(&self) -> T;
+    fn get_modified_point(&self, context: &BaseProviderContext) -> T;
 
-    fn fill_values(&self, ivals: &[ValueProvider], context: &BaseProviderContext) -> SmallVec<[f32; 4]> {
-        let mut values = SmallVec::with_capacity(Self::VALUE_COUNT);
+    fn has_base_provider(&self) -> bool;
+    fn get_operation(&self) -> Operation;
+
+    fn apply(
+        &self,
+        ivals: &[ValueProvider],
+        context: &BaseProviderContext,
+    ) -> [f32; Self::VALUE_COUNT] {
+        let mut values = [0.0; Self::VALUE_COUNT];
+        let mut i = 0;
         for value in ivals {
             for v in value.values(context).iter().copied() {
-                if values.len() < Self::VALUE_COUNT {
-                    values.push(v);
-                } else {
-                    return values;
+                if i >= Self::VALUE_COUNT {
+                    break;
                 }
+                values[i] = v;
+                i += 1;
             }
         }
         values
     }
-
-    // Default convert implementation avoids heap allocations by filling a fixed-size
-    // stack buffer (max 4 components) and passing a slice to `translate`.
-    fn convert(&self, ivals: &[ValueProvider], context: &BaseProviderContext) -> Self::Value {
-        let values = self.fill_values(ivals, context);
-        self.translate(&values)
-    }
 }
 
-pub fn shared_has_base_provider(is_dynamic: bool, modifiers: &[Modifier]) -> bool {
+pub fn shared_has_base_provider<T: ModifierLike<V>, V>(is_dynamic: bool, modifiers: &[T]) -> bool {
     match is_dynamic {
         true => true,
         false => modifiers.iter().any(|m| m.has_base_provider()),

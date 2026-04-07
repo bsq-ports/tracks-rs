@@ -3,8 +3,13 @@ use std::{borrow::Borrow, cell::RefCell, collections::HashMap, rc::Rc};
 use glam::{Quat, Vec3, Vec4};
 use log::{error, warn};
 
-use crate::values::{
-    AbstractValueProvider, UpdateableValues, ValueProvider, base::BaseProviderValues, quat::QuaternionProviderValues, smooth::SmoothProvidersValues, smooth_rot::SmoothRotationProvidersValues, value::{BaseValue, BaseValueRef}
+use crate::{
+    base_value::{BaseValue, BaseValueRef},
+    providers::{
+        AbstractValueProvider, UpdateableValues, ValueProvider, base::BaseProviderValues,
+        quat::QuaternionProviderValues, smooth::SmoothProvidersValues,
+        smooth_rot::SmoothRotationProvidersValues,
+    },
 };
 
 /// Context for base value providers
@@ -299,21 +304,18 @@ impl BaseProviderContext {
         result
     }
 
-    pub fn register_updatable_provider(
-        &mut self,
-        provider: &ValueProvider,
-    )  {
+    pub fn register_updatable_provider(&mut self, provider: &ValueProvider) {
         match provider {
             ValueProvider::SmoothProviders(v) => {
-                self.updatable_providers.push(v.clone() as Rc<RefCell<dyn UpdateableValues>>);
+                self.updatable_providers
+                    .push(v.clone() as Rc<RefCell<dyn UpdateableValues>>);
             }
             ValueProvider::SmoothRotationProviders(v) => {
-                self.updatable_providers.push(v.clone() as Rc<RefCell<dyn UpdateableValues>>);
+                self.updatable_providers
+                    .push(v.clone() as Rc<RefCell<dyn UpdateableValues>>);
             }
-            _ => {
-                return;
-            }
-        };
+            _ => {}
+        }
     }
 
     pub fn update_providers(&self, delta: f32) {
@@ -324,10 +326,10 @@ impl BaseProviderContext {
 
     fn handle_split_part(&self, split: &str, result: &ValueProvider) -> ValueProvider {
         if split.starts_with('s') {
-            return self.create_smooth_provider(&result, split);
+            return self.create_smooth_provider(result, split);
         }
         // partial swizzle like x/y/z/w
-        self.create_partial_provider(&result, split)
+        self.create_partial_provider(result, split)
     }
 
     /// Build a `PartialProvider` from a swizzle string like "x", "xy", "zw", etc.
@@ -348,7 +350,7 @@ impl BaseProviderContext {
             .collect();
 
         let src = source.values(self).to_vec();
-        ValueProvider::PartialProvider(crate::values::partial::PartialProviderValues::new(
+        ValueProvider::PartialProvider(crate::providers::partial::PartialProviderValues::new(
             src, parts,
         ))
     }
@@ -381,7 +383,7 @@ impl BaseProviderContext {
                         src_slice.len()
                     );
                     Quat::from_array([
-                        src_slice.get(0).cloned().unwrap_or(0.0),
+                        src_slice.first().cloned().unwrap_or(0.0),
                         src_slice.get(1).cloned().unwrap_or(0.0),
                         src_slice.get(2).cloned().unwrap_or(0.0),
                         src_slice.get(3).cloned().unwrap_or(1.0),
@@ -394,11 +396,9 @@ impl BaseProviderContext {
             }
             _ => {
                 let src = source.values(self).to_vec();
-                ValueProvider::SmoothProviders(Rc::new(RefCell::new(
-                    SmoothProvidersValues::new(
-                        src, mult,
-                    )
-                )))
+                ValueProvider::SmoothProviders(Rc::new(RefCell::new(SmoothProvidersValues::new(
+                    src, mult,
+                ))))
             }
         }
     }

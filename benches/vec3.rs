@@ -3,12 +3,12 @@ use serde_json::json;
 use std::hint::black_box;
 use tracks_rs::{
     base_provider_context::BaseProviderContext,
-    point_definition::{PointDefinition, vector3_point_definition::Vector3PointDefinition},
+    point_definition::{interpolate_vector3_point_definition, parse_vector3_point_definition},
 };
 
 fn point_step(n: u64) {
     let mut context = BaseProviderContext::new();
-    let definition = Vector3PointDefinition::parse(
+    let definition = parse_vector3_point_definition(
         json!([[0.0, 0.0, 0.0, 1.0], [1.0, 1.0, 1.0, 1.0, "easeInOutSine"]]),
         &mut context,
     );
@@ -18,7 +18,11 @@ fn point_step(n: u64) {
     let values: Vec<f64> = (0..=(n as usize)).map(|i| i as f64 / n as f64).collect();
 
     values.into_iter().for_each(|x| {
-        black_box(definition.interpolate(x as f32, &mut context));
+        black_box(interpolate_vector3_point_definition(
+            &definition,
+            x as f32,
+            &context,
+        ));
     });
 }
 

@@ -2,9 +2,7 @@ use std::borrow::Cow;
 
 use super::UpdateableValues;
 
-use crate::{
-    base_provider_context::BaseProviderContext, quaternion_utils::QuaternionUtilsExt,
-};
+use crate::{base_provider_context::BaseProviderContext, quaternion_utils::QuaternionUtilsExt};
 
 use super::AbstractValueProvider;
 
@@ -38,16 +36,10 @@ impl AbstractValueProvider for SmoothRotationProvidersValues {
 impl UpdateableValues for SmoothRotationProvidersValues {
     fn update(&mut self, delta: f32) {
         let mult_delta = delta * self.mult;
-        self.last_quaternion = self
-            .last_quaternion
-            .slerp(self.rotation_values, mult_delta);
+        self.last_quaternion = self.last_quaternion.slerp(self.rotation_values, mult_delta);
 
         let euler = self.last_quaternion.to_unity_euler_degrees();
 
-        self.values = [
-            euler.x,
-            euler.y,
-            euler.z,
-        ];
+        self.values = [euler.x, euler.y, euler.z];
     }
 }

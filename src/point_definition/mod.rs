@@ -1,22 +1,28 @@
 pub mod base_point_definition;
-pub mod float_point_definition;
+pub mod basic_point_definition;
 pub mod point_definition_interpolation;
+
+// specific handling
 pub mod quaternion_point_definition;
 pub mod vector3_point_definition;
-pub mod vector4_point_definition;
+
+pub type FloatPointDefinition = basic_point_definition::BasicPointDefinition<f32>;
+pub type Vector4PointDefinition = basic_point_definition::BasicPointDefinition<glam::Vec4>;
 
 use std::str::FromStr;
 
+#[cfg(feature = "json")]
 use serde_json::Value as JsonValue;
+
+#[cfg(feature = "json")]
 use serde_json::json;
 
 use crate::base_provider_context::BaseProviderContext;
-use crate::ffi::types::WrapBaseValueType;
-use crate::point_data::PointData;
+use crate::base_value::WrapBaseValueType;
+use crate::modifiers::ModifierLike;
+use crate::point_data::PointDataLike;
 use crate::{
-    easings::functions::Functions,
-    modifiers::{Modifier, operation::Operation},
-    values::{ValueProvider, deserialize_values},
+    easings::functions::Functions, modifiers::operation::Operation, providers::ValueProvider,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
@@ -26,50 +32,126 @@ pub enum GroupType {
     Modifier,
 }
 
-// The combined PointDefinition trait (acting as both BasePointDefinition and the templated PointDefinition<T>)
+#[cfg(feature = "json")]
+pub fn parse_float_point_definition(
+    value: JsonValue,
+    context: &mut BaseProviderContext,
+) -> FloatPointDefinition {
+    <FloatPointDefinition as PointDefinitionLike<f32>>::parse(value, context)
+}
+
+#[cfg(feature = "json")]
+pub fn parse_vector3_point_definition(
+    value: JsonValue,
+    context: &mut BaseProviderContext,
+) -> vector3_point_definition::Vector3PointDefinition {
+    <vector3_point_definition::Vector3PointDefinition as PointDefinitionLike<glam::Vec3>>::parse(
+        value, context,
+    )
+}
+
+#[cfg(feature = "json")]
+pub fn parse_vector4_point_definition(
+    value: JsonValue,
+    context: &mut BaseProviderContext,
+) -> Vector4PointDefinition {
+    <Vector4PointDefinition as PointDefinitionLike<glam::Vec4>>::parse(value, context)
+}
+
+#[cfg(feature = "json")]
+pub fn parse_quaternion_point_definition(
+    value: JsonValue,
+    context: &mut BaseProviderContext,
+) -> quaternion_point_definition::QuaternionPointDefinition {
+    <quaternion_point_definition::QuaternionPointDefinition as PointDefinitionLike<glam::Quat>>::parse(
+        value, context,
+    )
+}
+
+pub fn interpolate_float_point_definition(
+    definition: &FloatPointDefinition,
+    time: f32,
+    context: &BaseProviderContext,
+) -> (f32, bool) {
+    <FloatPointDefinition as PointDefinitionLike<f32>>::interpolate(definition, time, context)
+}
+
+pub fn interpolate_vector3_point_definition(
+    definition: &vector3_point_definition::Vector3PointDefinition,
+    time: f32,
+    context: &BaseProviderContext,
+) -> (glam::Vec3, bool) {
+    <vector3_point_definition::Vector3PointDefinition as PointDefinitionLike<glam::Vec3>>::interpolate(
+        definition, time, context,
+    )
+}
+
+pub fn interpolate_vector4_point_definition(
+    definition: &Vector4PointDefinition,
+    time: f32,
+    context: &BaseProviderContext,
+) -> (glam::Vec4, bool) {
+    <Vector4PointDefinition as PointDefinitionLike<glam::Vec4>>::interpolate(
+        definition, time, context,
+    )
+}
+
+pub fn interpolate_quaternion_point_definition(
+    definition: &quaternion_point_definition::QuaternionPointDefinition,
+    time: f32,
+    context: &BaseProviderContext,
+) -> (glam::Quat, bool) {
+    <quaternion_point_definition::QuaternionPointDefinition as PointDefinitionLike<glam::Quat>>::interpolate(
+        definition, time, context,
+    )
+}
 
 /// Point definitions are used to describe what happens over the course of an animation,
 /// they are used slightly differently for different properties.
 /// They consist of a collection of points over time.
-pub trait PointDefinition: std::default::Default {
-    type Value: Default + Clone;
+pub trait PointDefinitionLike<T>: Default
+where
+    T: Default + Clone,
+{
+    type Modifier: ModifierLike<T>;
+    type PointData: PointDataLike<T>;
 
     // Required methods common to all definitions
     fn get_count(&self) -> usize;
     fn has_base_provider(&self) -> bool;
     fn interpolate_points(
         &self,
-        points: &[PointData],
-        l: usize,
-        r: usize,
+        l: &Self::PointData,
+        r: &Self::PointData,
+        l_index: usize,
+        r_index: usize,
         time: f32,
         context: &BaseProviderContext,
-    ) -> Self::Value;
+    ) -> T;
     fn create_modifier(
         values: Vec<ValueProvider>,
-        modifiers: Vec<Modifier>,
+        modifiers: Vec<Self::Modifier>,
         operation: Operation,
         context: &BaseProviderContext,
-    ) -> Modifier;
+    ) -> Self::Modifier;
     fn create_point_data(
         values: Vec<ValueProvider>,
         flags: Vec<String>,
-        modifiers: Vec<Modifier>,
+        modifiers: Vec<Self::Modifier>,
         easing: Functions,
         context: &BaseProviderContext,
-    ) -> PointData;
+    ) -> Self::PointData;
     // fn get_points_mut(&mut self) -> &mut Vec<PointData>;
-    fn get_points(&self) -> &[PointData];
+    fn get_points(&self) -> &[Self::PointData];
 
-    fn get_point(&self, point: &PointData, context: &BaseProviderContext) -> Self::Value;
     fn get_type(&self) -> WrapBaseValueType;
 
-    fn new(points: Vec<PointData>) -> Self;
+    fn new(points: Vec<Self::PointData>) -> Self;
 
     /// Deserializes a JSON value into a Modifier. This is used for parsing modifiers from JSON.
     #[cfg(feature = "json")]
-    fn deserialize_modifier(list: &JsonValue, context: &mut BaseProviderContext) -> Modifier {
-        let mut modifiers: Option<Vec<Modifier>> = None;
+    fn deserialize_modifier(list: &JsonValue, context: &mut BaseProviderContext) -> Self::Modifier {
+        let mut modifiers: Option<Vec<Self::Modifier>> = None;
         let mut operation: Option<Operation> = None;
         let mut values: Option<Vec<ValueProvider>> = None;
 
@@ -77,6 +159,8 @@ pub trait PointDefinition: std::default::Default {
         for group in group_values(list) {
             match group.0 {
                 GroupType::Value => {
+                    use crate::prelude::deserialize_values;
+
                     values = Some(deserialize_values(&group.1, context));
                 }
                 GroupType::Modifier => {
@@ -134,14 +218,14 @@ pub trait PointDefinition: std::default::Default {
             return Self::default();
         };
 
-        let mut points = vec![];
+        let mut points: Vec<Self::PointData> = vec![];
         for raw_point in array {
             if raw_point.is_null() {
                 continue;
             }
 
             let mut easing = Functions::EaseLinear;
-            let mut modifiers: Option<Vec<Modifier>> = None;
+            let mut modifiers: Option<Vec<Self::Modifier>> = None;
             let mut flags: Option<Vec<String>> = None;
             let mut vals: Option<Vec<ValueProvider>> = None;
 
@@ -149,6 +233,8 @@ pub trait PointDefinition: std::default::Default {
             for group in group_values(raw_point) {
                 match group.0 {
                     GroupType::Value => {
+                        use crate::prelude::deserialize_values;
+
                         vals = Some(deserialize_values(&group.1, context));
                     }
                     GroupType::Modifier => {
@@ -200,21 +286,21 @@ pub trait PointDefinition: std::default::Default {
     }
 
     // The main interpolation method. Returns a tuple (interpolated value, is_last_point)
-    fn interpolate(&self, time: f32, context: &BaseProviderContext) -> (Self::Value, bool) {
+    fn interpolate(&self, time: f32, context: &BaseProviderContext) -> (T, bool) {
         let points = self.get_points();
 
         if points.is_empty() {
-            return (Self::Value::default(), true);
+            return (T::default(), true);
         }
 
         let last_point = points.last().unwrap();
         if last_point.get_time() <= time {
-            return (self.get_point(last_point, context), true);
+            return (last_point.get_point(context), true);
         }
 
         let first_point = points.first().unwrap();
         if first_point.get_time() >= time {
-            return (self.get_point(first_point, context), false);
+            return (first_point.get_point(context), false);
         }
 
         let (l, r) = search_index(points, time);
@@ -230,14 +316,14 @@ pub trait PointDefinition: std::default::Default {
 
         let eased_time = point_r.get_easing().interpolate(normal_time);
         (
-            self.interpolate_points(points, l, r, eased_time, context),
+            self.interpolate_points(point_l, point_r, l, r, eased_time, context),
             false,
         )
     }
 }
 
 // Binary search algorithm to find the relevant interval
-fn search_index(points: &[PointData], time: f32) -> (usize, usize) {
+fn search_index<P: PointDataLike<T>, T>(points: &[P], time: f32) -> (usize, usize) {
     let mut l = 0;
     let mut r = points.len();
 
