@@ -1,11 +1,13 @@
 use serde_json::json;
 use tracks_rs::{
     base_provider_context::BaseProviderContext,
+    base_value::BaseValue,
     point_definition::{
         PointDefinitionLike, Vector4PointDefinition, basic_point_definition::BasicPointDefinition,
         quaternion_point_definition::QuaternionPointDefinition,
         vector3_point_definition::Vector3PointDefinition,
-    }, quaternion_utils::QuaternionUtilsExt,
+    },
+    quaternion_utils::QuaternionUtilsExt,
 };
 
 #[test]
@@ -81,4 +83,43 @@ fn parses_quaternion_point_definition_from_heck_json() {
     let expected = glam::Quat::from_unity_euler_degrees(&glam::Vec3::new(0.0, -90.0, 0.0));
     assert_eq!(end, expected);
     assert!(end_is_last);
+}
+
+#[test]
+fn parses_vector3_from_smoothed_and_swizzled_base_provider() {
+    let mut context = BaseProviderContext::new();
+    context.set_values(
+        "baseHeadPosition",
+        BaseValue::from(glam::Vec3::new(10.0, 20.0, 30.0)),
+    );
+
+    let definition =
+        Vector3PointDefinition::parse(json!([["baseHeadPosition.zyx.s0_5"]]), &mut context);
+    assert!(definition.has_base_provider());
+
+    // Advance smoothing by delta=1.0 with multiplier 0.5.
+    context.update_providers(1.0);
+
+    let (value, is_last) = definition.interpolate(0.0, &context);
+    assert_eq!(value, glam::Vec3::new(15.0, 10.0, 5.0));
+    assert!(is_last);
+}
+
+#[test]
+fn parses_vector4_with_base_provider_modifier_op_mul() {
+    let mut context = BaseProviderContext::new();
+    context.set_values(
+        "baseNote0Color",
+        BaseValue::from(glam::Vec4::new(1.0, 0.5, 0.25, 1.0)),
+    );
+
+    let definition = Vector4PointDefinition::parse(
+        json!([["baseNote0Color", [0.5, 0.25, 2.0, 1.0, "opMul"]]]),
+        &mut context,
+    );
+    assert!(definition.has_base_provider());
+
+    let (value, is_last) = definition.interpolate(0.0, &context);
+    assert_eq!(value, glam::Vec4::new(0.5, 0.125, 0.5, 1.0));
+    assert!(is_last);
 }
