@@ -128,7 +128,7 @@ impl PointDefinitionLike<Vec3> for Vector3PointDefinition {
             [ValueProvider::Static(static_val)] => {
                 let values = static_val.values(context);
                 let point = Vec3::from_slice(&values[0..Vec3::VALUE_COUNT]);
-                let time = values[Vec3::VALUE_COUNT + 1];
+                let time = values[Vec3::VALUE_COUNT];
                 (ModifierValues::Static(point), time)
             }
 

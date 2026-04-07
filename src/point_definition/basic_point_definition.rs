@@ -85,7 +85,7 @@ where
             [ValueProvider::Static(static_val)] => {
                 let values = static_val.values(context);
                 let point = T::from_slice(&values[0..T::VALUE_COUNT]);
-                let time = values[T::VALUE_COUNT + 1];
+                let time = values[T::VALUE_COUNT];
                 (ModifierValues::Static(point), time)
             }
 
