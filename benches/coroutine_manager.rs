@@ -1,12 +1,14 @@
 use criterion::{BatchSize, BenchmarkId, Criterion, criterion_group, criterion_main};
+use glam::{Vec3, Vec4};
 use serde_json::json;
 use tracks_rs::animation::coroutine_manager::CoroutineManager;
 use tracks_rs::animation::events::{EventData, EventType};
 use tracks_rs::animation::track::{Track, V2_POSITION, ValuePropertyHandle};
 use tracks_rs::animation::tracks_holder::TracksHolder;
 use tracks_rs::base_provider_context::BaseProviderContext;
+use tracks_rs::base_value::BaseValue;
 use tracks_rs::easings::functions::Functions;
-use tracks_rs::point_definition::{
+use tracks_rs::test_helpers::{
     parse_quaternion_point_definition, parse_vector3_point_definition,
     parse_vector4_point_definition,
 };
@@ -107,6 +109,58 @@ fn make_event_quat(
         point_data: Some(
             parse_quaternion_point_definition(
                 json!([[euler_deg[0], euler_deg[1], euler_deg[2], time]]),
+                context,
+            )
+            .into(),
+        ),
+    }
+}
+
+fn make_event_vec3_base_swizzle_ops_points(
+    track_key: tracks_rs::animation::tracks_holder::TrackKey,
+    context: &mut BaseProviderContext,
+    duration: f32,
+    start: f32,
+) -> EventData {
+    EventData {
+        raw_duration: duration,
+        easing: Functions::EaseLinear,
+        repeat: 0,
+        start_song_time: start,
+        property: EventType::AnimateTrack(ValuePropertyHandle::new(V2_POSITION)),
+        track_key,
+        point_data: Some(
+            parse_vector3_point_definition(
+                json!([
+                    ["baseHeadPosition.zyx.s0_5", [1.1, 0.9, 1.0, "opMul"], 0.0],
+                    ["baseHeadPosition.xyz", [0.2, 0.1, 0.0, "opAdd"], 1.0]
+                ]),
+                context,
+            )
+            .into(),
+        ),
+    }
+}
+
+fn make_event_vec4_base_ops_points(
+    track_key: tracks_rs::animation::tracks_holder::TrackKey,
+    context: &mut BaseProviderContext,
+    duration: f32,
+    start: f32,
+) -> EventData {
+    EventData {
+        raw_duration: duration,
+        easing: Functions::EaseLinear,
+        repeat: 0,
+        start_song_time: start,
+        property: EventType::AnimateTrack(ValuePropertyHandle::new(V2_COLOR)),
+        track_key,
+        point_data: Some(
+            parse_vector4_point_definition(
+                json!([
+                    ["baseNote0Color", [0.5, 0.25, 2.0, 1.0, "opMul"], 0.0],
+                    ["baseNote0Color", [0.1, 0.2, 0.0, 0.0, "opAdd"], 1.0]
+                ]),
                 context,
             )
             .into(),
@@ -299,5 +353,77 @@ fn bench_multi_props(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, bench_start_and_poll, bench_multi_props);
+fn bench_base_swizzle_ops_points(c: &mut Criterion) {
+    let mut group = c.benchmark_group("coroutine_manager_base_swizzle_ops_points");
+
+    for &n_tracks in &[10usize, 100usize] {
+        group.bench_with_input(
+            BenchmarkId::new("start_and_poll", n_tracks),
+            &n_tracks,
+            |b, &n| {
+                let manager = CoroutineManager::default();
+                let mut holder = TracksHolder::new();
+
+                let mut keys = Vec::with_capacity(n);
+                for i in 0..n {
+                    let mut t = Track::default();
+                    t.name = format!("swizzle_track_{}", i);
+                    keys.push(holder.add_track(t));
+                }
+
+                let mut ctx = BaseProviderContext::new();
+                ctx.set_values(
+                    "baseHeadPosition",
+                    BaseValue::from(Vec3::new(10.0, 20.0, 30.0)),
+                );
+                ctx.set_values(
+                    "baseNote0Color",
+                    BaseValue::from(Vec4::new(1.0, 0.5, 0.25, 1.0)),
+                );
+                ctx.set_values("baseSongTime", BaseValue::from(2.0_f32));
+
+                let mut events = Vec::with_capacity(keys.len() * 2);
+                let mut max_end = 0.0_f32;
+                for &key in &keys {
+                    let pos = make_event_vec3_base_swizzle_ops_points(key, &mut ctx, 1.0, 0.0);
+                    let col = make_event_vec4_base_ops_points(key, &mut ctx, 1.2, 0.2);
+                    max_end = max_end.max(pos.start_song_time + pos.raw_duration);
+                    max_end = max_end.max(col.start_song_time + col.raw_duration);
+                    events.push(pos);
+                    events.push(col);
+                }
+
+                let bpm = 120.0_f32;
+                let song_time = 0.0_f32;
+
+                b.iter_batched(
+                    || (manager.clone(), holder.clone(), events.clone(), ctx.clone()),
+                    |(mut manager, mut holder, events, ctx)| {
+                        for ev in events {
+                            manager.start_event_coroutine(bpm, song_time, &ctx, &mut holder, ev);
+                        }
+
+                        let step = 0.05_f32;
+                        let steps = (max_end / step).ceil() as usize;
+                        for i in 0..=steps {
+                            ctx.update_providers(step);
+                            let t = i as f32 * step;
+                            manager.poll_events(t, &ctx, &mut holder);
+                        }
+                    },
+                    BatchSize::SmallInput,
+                )
+            },
+        );
+    }
+
+    group.finish();
+}
+
+criterion_group!(
+    benches,
+    bench_start_and_poll,
+    bench_multi_props,
+    bench_base_swizzle_ops_points
+);
 criterion_main!(benches);

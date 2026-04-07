@@ -34,6 +34,18 @@ harness = false
 name = "json_parsing"
 harness = false
 
+[[bench]]
+name = "path_interpolation"
+harness = false
+
+[[bench]]
+name = "property_lookup"
+harness = false
+
+[[bench]]
+name = "base_provider_swizzle"
+harness = false
+
 [dev-dependencies]
 criterion = { version = "0.8", features = ["html_reports"] }
 

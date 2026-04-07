@@ -31,6 +31,9 @@
 #[cfg(feature = "ffi")]
 pub mod ffi;
 
+// #[cfg]
+pub mod test_helpers;
+
 pub mod animation;
 pub mod base_provider_context;
 pub mod easings;

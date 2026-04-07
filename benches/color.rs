@@ -3,7 +3,7 @@ use serde_json::json;
 use std::hint::black_box;
 use tracks_rs::{
     base_provider_context::BaseProviderContext,
-    point_definition::{interpolate_vector4_point_definition, parse_vector4_point_definition},
+    test_helpers::{interpolate_vector4_point_definition, parse_vector4_point_definition},
 };
 
 fn point_step(n: u64) {
