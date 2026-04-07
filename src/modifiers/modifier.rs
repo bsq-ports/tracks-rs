@@ -2,17 +2,17 @@ use super::{ModifierLike, operation::Operation};
 use super::{ModifierValues, shared_has_base_provider};
 use crate::base_provider_context::BaseProviderContext;
 use crate::providers::AbstractValueProvider;
-use crate::value_types::ValueType;
+use crate::value_types::{LinearValueType, ValueType};
 
 #[derive(Debug, Clone)]
-pub struct BasicModifier<T: ValueType> {
+pub struct BasicModifier<T: LinearValueType> {
     values: ModifierValues<T>,
     has_base_provider: bool,
     modifiers: Vec<BasicModifier<T>>,
     operation: Operation,
 }
 
-impl<T: ValueType> BasicModifier<T>
+impl<T: LinearValueType> BasicModifier<T>
 where
     [(); T::VALUE_COUNT]:,
 {
@@ -32,7 +32,7 @@ where
     }
 }
 
-impl<T: ValueType> ModifierLike<T> for BasicModifier<T>
+impl<T: LinearValueType> ModifierLike<T> for BasicModifier<T>
 where
     [(); T::VALUE_COUNT]:,
 {

@@ -2,20 +2,20 @@ use crate::{
     base_provider_context::BaseProviderContext,
     easings::functions::Functions,
     modifiers::{ModifierLike, ModifierValues, modifier::BasicModifier, operation::Operation},
-    value_types::ValueType,
+    value_types::{LinearValueType, ValueType},
 };
 
 use super::PointDataLike;
 
 #[derive(Debug, Clone)]
-pub struct BasicPointData<T: ValueType> {
+pub struct BasicPointData<T: LinearValueType> {
     base_modifier: BasicModifier<T>,
     pub smooth: bool,
     easing: Functions,
     time: f32,
 }
 
-impl<T: ValueType> BasicPointData<T>
+impl<T: LinearValueType> BasicPointData<T>
 where
     [(); T::VALUE_COUNT]:,
 {
@@ -59,7 +59,7 @@ where
 //     }
 // }
 
-impl<T: ValueType> PointDataLike<T> for BasicPointData<T>
+impl<T: LinearValueType> PointDataLike<T> for BasicPointData<T>
 where
     [(); T::VALUE_COUNT]:,
 {

@@ -15,12 +15,11 @@ pub trait ValueType: Lerpable + Default + Copy + PartialEq + PartialEq<BaseValue
     where
         [(); Self::VALUE_COUNT]:;
     const VALUE_COUNT: usize;
-    const TRANSLATE_VALUE_COUNT: usize = Self::VALUE_COUNT;
 
     fn base_type() -> WrapBaseValueType;
 
     fn from_translate_slice(values: &[f32]) -> Self;
-    fn from_translate_array(values: [f32; Self::TRANSLATE_VALUE_COUNT]) -> Self;
+    fn from_translate_array(values: [f32; Self::VALUE_COUNT]) -> Self;
 
     fn from_slice(values: &[f32]) -> Self;
 
@@ -267,7 +266,6 @@ impl ValueType for BaseValue {
 
 impl ValueType for Quat {
     const VALUE_COUNT: usize = 4;
-    const TRANSLATE_VALUE_COUNT: usize = 3;
     // For translation, we only use the Euler angles (x, y, z)
 
     fn from_slice(values: &[f32]) -> Self {
@@ -278,8 +276,8 @@ impl ValueType for Quat {
         Quat::from_unity_euler_degrees(&Vec3::from_slice(values))
     }
 
-    fn from_translate_array(values: [f32; Self::TRANSLATE_VALUE_COUNT]) -> Self {
-        Quat::from_unity_euler_degrees(&Vec3::from_array(values))
+    fn from_translate_array(values: [f32; Self::VALUE_COUNT]) -> Self {
+        Quat::from_unity_euler_degrees(&Vec3::from_slice(&values))
     }
 
     type Array

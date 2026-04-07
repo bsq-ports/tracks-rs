@@ -13,6 +13,8 @@ pub trait PointDefinitionInterpolationLike {
     fn interpolate_base(&self, time: f32, context: &BaseProviderContext) -> Option<BaseValue>;
 
     fn get_interpolated_time(&self) ->f32;
+    fn set_interpolated_time(&mut self, time: f32);
+    
     fn get_prev_point(&self) -> Option<&BasePointDefinition>;
     fn copy_from(&mut self, other: &dyn PointDefinitionInterpolationLike);
 }
@@ -144,6 +146,18 @@ where
             point: other.point.clone(),
             mark: std::marker::PhantomData,
         };
+    }
+    
+    fn get_interpolated_time(&self) ->f32 {
+        self.interpolate_time
+    }
+    
+    fn set_interpolated_time(&mut self, time: f32) {
+        self.interpolate_time = time;
+    }
+    
+    fn get_prev_point(&self) -> Option<&BasePointDefinition> {
+        self.prev_point.as_ref()
     }
 }
 

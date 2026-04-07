@@ -1,5 +1,6 @@
 use glam::FloatExt;
 
+use std::fmt::Display;
 use std::ops::Add;
 use std::ops::Div;
 use std::ops::Index;
@@ -50,6 +51,18 @@ pub enum WrapBaseValueType {
     Quat = 1,
     Vec4 = 2,
     Float = 3,
+}
+
+impl Display for WrapBaseValueType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            WrapBaseValueType::Unknown => write!(f, "Unknown"),
+            WrapBaseValueType::Vec3 => write!(f, "Vec3"),
+            WrapBaseValueType::Quat => write!(f, "Quat"),
+            WrapBaseValueType::Vec4 => write!(f, "Vec4"),
+            WrapBaseValueType::Float => write!(f, "Float"),
+        }
+    }
 }
 
 impl BaseValue {

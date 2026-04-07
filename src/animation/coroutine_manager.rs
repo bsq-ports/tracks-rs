@@ -2,7 +2,7 @@ use log::debug;
 
 use crate::{
     animation::{
-        property::ValuePropertyLike, track::Track, tracks_holder::{TrackKey, TracksHolder}
+        property::{PathPropertyLike, ValuePropertyLike}, track::Track, tracks_holder::{TrackKey, TracksHolder}
     },
     base_provider_context::BaseProviderContext,
     easings::functions::Functions,
@@ -57,14 +57,14 @@ impl EventType {
                     .properties
                     .get_by_handle_mut(property_handle)
                     .expect("Property not found");
-                property.set_value(None);
+                property.set_base_value(None);
             }
             EventType::AssignPathAnimation(path_property_handle) => {
                 let path_property = track
                     .path_properties
                     .get_by_handle_mut(path_property_handle)
                     .expect("Path property not found");
-                path_property.init(None)
+                path_property.init_base(None)
             }
         }
     }
@@ -188,7 +188,7 @@ impl CoroutineManager {
                     .get_by_handle_mut(path_property_handle)
                     .expect("Path property not found");
 
-                path_property.init(point_data.take());
+                path_property.init_base(point_data.take());
 
                 if no_duration {
                     path_property.finish();
@@ -303,7 +303,7 @@ impl CoroutineManager {
 #[allow(clippy::too_many_arguments)]
 fn animate_track<T>(
     points: &impl PointDefinitionLike<T>,
-    property: &mut ValuePropertyLike,
+    property: &mut dyn ValuePropertyLike,
     duration: f32,
     start_song_time: f32,
     current_song_time: f32,
@@ -340,7 +340,7 @@ where
 }
 
 fn assign_path_animation<PDL, V>(
-    interpolation: &mut PathProperty<PDL, V>,
+    interpolation: &mut PathPropertyLike,
     duration: f32,
     start_time: f32,
     easing: Functions,
@@ -354,7 +354,7 @@ where
 {
     let elapsed_time = song_time - start_time;
     let normalized_time = (elapsed_time / duration).min(1.0);
-    interpolation.interpolate_time = easing.interpolate(normalized_time);
+    interpolation.set_interpolated_time(easing.interpolate(normalized_time));
 
     if elapsed_time < duration {
         return CoroutineResult::Yield;
@@ -367,7 +367,7 @@ where
 /// Returns true if the property was set to the last point's value. aka finished
 fn set_property_value<T>(
     points: &impl PointDefinitionLike<T>,
-    property: &mut ValuePropertyLike,
+    property: &mut dyn ValuePropertyLike,
     time: f32,
     context: &BaseProviderContext,
 ) -> bool
@@ -377,11 +377,11 @@ where
 {
     let (value, finished) = points.interpolate(time, context);
 
-    if Some(value) == property.get_value() {
+    if Some(value) == property.get_base_value() {
         return finished;
     }
 
-    property.set_value(Some(value));
+    property.set_base_value(Some(value.into_base_value()));
     finished
 }
 
@@ -486,7 +486,7 @@ mod tests {
 
         let track = holder.get_track(key).unwrap();
         let val = track.properties.dissolve.get_value().expect("value set");
-        let f = val.as_float().unwrap();
+        let f = val;
         assert!((f - 5.0).abs() < 1e-3, "expected ~5.0 got {}", f);
     }
 

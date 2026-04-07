@@ -2,7 +2,9 @@ use std::{fmt::Display, rc::Rc, str::FromStr};
 
 use crate::{
     animation::property::{
-        BasePathProperty, BaseValueProperty, FloatPathProperty, FloatValueProperty, PathProperty, PathPropertyLike, QuatPathProperty, QuatValueProperty, ValueProperty, ValuePropertyLike, Vec3PathProperty, Vec3ValueProperty, Vec4PathProperty, Vec4ValueProperty
+        BasePathProperty, BaseValueProperty, FloatPathProperty, FloatValueProperty, PathProperty,
+        PathPropertyLike, QuatPathProperty, QuatValueProperty, ValueProperty, ValuePropertyLike,
+        Vec3PathProperty, Vec3ValueProperty, Vec4PathProperty, Vec4ValueProperty,
     },
     base_value::WrapBaseValueType,
 };
@@ -388,7 +390,7 @@ impl PropertiesMap {
 impl PathPropertiesMap {
     pub fn insert(&mut self, id: String, property: BasePathProperty) {
         match self.get_mut(&id) {
-            Some(prop) => *prop.copy_from(property),
+            Some(prop) => prop.copy_from(&property),
             None => {
                 self.path_properties.insert(id, property);
             }
@@ -414,7 +416,10 @@ impl PathPropertiesMap {
         }
     }
 
-    pub fn get_property_by_name_mut(&mut self, name: PropertyNames) -> Option<&mut PathPropertyLike> {
+    pub fn get_property_by_name_mut(
+        &mut self,
+        name: PropertyNames,
+    ) -> Option<&mut PathPropertyLike> {
         match name {
             PropertyNames::Position => Some(&mut self.position),
             PropertyNames::OffsetPosition => Some(&mut self.offset_position),
@@ -435,28 +440,39 @@ impl PathPropertiesMap {
     pub fn get(&self, id: &str) -> Option<&PathPropertyLike> {
         match PropertyNames::from_str(id) {
             Ok(name) => self.get_property_by_name(name),
-            _ => self.path_properties.get(id),
+            _ => self.path_properties.get(id).map(|p| p as &PathPropertyLike),
         }
     }
 
     pub fn get_mut(&mut self, id: &str) -> Option<&mut PathPropertyLike> {
         match PropertyNames::from_str(id) {
             Ok(name) => self.get_property_by_name_mut(name),
-            _ => self.path_properties.get_mut(id),
+            _ => self
+                .path_properties
+                .get_mut(id)
+                .map(|p| p as &mut PathPropertyLike),
         }
     }
 
     // faster access via handle
     pub fn get_by_handle(&self, handle: &PathPropertyHandle) -> Option<&PathPropertyLike> {
         match handle {
-            PathPropertyHandle::ByName(id) => self.path_properties.get(id),
+            PathPropertyHandle::ByName(id) => {
+                self.path_properties.get(id).map(|p| p as &PathPropertyLike)
+            }
             PathPropertyHandle::ById(name) => self.get_property_by_name(*name),
         }
     }
 
-    pub fn get_by_handle_mut(&mut self, handle: &PathPropertyHandle) -> Option<&mut PathPropertyLike> {
+    pub fn get_by_handle_mut(
+        &mut self,
+        handle: &PathPropertyHandle,
+    ) -> Option<&mut PathPropertyLike> {
         match handle {
-            PathPropertyHandle::ByName(id) => self.path_properties.get_mut(id),
+            PathPropertyHandle::ByName(id) => self
+                .path_properties
+                .get_mut(id)
+                .map(|p| p as &mut PathPropertyLike),
             PathPropertyHandle::ById(name) => self.get_property_by_name_mut(*name),
         }
     }
@@ -572,25 +588,25 @@ mod tests {
 
         // Linear / float (dissolve)
         props.dissolve.set_value(Some((3.15_f32)));
-        let f = props.dissolve.get_value().unwrap().as_float().unwrap();
+        let f = props.dissolve.get_value().unwrap();
         assert!((f - 3.15).abs() < 1e-6, "float value mismatch");
 
         // Vec3 (scale) - user requested one test must be scale
         let scale = Vec3::new(1.0, 2.0, 3.0);
-        props.scale.set_value(Some((scale)));
-        let got_scale = props.scale.get_value().unwrap().as_vec3().unwrap();
+        props.scale.set_value(Some(scale));
+        let got_scale = props.scale.get_value().unwrap();
         assert_eq!(got_scale, scale, "scale Vec3 mismatch");
 
         // Vec4 (color)
         let color = Vec4::new(0.1, 0.2, 0.3, 0.4);
-        props.color.set_value(Some((color)));
-        let got_color = props.color.get_value().unwrap().as_vec4().unwrap();
+        props.color.set_value(Some(color));
+        let got_color = props.color.get_value().unwrap();
         assert_eq!(got_color, color, "color Vec4 mismatch");
 
         // Quat (rotation)
         let quat = Quat::from_array([0.0, 0.0, 0.0, 1.0]);
-        props.rotation.set_value(Some((quat)));
-        let got_quat = props.rotation.get_value().unwrap().as_quat().unwrap();
+        props.rotation.set_value(Some(quat));
+        let got_quat = props.rotation.get_value().unwrap();
         assert_eq!(got_quat, quat, "rotation Quat mismatch");
     }
 
@@ -624,7 +640,7 @@ mod tests {
         let got = props
             .get("custom_prop")
             .expect("custom_prop should be present")
-            .get_value()
+            .get_base_value()
             .expect("custom_prop should have a value")
             .as_float()
             .expect("custom_prop should be a float");
@@ -665,12 +681,7 @@ mod tests {
 
         // Set dissolve to an initial value
         props.dissolve.set_value(Some((0.1_f32)));
-        let first = props
-            .dissolve
-            .get_value()
-            .expect("first value present")
-            .as_float()
-            .expect("first is float");
+        let first = props.dissolve.get_value().expect("first value present");
         assert!(
             props.dissolve.last_updated.duration_since(time).is_ok(),
             "last_updated should be a valid SystemTime after setting value"
@@ -686,9 +697,7 @@ mod tests {
         let second = props
             .dissolve
             .get_value()
-            .expect("second value present")
-            .as_float()
-            .expect("second is float");
+            .expect("second value present");
 
         // Ensure the value actually changed (i.e., it was "updated")
         assert!(

@@ -9,17 +9,17 @@ use crate::{
     modifiers::{ModifierValues, modifier::BasicModifier, operation::Operation},
     point_data::{PointDataLike, basic_point_data::BasicPointData},
     prelude::{AbstractValueProvider, ValueProvider},
-    value_types::ValueType,
+    value_types::{LinearValueType, ValueType},
 };
 
 use super::PointDefinitionLike;
 
 #[derive(Default, Debug, Clone)]
-pub struct BasicPointDefinition<T: ValueType> {
+pub struct BasicPointDefinition<T: LinearValueType> {
     points: Rc<[BasicPointData<T>]>,
 }
 
-impl<T: ValueType> PointDefinitionLike<T> for BasicPointDefinition<T>
+impl<T: LinearValueType> PointDefinitionLike<T> for BasicPointDefinition<T>
 where
     [f32; T::VALUE_COUNT + 1]: smallvec::Array,
 {

@@ -43,7 +43,7 @@ pub type BasePathProperty = PathProperty<BasePointDefinition, BaseValue>;
 
 pub trait ValuePropertyLike {
     fn get_type(&self) -> WrapBaseValueType;
-    fn as_base_value(&self) -> Option<BaseValue>;
+    fn get_base_value(&self) -> Option<BaseValue>;
     fn set_base_value(&mut self, value: Option<BaseValue>);
     fn updated(&self) -> SystemTime;
 
@@ -93,7 +93,7 @@ where
         V::base_type()
     }
 
-    fn as_base_value(&self) -> Option<BaseValue> {
+    fn get_base_value(&self) -> Option<BaseValue> {
         self.value.clone().map(|v| v.into_base_value())
     }
 
@@ -113,9 +113,8 @@ where
     fn copy_from(&mut self, other: &dyn ValuePropertyLike) {
         if self.get_type() != other.get_type() {
             panic!("Cannot copy from a ValueProperty {} of a different type {}", self.get_type(), other.get_type());
-            return;
         }
-        let value = other.as_base_value();
+        let value = other.get_base_value();
         self.set_base_value(value);
     }
 }
