@@ -123,3 +123,43 @@ fn parses_vector4_with_base_provider_modifier_op_mul() {
     assert_eq!(value, glam::Vec4::new(0.5, 0.125, 0.5, 1.0));
     assert!(is_last);
 }
+
+#[test]
+fn parses_float_from_smoothed_and_swizzled_base_provider() {
+    let mut context = BaseProviderContext::new();
+    context.set_values("baseSongTime", BaseValue::from(2.0_f32));
+
+    let definition =
+        BasicPointDefinition::<f32>::parse(json!([["baseSongTime.x.s0_5"]]), &mut context);
+    assert!(definition.has_base_provider());
+
+    // Advance smoothing by delta=1.0 with multiplier 0.5.
+    context.update_providers(1.0);
+
+    let (value, is_last) = definition.interpolate(0.0, &context);
+    assert!((value - 1.0).abs() < 1e-6);
+    assert!(is_last);
+}
+
+#[test]
+fn parses_quaternion_from_smoothed_base_provider() {
+    let mut context = BaseProviderContext::new();
+    let target_euler = glam::Vec3::new(12.0, -34.0, 56.0);
+    let target_quat = glam::Quat::from_unity_euler_degrees(&target_euler);
+    context.set_values("baseHeadRotation", BaseValue::from(target_quat));
+
+    let definition =
+        QuaternionPointDefinition::parse(json!([["baseHeadRotation.s1"]]), &mut context);
+    assert!(definition.has_base_provider());
+
+    // Advance smoothing fully so provider reaches target quaternion.
+    context.update_providers(1.0);
+
+    let (value, is_last) = definition.interpolate(0.0, &context);
+    let eps = 1e-5_f32;
+    assert!((value.x - target_quat.x).abs() < eps);
+    assert!((value.y - target_quat.y).abs() < eps);
+    assert!((value.z - target_quat.z).abs() < eps);
+    assert!((value.w - target_quat.w).abs() < eps);
+    assert!(is_last);
+}
