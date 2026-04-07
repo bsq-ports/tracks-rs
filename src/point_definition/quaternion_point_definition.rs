@@ -79,7 +79,8 @@ impl PointDefinitionLike<Quat> for QuaternionPointDefinition {
                 (QuaternionValues::Static(raw_vector_point, quat), values[3])
             }
             _ => {
-                let values_len: usize = values.iter().map(|v| v.values(context).len()).sum();
+                let map = values.iter().map(|v| v.values(context).len());
+                let values_len: usize = map.sum();
                 let time = if values_len == 4 {
                     values
                         .last()

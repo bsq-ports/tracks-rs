@@ -12,6 +12,7 @@ pub mod r#static;
 
 #[cfg(feature = "json")]
 use serde_json::Value as JsonValue;
+use smallvec::SmallVec;
 
 /// Abstract value provider
 /// that provides values
@@ -21,7 +22,7 @@ pub trait AbstractValueProvider {
     // TODO: make this return a value instead of a reference
     // we can theoretically limit this to [f32; 4],
     // or a Cow<'a, [f32; 4]> to avoid allocations
-    fn values<'a>(&'a self, context: &BaseProviderContext) -> Cow<'a, [f32]>;
+    fn values(&self, context: &BaseProviderContext) -> SmallVec<[f32; 4]>;
 }
 
 /// Update values on demand
@@ -47,7 +48,7 @@ pub enum ValueProvider {
 }
 
 impl AbstractValueProvider for ValueProvider {
-    fn values<'a>(&'a self, context: &BaseProviderContext) -> Cow<'a, [f32]> {
+    fn values(&self, context: &BaseProviderContext) -> SmallVec<[f32; 4]> {
         match self {
             ValueProvider::Static(v) => v.values(context),
             ValueProvider::BaseProvider(v) => v.values(context),
@@ -55,11 +56,11 @@ impl AbstractValueProvider for ValueProvider {
             ValueProvider::PartialProvider(v) => v.values(context),
             ValueProvider::SmoothProviders(v) => {
                 let borrow = v.borrow();
-                Cow::Owned(borrow.values(context).clone().into_owned())
+                borrow.values(context)
             }
             ValueProvider::SmoothRotationProviders(v) => {
                 let borrow = v.borrow();
-                Cow::Owned(borrow.values(context).clone().into_owned())
+                borrow.values(context)
             }
         }
     }
@@ -131,9 +132,9 @@ fn close(result: &mut Vec<ValueProvider>, raw_values: Vec<&JsonValue>, open: usi
         return;
     }
 
-    let values: Vec<f32> = raw_values[open..end]
+    let values: SmallVec<[f32; 4]> = raw_values[open..end]
         .iter()
         .filter_map(|v| v.as_f64().map(|i| i as f32))
         .collect();
-    result.push(ValueProvider::Static(StaticValues::new(&values)));
+    result.push(ValueProvider::Static(StaticValues::new(values)));
 }

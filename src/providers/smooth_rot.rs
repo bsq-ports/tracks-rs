@@ -6,14 +6,15 @@ use crate::{base_provider_context::BaseProviderContext, quaternion_utils::Quater
 
 use super::AbstractValueProvider;
 
-use glam::Quat;
+use glam::{Quat, Vec3};
+use smallvec::SmallVec;
 
 #[derive(Clone, Debug)]
 pub struct SmoothRotationProvidersValues {
     pub(crate) rotation_values: Quat,
     pub(crate) mult: f32,
     pub(crate) last_quaternion: Quat,
-    pub(crate) values: [f32; 3],
+    pub(crate) values: Vec3,
 }
 
 impl SmoothRotationProvidersValues {
@@ -28,8 +29,8 @@ impl SmoothRotationProvidersValues {
 }
 
 impl AbstractValueProvider for SmoothRotationProvidersValues {
-    fn values<'a>(&'a self, _context: &BaseProviderContext) -> Cow<'a, [f32]> {
-        std::borrow::Cow::Borrowed(&self.values)
+    fn values<'a>(&'a self, _context: &BaseProviderContext) -> SmallVec<[f32; 4]> {
+        SmallVec::from(self.values.to_array().as_slice())
     }
 }
 
@@ -40,6 +41,6 @@ impl UpdateableValues for SmoothRotationProvidersValues {
 
         let euler = self.last_quaternion.to_unity_euler_degrees();
 
-        self.values = [euler.x, euler.y, euler.z];
+        self.values = euler;
     }
 }

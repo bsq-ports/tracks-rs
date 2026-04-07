@@ -1,4 +1,5 @@
 use glam::FloatExt;
+use smallvec::SmallVec;
 
 use std::ops::Add;
 use std::ops::Div;
@@ -117,6 +118,15 @@ impl BaseValue {
         }
     }
 
+    pub fn as_small_vec(&self) -> SmallVec<[f32; 4]> {
+        match self {
+            BaseValue::Float(v) => smallvec::smallvec![*v],
+            BaseValue::Vector3(v) => smallvec::smallvec![v.x, v.y, v.z],
+            BaseValue::Vector4(v) => smallvec::smallvec![v.x, v.y, v.z, v.w],
+            BaseValue::Quaternion(v) => smallvec::smallvec![v.x, v.y, v.z, v.w],
+        }
+    }
+
     pub fn lerp(a: BaseValue, b: BaseValue, t: f32) -> BaseValue {
         match (a, b) {
             (BaseValue::Float(v1), BaseValue::Float(v2)) => f32::lerp(v1, v2, t).into(),
@@ -189,6 +199,15 @@ impl BaseValueRef<'_> {
             BaseValueRef::Vector3(v) => v.as_ref(),
             BaseValueRef::Vector4(v) => v.as_ref(),
             BaseValueRef::Quaternion(v) => v.as_ref(),
+        }
+    }
+
+    pub fn as_small_vec(&self) -> SmallVec<[f32; 4]> {
+        match self {
+            BaseValueRef::Float(v) => smallvec::smallvec![**v],
+            BaseValueRef::Vector3(v) => smallvec::smallvec![v.x, v.y, v.z],
+            BaseValueRef::Vector4(v) => smallvec::smallvec![v.x, v.y, v.z, v.w],
+            BaseValueRef::Quaternion(v) => smallvec::smallvec![v.x, v.y, v.z, v.w],
         }
     }
 }

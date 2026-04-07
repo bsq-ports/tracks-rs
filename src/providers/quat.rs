@@ -7,6 +7,7 @@ use crate::{base_provider_context::BaseProviderContext, quaternion_utils::Quater
 use super::AbstractValueProvider;
 
 use glam::Quat;
+use smallvec::SmallVec;
 
 #[derive(Clone, Debug)]
 pub struct QuaternionProviderValues {
@@ -22,7 +23,7 @@ impl QuaternionProviderValues {
 }
 
 impl AbstractValueProvider for QuaternionProviderValues {
-    fn values<'a>(&'a self, _context: &BaseProviderContext) -> Cow<'a, [f32]> {
+    fn values(&self, _context: &BaseProviderContext) -> SmallVec<[f32; 4]> {
         let source = self.source.values(_context);
 
         // We are receiving quaternion values directly here
@@ -30,6 +31,6 @@ impl AbstractValueProvider for QuaternionProviderValues {
         let rotation = Quat::from_xyzw(source[0], source[1], source[2], source[3]);
         let euler = rotation.to_unity_euler_degrees();
 
-        euler.to_array().to_vec().into()
+        SmallVec::from(euler.to_array().as_slice())
     }
 }

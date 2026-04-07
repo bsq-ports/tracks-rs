@@ -47,7 +47,7 @@ pub trait ModifierLike<T> {
         let mut values = [0.0; Self::VALUE_COUNT];
         let mut i = 0;
         for value in ivals {
-            for v in value.values(context).iter().copied() {
+            for v in value.values(context) {
                 if i >= Self::VALUE_COUNT {
                     break;
                 }

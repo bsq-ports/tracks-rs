@@ -1,5 +1,7 @@
 use std::borrow::Cow;
 
+use smallvec::SmallVec;
+
 use crate::base_provider_context::BaseProviderContext;
 
 use super::AbstractValueProvider;
@@ -17,12 +19,12 @@ impl PartialProviderValues {
 }
 
 impl AbstractValueProvider for PartialProviderValues {
-    fn values<'a>(&'a self, _context: &BaseProviderContext) -> Cow<'a, [f32]> {
+    fn values<'a>(&'a self, _context: &BaseProviderContext) -> SmallVec<[f32; 4]> {
         let new_values = self
             .parts
             .iter()
             .map(|&part| self.source[part])
-            .collect::<Vec<f32>>();
-        Cow::Owned(new_values)
+            .collect::<_>();
+        new_values
     }
 }
