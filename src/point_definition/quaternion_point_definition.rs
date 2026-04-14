@@ -73,8 +73,9 @@ impl PointDefinitionLike<Quat> for QuaternionPointDefinition {
         context: &BaseProviderContext,
     ) -> Self::PointData {
         let (base_values, time) = match values.as_slice() {
-            [ValueProvider::Static(static_val)] if static_val.values(context).len() == 4 => {
-                let values = static_val.values(context);
+            // [vec3, time]
+            [ValueProvider::Static(static_val)] if static_val.values.len() == 4 => {
+                let values = &static_val.values;
                 let raw_vector_point = Vec3::new(values[0], values[1], values[2]);
                 let quat =
                     Quat::from_unity_euler_degrees(&raw_vector_point);

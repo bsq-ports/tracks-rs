@@ -82,8 +82,8 @@ where
 
         let (value, time) = match &values[..] {
             // [x, ..., y]
-            [ValueProvider::Static(static_val)] => {
-                let values = static_val.values(context);
+            [ValueProvider::Static(static_val)] if static_val.values.len() == T::VALUE_COUNT + 1 => {
+                let values = &static_val.values;
                 let point = T::from_slice(&values[0..T::VALUE_COUNT]);
                 let time = values[T::VALUE_COUNT];
                 (ModifierValues::Static(point), time)
