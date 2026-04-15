@@ -8,7 +8,7 @@ use crate::{
     base_provider_context::BaseProviderContext,
     easings::functions::Functions,
     point_definition::{
-        PointDefinition,
+        PointDefinitionLike,
         base_point_definition::{self},
     },
 };
@@ -29,6 +29,9 @@ struct CoroutineTask {
     event_type: EventType,
     repeat: u32,
     duration_song_time: f32,
+    /// Whether the point definition has a base provider, which affects whether we can skip interpolation when finished
+    /// this is here to avoid repeatedly calling has_base_provider on the point definition during interpolation, which can be expensive for complex definitions with many modifiers
+    has_base_provider: bool,
     easing: Functions,
     start_song_time: f32,
     track_key: TrackKey,
@@ -88,7 +91,9 @@ impl CoroutineManager {
         if let Some(pos) = self.coroutines.iter().position(|x| {
             x.track_key == event_group_data.track_key && x.event_type == event_group_data.property
         }) {
-            self.coroutines.remove(pos);
+            // order does not matter for coroutine execution semantics, so use swap_remove
+            // to avoid O(n) shifts on cancellation-heavy paths
+            self.coroutines.swap_remove(pos);
         }
 
         // iterate entire list and remove all matching (in case of repeats)
@@ -132,6 +137,7 @@ impl CoroutineManager {
         tracks_holder: &mut TracksHolder,
     ) -> Option<CoroutineTask> {
         let mut repeat = data.repeat;
+        let mut has_base_provider = false;
 
         let no_duration = duration_song_time == 0.0
             || data.start_song_time + (duration_song_time * (repeat as f32 + 1.0))
@@ -158,8 +164,8 @@ impl CoroutineManager {
 
                 let point_data = point_data.as_ref().unwrap();
 
-                let has_base = point_data.has_base_provider();
-                if no_duration || (point_data.get_points().len() <= 1 && !has_base) {
+                has_base_provider = point_data.has_base_provider();
+                if no_duration || (point_data.get_count() <= 1 && !has_base_provider) {
                     set_property_value(point_data, property, 1.0, provider_context);
                     return None;
                 }
@@ -171,7 +177,7 @@ impl CoroutineManager {
                     data.start_song_time,
                     current_song_time,
                     data.easing,
-                    has_base,
+                    has_base_provider,
                     provider_context,
                 );
                 if result == CoroutineResult::Break {
@@ -210,6 +216,7 @@ impl CoroutineManager {
             easing: data.easing,
             track_key,
             event_type: property,
+            has_base_provider,
 
             point_definition: point_data,
 
@@ -225,10 +232,18 @@ impl CoroutineManager {
         context: &BaseProviderContext,
         tracks_holder: &mut TracksHolder,
     ) {
-        // Yield and remove coroutines that are finished
-        self.coroutines.retain_mut(|event| {
-            Self::poll_event(song_time, context, event, tracks_holder) == CoroutineResult::Yield
-        });
+        // Poll in-place and remove completed coroutines with swap_remove to avoid
+        // compaction costs from retain_mut when many entries complete each frame.
+        let mut i = 0;
+        while i < self.coroutines.len() {
+            let result =
+                Self::poll_event(song_time, context, &mut self.coroutines[i], tracks_holder);
+            if result == CoroutineResult::Yield {
+                i += 1;
+            } else {
+                self.coroutines.swap_remove(i);
+            }
+        }
     }
 
     fn poll_event(
@@ -251,7 +266,7 @@ impl CoroutineManager {
                         return CoroutineResult::Break;
                     }
                 };
-                let has_base = point_def.has_base_provider();
+                let has_base = event_data.has_base_provider;
                 let value_property = track
                     .properties
                     .get_by_handle_mut(value_property_handle)
@@ -381,16 +396,20 @@ mod tests {
     use crate::animation::track::ValuePropertyHandle;
     use crate::animation::tracks_holder::TracksHolder;
     use crate::base_provider_context::BaseProviderContext;
+    use crate::base_value::WrapBaseValueType;
     use crate::easings::functions::Functions;
-    use crate::modifiers::float_modifier::FloatValues;
-    use crate::modifiers::vector3_modifier::Vector3Values;
-    use crate::point_data::PointData;
-    use crate::point_data::float_point_data::FloatPointData;
-    use crate::point_data::vector3_point_data::Vector3PointData;
-    use crate::point_definition::float_point_definition::FloatPointDefinition;
-    use crate::point_definition::vector3_point_definition::Vector3PointDefinition;
+    use crate::modifiers::ModifierValues;
+    use crate::point_data::basic_point_data::BasicPointData;
+    use crate::point_definition::base_point_definition::BasePointDefinition;
+    use crate::point_definition::basic_point_definition::BasicPointDefinition;
+    use crate::point_definition::vector3_point_definition;
     use glam::Vec3;
     use glam::Vec4;
+
+    type Vector3PointData = BasicPointData<Vec3>;
+
+    type Vector3PointDefinition = vector3_point_definition::Vector3PointDefinition;
+    type Vector4PointDefinition = BasicPointDefinition<Vec4>;
 
     #[test]
     fn tracks_holder_add_get() {
@@ -434,19 +453,21 @@ mod tests {
         let key = holder.add_track(t);
 
         // construct a simple float point definition with two points (0 -> 10 over time 0..1)
-        let pd = FloatPointDefinition::new(vec![
-            PointData::Float(FloatPointData::new(
-                FloatValues::Static(0.0),
+        let pd = BasicPointDefinition::new(vec![
+            BasicPointData::new(
+                ModifierValues::Static(0.0),
                 0.0,
+                false,
                 vec![],
                 Functions::EaseLinear,
-            )),
-            PointData::Float(FloatPointData::new(
-                FloatValues::Static(10.0),
+            ),
+            BasicPointData::new(
+                ModifierValues::Static(10.0),
                 1.0,
+                false,
                 vec![],
                 Functions::EaseLinear,
-            )),
+            ),
         ]);
 
         let ev = EventData {
@@ -456,7 +477,7 @@ mod tests {
             start_song_time: 0.0,
             property: EventType::AnimateTrack(ValuePropertyHandle::new("dissolve")),
             track_key: key,
-            point_data: Some(pd.into()),
+            point_data: Some(BasePointDefinition::Float(pd)),
         };
 
         // bpm 60 => duration = 1.0 for raw_duration 1.0
@@ -489,19 +510,21 @@ mod tests {
         let key_b = holder.add_track(tb);
 
         // initial coroutine on track A (should be cancelled later)
-        let pd_a1 = FloatPointDefinition::new(vec![
-            PointData::Float(FloatPointData::new(
-                FloatValues::Static(0.0),
+        let pd_a1 = BasicPointDefinition::new(vec![
+            BasicPointData::new(
+                ModifierValues::Static(0.0),
                 0.0,
+                false,
                 vec![],
                 Functions::EaseLinear,
-            )),
-            PointData::Float(FloatPointData::new(
-                FloatValues::Static(10.0),
+            ),
+            BasicPointData::new(
+                ModifierValues::Static(10.0),
                 1.0,
+                false,
                 vec![],
                 Functions::EaseLinear,
-            )),
+            ),
         ]);
 
         let ev_a1 = EventData {
@@ -511,25 +534,27 @@ mod tests {
             start_song_time: 0.0,
             property: EventType::AnimateTrack(ValuePropertyHandle::new("dissolve")),
             track_key: key_a,
-            point_data: Some(pd_a1.into()),
+            point_data: Some(BasePointDefinition::Float(pd_a1)),
         };
 
         cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev_a1);
 
         // start a coroutine on track B same property - should NOT be cancelled by later A
-        let pd_b = FloatPointDefinition::new(vec![
-            PointData::Float(FloatPointData::new(
-                FloatValues::Static(5.0),
+        let pd_b = BasicPointDefinition::new(vec![
+            BasicPointData::new(
+                ModifierValues::Static(5.0),
                 0.0,
+                false,
                 vec![],
                 Functions::EaseLinear,
-            )),
-            PointData::Float(FloatPointData::new(
-                FloatValues::Static(15.0),
+            ),
+            BasicPointData::new(
+                ModifierValues::Static(15.0),
                 1.0,
+                false,
                 vec![],
                 Functions::EaseLinear,
-            )),
+            ),
         ]);
 
         let ev_b = EventData {
@@ -539,38 +564,29 @@ mod tests {
             start_song_time: 0.0,
             property: EventType::AnimateTrack(ValuePropertyHandle::new("dissolve")),
             track_key: key_b,
-            point_data: Some(pd_b.into()),
+            point_data: Some(BasePointDefinition::Float(pd_b)),
         };
 
         cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev_b);
 
         // start a different-property coroutine on track A - should NOT cancel dissolve on A
         // use color (vec4)
-        let pd_color =
-            crate::point_definition::vector4_point_definition::Vector4PointDefinition::new(vec![
-                PointData::Vector4(
-                    crate::point_data::vector4_point_data::Vector4PointData::new(
-                        crate::modifiers::vector4_modifier::Vector4Values::Static(Vec4::new(
-                            0.0, 0.0, 0.0, 0.0,
-                        )),
-                        false,
-                        0.0,
-                        vec![],
-                        Functions::EaseLinear,
-                    ),
-                ),
-                PointData::Vector4(
-                    crate::point_data::vector4_point_data::Vector4PointData::new(
-                        crate::modifiers::vector4_modifier::Vector4Values::Static(Vec4::new(
-                            4.0, 4.0, 4.0, 4.0,
-                        )),
-                        false,
-                        1.0,
-                        vec![],
-                        Functions::EaseLinear,
-                    ),
-                ),
-            ]);
+        let pd_color = Vector4PointDefinition::new(vec![
+            BasicPointData::new(
+                ModifierValues::Static(Vec4::new(0.0, 0.0, 0.0, 0.0)),
+                0.0,
+                false,
+                vec![],
+                Functions::EaseLinear,
+            ),
+            BasicPointData::new(
+                ModifierValues::Static(Vec4::new(4.0, 4.0, 4.0, 4.0)),
+                1.0,
+                false,
+                vec![],
+                Functions::EaseLinear,
+            ),
+        ]);
 
         let ev_a_color = EventData {
             raw_duration: 1.0,
@@ -579,25 +595,27 @@ mod tests {
             start_song_time: 0.0,
             property: EventType::AnimateTrack(ValuePropertyHandle::new("color")),
             track_key: key_a,
-            point_data: Some(pd_color.into()),
+            point_data: Some(BasePointDefinition::Vector4(pd_color)),
         };
 
         cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev_a_color);
 
         // Now start a NEW coroutine on track A for same property (dissolve) which should cancel the first one
-        let pd_a2 = FloatPointDefinition::new(vec![
-            PointData::Float(FloatPointData::new(
-                FloatValues::Static(0.0),
+        let pd_a2 = BasicPointDefinition::new(vec![
+            BasicPointData::new(
+                ModifierValues::Static(0.0),
                 0.0,
+                false,
                 vec![],
                 Functions::EaseLinear,
-            )),
-            PointData::Float(FloatPointData::new(
-                FloatValues::Static(20.0),
+            ),
+            BasicPointData::new(
+                ModifierValues::Static(20.0),
                 1.0,
+                false,
                 vec![],
                 Functions::EaseLinear,
-            )),
+            ),
         ]);
 
         let ev_a2 = EventData {
@@ -607,7 +625,7 @@ mod tests {
             start_song_time: 0.0,
             property: EventType::AnimateTrack(ValuePropertyHandle::new("dissolve")),
             track_key: key_a,
-            point_data: Some(pd_a2.into()),
+            point_data: Some(BasePointDefinition::Float(pd_a2)),
         };
 
         cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev_a2);
@@ -664,19 +682,21 @@ mod tests {
         t.name = "z_track".to_string();
         let key = holder.add_track(t);
 
-        let pd = FloatPointDefinition::new(vec![
-            PointData::Float(FloatPointData::new(
-                FloatValues::Static(0.0),
+        let pd = BasicPointDefinition::new(vec![
+            BasicPointData::new(
+                ModifierValues::Static(0.0),
                 0.0,
+                false,
                 vec![],
                 Functions::EaseLinear,
-            )),
-            PointData::Float(FloatPointData::new(
-                FloatValues::Static(10.0),
+            ),
+            BasicPointData::new(
+                ModifierValues::Static(10.0),
                 1.0,
+                false,
                 vec![],
                 Functions::EaseLinear,
-            )),
+            ),
         ]);
 
         // raw_duration 0 -> duration calculation leads to 0 and should immediately set final value
@@ -687,7 +707,7 @@ mod tests {
             start_song_time: 0.0,
             property: EventType::AnimateTrack(ValuePropertyHandle::new("dissolve")),
             track_key: key,
-            point_data: Some(pd.into()),
+            point_data: Some(BasePointDefinition::Float(pd)),
         };
 
         cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev);
@@ -726,20 +746,20 @@ mod tests {
 
         // Vec3 point definition (0 -> 3 over time 0..1)
         let pd = Vector3PointDefinition::new(vec![
-            PointData::Vector3(Vector3PointData::new(
-                Vector3Values::Static(Vec3::new(0.0, 0.0, 0.0)),
-                false,
+            Vector3PointData::new(
+                ModifierValues::Static(Vec3::new(0.0, 0.0, 0.0)),
                 0.0,
-                vec![],
-                Functions::EaseLinear,
-            )),
-            PointData::Vector3(Vector3PointData::new(
-                Vector3Values::Static(Vec3::new(3.0, 3.0, 3.0)),
                 false,
-                1.0,
                 vec![],
                 Functions::EaseLinear,
-            )),
+            ),
+            Vector3PointData::new(
+                ModifierValues::Static(Vec3::new(3.0, 3.0, 3.0)),
+                1.0,
+                false,
+                vec![],
+                Functions::EaseLinear,
+            ),
         ]);
 
         let ev = EventData {
@@ -749,7 +769,7 @@ mod tests {
             start_song_time: 0.0,
             property: EventType::AssignPathAnimation(PathPropertyHandle::new("definitePosition")),
             track_key: key,
-            point_data: Some(pd.into()),
+            point_data: Some(BasePointDefinition::Vector3(pd)),
         };
 
         cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev);
@@ -806,20 +826,20 @@ mod tests {
 
         // Vec3 point definition (0 -> 3 over time 0..1)
         let pd = Vector3PointDefinition::new(vec![
-            PointData::Vector3(Vector3PointData::new(
-                Vector3Values::Static(Vec3::new(0.0, 0.0, 0.0)),
-                false,
+            Vector3PointData::new(
+                ModifierValues::Static(Vec3::new(0.0, 0.0, 0.0)),
                 0.0,
-                vec![],
-                Functions::EaseLinear,
-            )),
-            PointData::Vector3(Vector3PointData::new(
-                Vector3Values::Static(Vec3::new(3.0, 3.0, 3.0)),
                 false,
-                1.0,
                 vec![],
                 Functions::EaseLinear,
-            )),
+            ),
+            Vector3PointData::new(
+                ModifierValues::Static(Vec3::new(3.0, 3.0, 3.0)),
+                1.0,
+                false,
+                vec![],
+                Functions::EaseLinear,
+            ),
         ]);
 
         let ev = EventData {
@@ -829,7 +849,7 @@ mod tests {
             start_song_time: 0.0,
             property: EventType::AssignPathAnimation(PathPropertyHandle::new("definitePosition")),
             track_key: key,
-            point_data: Some(pd.into()),
+            point_data: Some(BasePointDefinition::Vector3(pd)),
         };
 
         cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev);
@@ -866,20 +886,20 @@ mod tests {
 
         // Vec3 point definition (0 -> 3 over time 0..1)
         let pd = Vector3PointDefinition::new(vec![
-            PointData::Vector3(Vector3PointData::new(
-                Vector3Values::Static(Vec3::new(0.0, 0.0, 0.0)),
-                false,
+            Vector3PointData::new(
+                ModifierValues::Static(Vec3::new(0.0, 0.0, 0.0)),
                 0.0,
-                vec![],
-                Functions::EaseLinear,
-            )),
-            PointData::Vector3(Vector3PointData::new(
-                Vector3Values::Static(Vec3::new(3.0, 3.0, 3.0)),
                 false,
-                1.0,
                 vec![],
                 Functions::EaseLinear,
-            )),
+            ),
+            Vector3PointData::new(
+                ModifierValues::Static(Vec3::new(3.0, 3.0, 3.0)),
+                1.0,
+                false,
+                vec![],
+                Functions::EaseLinear,
+            ),
         ]);
 
         let ev = EventData {
@@ -889,7 +909,7 @@ mod tests {
             start_song_time: 0.0,
             property: EventType::AssignPathAnimation(PathPropertyHandle::new("definitePosition")),
             track_key: key,
-            point_data: Some(pd.into()),
+            point_data: Some(BasePointDefinition::Vector3(pd)),
         };
 
         cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev);
@@ -950,19 +970,21 @@ mod tests {
         let key = holder.add_track(t);
 
         // float point definition (0 -> 10 over 0..1)
-        let pd = FloatPointDefinition::new(vec![
-            PointData::Float(FloatPointData::new(
-                FloatValues::Static(0.0),
+        let pd = BasicPointDefinition::new(vec![
+            BasicPointData::new(
+                ModifierValues::Static(0.0),
                 0.0,
+                false,
                 vec![],
                 Functions::EaseLinear,
-            )),
-            PointData::Float(FloatPointData::new(
-                FloatValues::Static(10.0),
+            ),
+            BasicPointData::new(
+                ModifierValues::Static(10.0),
                 1.0,
+                false,
                 vec![],
                 Functions::EaseLinear,
-            )),
+            ),
         ]);
 
         // repeat = 2 -> should run 3 times total
@@ -973,7 +995,7 @@ mod tests {
             start_song_time: 0.0,
             property: EventType::AnimateTrack(ValuePropertyHandle::new("dissolve")),
             track_key: key,
-            point_data: Some(pd.into()),
+            point_data: Some(BasePointDefinition::Float(pd)),
         };
 
         cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev);
@@ -1062,20 +1084,20 @@ mod tests {
 
         // Vec3 point definition (0 -> 3 over 0..1)
         let pd = Vector3PointDefinition::new(vec![
-            PointData::Vector3(Vector3PointData::new(
-                Vector3Values::Static(Vec3::new(0.0, 0.0, 0.0)),
-                false,
+            Vector3PointData::new(
+                ModifierValues::Static(Vec3::new(0.0, 0.0, 0.0)),
                 0.0,
-                vec![],
-                Functions::EaseLinear,
-            )),
-            PointData::Vector3(Vector3PointData::new(
-                Vector3Values::Static(Vec3::new(3.0, 3.0, 3.0)),
                 false,
-                1.0,
                 vec![],
                 Functions::EaseLinear,
-            )),
+            ),
+            Vector3PointData::new(
+                ModifierValues::Static(Vec3::new(3.0, 3.0, 3.0)),
+                1.0,
+                false,
+                vec![],
+                Functions::EaseLinear,
+            ),
         ]);
 
         // repeat = 2 -> should run 3 times total
@@ -1086,7 +1108,7 @@ mod tests {
             start_song_time: 0.0,
             property: EventType::AssignPathAnimation(PathPropertyHandle::new("definitePosition")),
             track_key: key,
-            point_data: Some(pd.into()),
+            point_data: Some(BasePointDefinition::Vector3(pd)),
         };
 
         cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev);
@@ -1182,19 +1204,21 @@ mod tests {
         let key = holder.add_track(t);
 
         // repeat = 1 -> should run twice
-        let pd = FloatPointDefinition::new(vec![
-            PointData::Float(FloatPointData::new(
-                FloatValues::Static(0.0),
+        let pd = BasicPointDefinition::new(vec![
+            BasicPointData::new(
+                ModifierValues::Static(0.0),
                 0.0,
+                false,
                 vec![],
                 Functions::EaseLinear,
-            )),
-            PointData::Float(FloatPointData::new(
-                FloatValues::Static(10.0),
+            ),
+            BasicPointData::new(
+                ModifierValues::Static(10.0),
                 1.0,
+                false,
                 vec![],
                 Functions::EaseLinear,
-            )),
+            ),
         ]);
 
         let ev = EventData {
@@ -1204,7 +1228,7 @@ mod tests {
             start_song_time: 0.0,
             property: EventType::AnimateTrack(ValuePropertyHandle::new("dissolve")),
             track_key: key,
-            point_data: Some(pd.into()),
+            point_data: Some(BasePointDefinition::Float(pd)),
         };
 
         cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev);
@@ -1259,19 +1283,21 @@ mod tests {
         t.name = "persist_track".to_string();
         let key = holder.add_track(t);
 
-        let pd = FloatPointDefinition::new(vec![
-            PointData::Float(FloatPointData::new(
-                FloatValues::Static(0.0),
+        let pd = BasicPointDefinition::new(vec![
+            BasicPointData::new(
+                ModifierValues::Static(0.0),
                 0.0,
+                false,
                 vec![],
                 Functions::EaseLinear,
-            )),
-            PointData::Float(FloatPointData::new(
-                FloatValues::Static(10.0),
+            ),
+            BasicPointData::new(
+                ModifierValues::Static(10.0),
                 1.0,
+                false,
                 vec![],
                 Functions::EaseLinear,
-            )),
+            ),
         ]);
 
         let ev = EventData {
@@ -1281,7 +1307,7 @@ mod tests {
             start_song_time: 0.0,
             property: EventType::AnimateTrack(ValuePropertyHandle::new("dissolve")),
             track_key: key,
-            point_data: Some(pd.into()),
+            point_data: Some(BasePointDefinition::Float(pd)),
         };
 
         // Start at song_time = 0.0
@@ -1340,25 +1366,25 @@ mod tests {
 
     #[test]
     fn animate_track_matches_csharp_coroutine_semantics() {
-        use crate::modifiers::float_modifier::FloatValues;
-        use crate::point_data::PointData;
-        use crate::point_data::float_point_data::FloatPointData;
-        use crate::point_definition::float_point_definition::FloatPointDefinition;
+        use crate::point_data::basic_point_data::BasicPointData;
+        use crate::point_definition::basic_point_definition::BasicPointDefinition;
 
         // prepare points 0 -> 10 over 0..1
-        let pd = FloatPointDefinition::new(vec![
-            PointData::Float(FloatPointData::new(
-                FloatValues::Static(0.0),
+        let pd = BasicPointDefinition::new(vec![
+            BasicPointData::new(
+                ModifierValues::Static(0.0),
                 0.0,
+                false,
                 vec![],
                 Functions::EaseLinear,
-            )),
-            PointData::Float(FloatPointData::new(
-                FloatValues::Static(10.0),
+            ),
+            BasicPointData::new(
+                ModifierValues::Static(10.0),
                 1.0,
+                false,
                 vec![],
                 Functions::EaseLinear,
-            )),
+            ),
         ]);
 
         // common parameters
@@ -1384,14 +1410,14 @@ mod tests {
             start_song_time: 0.0,
             property: EventType::AnimateTrack(ValuePropertyHandle::new("dissolve")),
             track_key: key,
-            point_data: Some(pd.clone().into()),
+            point_data: Some(BasePointDefinition::Float(pd.clone())),
         };
 
         // Start the coroutine (bpm=60 -> duration_song_time = 1.0)
         cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev);
 
         // C#-side simulation property
-        let mut prop_csharp = ValueProperty::empty(crate::ffi::types::WrapBaseValueType::Float);
+        let mut prop_csharp = ValueProperty::empty(WrapBaseValueType::Float);
 
         // C# simulation state
         let mut cs_repeat = repeat as i32;
@@ -1416,7 +1442,7 @@ mod tests {
                     let time = easing.interpolate(normalized);
                     let on_last = {
                         let (value, finished) = pd.interpolate(time, &BaseProviderContext::new());
-                        prop_csharp.set_value(Some(crate::values::value::BaseValue::Float(value)));
+                        prop_csharp.set_value(Some(crate::base_value::BaseValue::Float(value)));
                         finished
                     };
                     cs_skip = !non_lazy && on_last;

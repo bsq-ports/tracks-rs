@@ -4,9 +4,9 @@ use std::str::FromStr;
 use crate::animation::property::{PathProperty, ValueProperty};
 use crate::animation::track::PropertyNames;
 use crate::base_provider_context::BaseProviderContext;
-use crate::ffi::types::{WrapBaseValue, WrapBaseValueType};
+use crate::base_value::{BaseValue, WrapBaseValueType};
+use crate::ffi::types::WrapBaseValue;
 use crate::point_definition::base_point_definition::{self};
-use crate::values::value::BaseValue;
 
 use super::time::CTimeUnit;
 

@@ -1,16 +1,17 @@
 use glam::FloatExt;
+use smallvec::SmallVec;
 
+use std::ops::Add;
 use std::ops::Div;
 use std::ops::Index;
 use std::ops::IndexMut;
 use std::ops::Mul;
+use std::ops::Sub;
 
 use glam::Quat;
 use glam::Vec3;
 
 use glam::Vec4;
-
-use crate::ffi::types::WrapBaseValueType;
 
 ///
 /// Time based number
@@ -39,6 +40,17 @@ pub enum BaseValueRef<'a> {
     Vector3(&'a Vec3),
     Vector4(&'a Vec4),
     Quaternion(&'a Quat),
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, PartialEq, PartialOrd, Eq, Hash, Ord, Debug, Default)]
+pub enum WrapBaseValueType {
+    #[default]
+    Unknown = -1,
+    Vec3 = 0,
+    Quat = 1,
+    Vec4 = 2,
+    Float = 3,
 }
 
 impl BaseValue {
@@ -103,6 +115,15 @@ impl BaseValue {
             BaseValue::Vector3(v) => v.as_ref(),
             BaseValue::Vector4(v) => v.as_ref(),
             BaseValue::Quaternion(v) => v.as_ref(),
+        }
+    }
+
+    pub fn into_small_vec(self) -> SmallVec<[f32; 4]> {
+        match self {
+            BaseValue::Float(v) => smallvec::smallvec![v],
+            BaseValue::Vector3(v) => smallvec::smallvec![v.x, v.y, v.z],
+            BaseValue::Vector4(v) => smallvec::smallvec![v.x, v.y, v.z, v.w],
+            BaseValue::Quaternion(v) => smallvec::smallvec![v.x, v.y, v.z, v.w],
         }
     }
 
@@ -180,6 +201,15 @@ impl BaseValueRef<'_> {
             BaseValueRef::Quaternion(v) => v.as_ref(),
         }
     }
+
+    pub fn as_small_vec(&self) -> SmallVec<[f32; 4]> {
+        match self {
+            BaseValueRef::Float(v) => smallvec::smallvec![**v],
+            BaseValueRef::Vector3(v) => smallvec::smallvec![v.x, v.y, v.z],
+            BaseValueRef::Vector4(v) => smallvec::smallvec![v.x, v.y, v.z, v.w],
+            BaseValueRef::Quaternion(v) => smallvec::smallvec![v.x, v.y, v.z, v.w],
+        }
+    }
 }
 
 impl From<f32> for BaseValue {
@@ -203,6 +233,78 @@ impl From<Vec4> for BaseValue {
 impl From<Quat> for BaseValue {
     fn from(v: Quat) -> Self {
         BaseValue::Quaternion(v)
+    }
+}
+
+impl Add<BaseValue> for BaseValue {
+    type Output = BaseValue;
+
+    fn add(self, rhs: BaseValue) -> Self::Output {
+        match (self, rhs) {
+            (BaseValue::Float(v1), BaseValue::Float(v2)) => BaseValue::Float(v1 + v2),
+            (BaseValue::Vector3(v1), BaseValue::Vector3(v2)) => BaseValue::Vector3(v1 + v2),
+            (BaseValue::Vector4(v1), BaseValue::Vector4(v2)) => BaseValue::Vector4(v1 + v2),
+            (BaseValue::Quaternion(v1), BaseValue::Quaternion(v2)) => {
+                // Add or multiply quaternions?
+
+                BaseValue::Quaternion((v1 * v2).normalize())
+            }
+            _ => panic!("Invalid addition"),
+        }
+    }
+}
+
+impl Sub<BaseValue> for BaseValue {
+    type Output = BaseValue;
+
+    fn sub(self, rhs: BaseValue) -> Self::Output {
+        match (self, rhs) {
+            (BaseValue::Float(v1), BaseValue::Float(v2)) => BaseValue::Float(v1 - v2),
+            (BaseValue::Vector3(v1), BaseValue::Vector3(v2)) => BaseValue::Vector3(v1 - v2),
+            (BaseValue::Vector4(v1), BaseValue::Vector4(v2)) => BaseValue::Vector4(v1 - v2),
+            (BaseValue::Quaternion(v1), BaseValue::Quaternion(v2)) => {
+                // Subtract or divide quaternions?
+
+                BaseValue::Quaternion((v1 * v2.inverse()).normalize())
+            }
+            _ => panic!("Invalid subtraction"),
+        }
+    }
+}
+
+impl Mul<BaseValue> for BaseValue {
+    type Output = BaseValue;
+
+    fn mul(self, rhs: BaseValue) -> Self::Output {
+        match (self, rhs) {
+            (BaseValue::Float(v1), BaseValue::Float(v2)) => BaseValue::Float(v1 * v2),
+            (BaseValue::Vector3(v1), BaseValue::Vector3(v2)) => BaseValue::Vector3(v1 * v2),
+            (BaseValue::Vector4(v1), BaseValue::Vector4(v2)) => BaseValue::Vector4(v1 * v2),
+            (BaseValue::Quaternion(v1), BaseValue::Quaternion(v2)) => {
+                // Multiply or slerp quaternions?
+
+                BaseValue::Quaternion((v1 * v2).normalize())
+            }
+            _ => panic!("Invalid multiplication"),
+        }
+    }
+}
+
+impl Div<BaseValue> for BaseValue {
+    type Output = BaseValue;
+
+    fn div(self, rhs: BaseValue) -> Self::Output {
+        match (self, rhs) {
+            (BaseValue::Float(v1), BaseValue::Float(v2)) => BaseValue::Float(v1 / v2),
+            (BaseValue::Vector3(v1), BaseValue::Vector3(v2)) => BaseValue::Vector3(v1 / v2),
+            (BaseValue::Vector4(v1), BaseValue::Vector4(v2)) => BaseValue::Vector4(v1 / v2),
+            (BaseValue::Quaternion(v1), BaseValue::Quaternion(v2)) => {
+                // Divide or slerp quaternions?
+                // TODO: Quaternion division is not well defined, we can either do v1 * v2.inverse() or slerp between identity and v1 * v2.inverse() based on the length of v2
+                BaseValue::Quaternion((v1 * v2.inverse()).normalize())
+            }
+            _ => panic!("Invalid division"),
+        }
     }
 }
 

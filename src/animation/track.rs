@@ -2,7 +2,7 @@ use std::{fmt::Display, rc::Rc, str::FromStr};
 
 use crate::{
     animation::property::{PathProperty, ValueProperty},
-    ffi::types::WrapBaseValueType,
+    base_value::WrapBaseValueType,
 };
 
 use super::game_object::GameObject;
@@ -477,7 +477,6 @@ impl FromStr for PropertyNames {
             // in v3 -> interactable
             INTERACTABLE => Ok(PropertyNames::Cuttable),
 
-
             COLOR => Ok(PropertyNames::Color),
             ATTENTUATION => Ok(PropertyNames::Attentuation),
             FOG_OFFSET => Ok(PropertyNames::FogOffset),
@@ -532,8 +531,10 @@ impl Display for PropertyNames {
 
 #[cfg(test)]
 mod tests {
+    use std::{thread::sleep, time::Duration};
+
     use super::*;
-    use crate::values::value::BaseValue;
+    use crate::base_value::BaseValue;
     use glam::{Quat, Vec3, Vec4};
 
     #[test]
@@ -654,6 +655,8 @@ mod tests {
             time.elapsed().is_ok(),
             "last_updated should be a valid SystemTime"
         );
+        // sleep to avoid potential flakiness of last_updated being the same as time (if set_value is called too quickly)
+        sleep(Duration::from_millis(1));
 
         // Set dissolve to an initial value
         props.dissolve.set_value(Some(BaseValue::from(0.1_f32)));

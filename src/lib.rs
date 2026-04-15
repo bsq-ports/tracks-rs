@@ -24,9 +24,15 @@
 //! See `benches/` and unit tests in `src/point_definition/` for minimal examples of usage.
 #![feature(trait_alias)]
 #![feature(unboxed_closures)]
+#![feature(generic_const_exprs)]
+#![feature(generic_const_items)]
+#![feature(associated_type_defaults)]
 
 #[cfg(feature = "ffi")]
 pub mod ffi;
+
+// #[cfg]
+pub mod test_helpers;
 
 pub mod animation;
 pub mod base_provider_context;
@@ -34,7 +40,10 @@ pub mod easings;
 pub mod modifiers;
 pub mod point_data;
 pub mod point_definition;
-pub mod values;
+pub mod providers;
+
+pub mod base_value;
+pub mod value_types;
 
 pub mod quaternion_utils;
 
@@ -44,8 +53,11 @@ pub mod quaternion_utils;
 /// the crate root with many names.
 pub mod prelude {
     pub use crate::base_provider_context::BaseProviderContext;
-    pub use crate::point_definition::PointDefinition;
-    pub use crate::values::{ValueProvider, AbstractValueProvider, UpdateableValues, deserialize_values};
-    pub use crate::modifiers::Modifier;
+    pub use crate::point_definition::PointDefinitionLike;
+    #[cfg(feature = "json")]
+    pub use crate::providers::deserialize_values;
+    pub use crate::providers::{AbstractValueProvider, UpdateableValues, ValueProvider};
+
     pub use crate::easings::functions::Functions;
+    pub use crate::modifiers::base_modifier::BaseModifier;
 }

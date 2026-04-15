@@ -1,4 +1,6 @@
-use std::{borrow::Cow, ffi::c_void, slice};
+use std::{ffi::c_void, slice};
+
+use smallvec::SmallVec;
 
 use crate::{base_provider_context::BaseProviderContext, ffi::types::WrappedValues};
 
@@ -18,10 +20,10 @@ impl BaseFFIProviderValues {
 }
 
 impl AbstractValueProvider for BaseFFIProviderValues {
-    fn values<'a>(&'a self, context: &BaseProviderContext) -> Cow<'a, [f32]> {
+    fn values(&self, context: &BaseProviderContext) -> SmallVec<[f32; 4]> {
         let c_values: WrappedValues = unsafe { (*self.fetch)(context, self.user_data) };
         // move to owned values
         let arr = unsafe { slice::from_raw_parts(c_values.values, c_values.length) };
-        Cow::Owned(arr.to_vec())
+        SmallVec::from_slice(arr)
     }
 }

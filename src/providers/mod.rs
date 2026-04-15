@@ -1,6 +1,5 @@
 use crate::base_provider_context::BaseProviderContext;
-use serde_json::Value as JsonValue;
-use std::{borrow::Cow, cell::RefCell, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 
 pub mod base;
 #[cfg(feature = "ffi")]
@@ -10,17 +9,19 @@ pub mod quat;
 pub mod smooth;
 pub mod smooth_rot;
 pub mod r#static;
-pub mod value;
+
+#[cfg(feature = "json")]
+use serde_json::Value as JsonValue;
+use smallvec::SmallVec;
 
 /// Abstract value provider
 /// that provides values
 /// based on the context
 /// and the values
 pub trait AbstractValueProvider {
-    // TODO: make this return a value instead of a reference
-    // we can theoretically limit this to [f32; 4],
-    // or a Cow<'a, [f32; 4]> to avoid allocations
-    fn values<'a>(&'a self, context: &BaseProviderContext) -> Cow<'a, [f32]>;
+    /// Get an array of values
+    /// the values are [T, time] e.g for a Vec3 it would be [x, y, z, time]
+    fn values(&self, context: &BaseProviderContext) -> SmallVec<[f32; 4]>;
 }
 
 /// Update values on demand
@@ -46,7 +47,7 @@ pub enum ValueProvider {
 }
 
 impl AbstractValueProvider for ValueProvider {
-    fn values<'a>(&'a self, context: &BaseProviderContext) -> Cow<'a, [f32]> {
+    fn values(&self, context: &BaseProviderContext) -> SmallVec<[f32; 4]> {
         match self {
             ValueProvider::Static(v) => v.values(context),
             ValueProvider::BaseProvider(v) => v.values(context),
@@ -54,11 +55,11 @@ impl AbstractValueProvider for ValueProvider {
             ValueProvider::PartialProvider(v) => v.values(context),
             ValueProvider::SmoothProviders(v) => {
                 let borrow = v.borrow();
-                Cow::Owned(borrow.values(context).clone().into_owned())
+                borrow.values(context)
             }
             ValueProvider::SmoothRotationProviders(v) => {
                 let borrow = v.borrow();
-                Cow::Owned(borrow.values(context).clone().into_owned())
+                borrow.values(context)
             }
         }
     }
@@ -70,7 +71,7 @@ impl UpdateableValues for ValueProvider {
             ValueProvider::Static(_) => {}
             ValueProvider::BaseProvider(_) => {}
             ValueProvider::QuaternionProvider(_) => {}
-            ValueProvider::PartialProvider(v) => {}
+            ValueProvider::PartialProvider(_v) => {}
             ValueProvider::SmoothProviders(v) => v.borrow_mut().update(delta),
             ValueProvider::SmoothRotationProviders(v) => v.borrow_mut().update(delta),
         }
@@ -130,9 +131,9 @@ fn close(result: &mut Vec<ValueProvider>, raw_values: Vec<&JsonValue>, open: usi
         return;
     }
 
-    let values: Vec<f32> = raw_values[open..end]
+    let values: SmallVec<[f32; 4]> = raw_values[open..end]
         .iter()
         .filter_map(|v| v.as_f64().map(|i| i as f32))
         .collect();
-    result.push(ValueProvider::Static(StaticValues::new(&values)));
+    result.push(ValueProvider::Static(StaticValues::new(values)));
 }

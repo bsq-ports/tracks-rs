@@ -1,4 +1,5 @@
-use std::borrow::Cow;
+
+use smallvec::{SmallVec, smallvec};
 
 use super::{UpdateableValues, clamp_lerp};
 
@@ -8,24 +9,26 @@ use super::AbstractValueProvider;
 
 #[derive(Clone, Debug)]
 pub struct SmoothProvidersValues {
-    pub(crate) source: Vec<f32>,
+    pub(crate) source: SmallVec<[f32; 4]>,
     pub(crate) mult: f32,
-    pub(crate) values: Vec<f32>,
+    pub(crate) values: SmallVec<[f32; 4]>,
 }
 
 impl SmoothProvidersValues {
-    pub fn new(source: Vec<f32>, mult: f32) -> Self {
+    // TODO: use a Vec4?
+    pub fn new(source: impl Into<SmallVec<[f32; 4]>>, mult: f32) -> Self {
+        let source = source.into();
         Self {
-            source: source.clone(),
             mult,
-            values: vec![0.0; source.len()],
+            values: smallvec![0.0; source.len()],
+            source,
         }
     }
 }
 
 impl AbstractValueProvider for SmoothProvidersValues {
-    fn values<'a>(&'a self, _context: &BaseProviderContext) -> Cow<'a, [f32]> {
-        Cow::Borrowed(self.values.as_ref())
+    fn values(&self, _context: &BaseProviderContext) -> SmallVec<[f32; 4]> {
+        SmallVec::from(self.values.as_slice())
     }
 }
 

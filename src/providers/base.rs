@@ -1,4 +1,5 @@
-use std::borrow::Cow;
+
+use smallvec::SmallVec;
 
 use crate::base_provider_context::BaseProviderContext;
 
@@ -16,8 +17,8 @@ impl BaseProviderValues {
 }
 
 impl AbstractValueProvider for BaseProviderValues {
-    fn values<'a>(&'a self, context: &BaseProviderContext) -> Cow<'a, [f32]> {
+    fn values(&self, context: &BaseProviderContext) -> SmallVec<[f32; 4]> {
         let value = context.get_values(&self.base);
-        value.as_slice().to_vec().into()
+        value.as_small_vec()
     }
 }

@@ -3,20 +3,26 @@ use serde_json::json;
 use std::hint::black_box;
 use tracks_rs::{
     base_provider_context::BaseProviderContext,
-    point_definition::{PointDefinition, float_point_definition::FloatPointDefinition},
+    test_helpers::{interpolate_float_point_definition, parse_float_point_definition},
 };
 
 fn point_step(n: u64) {
     let mut context = BaseProviderContext::new();
-    let definition =
-        FloatPointDefinition::parse(json!([[0.0, 0.0], [1.0, 1.0, "easeInOutSine"]]), &mut context);
+    let definition = parse_float_point_definition(
+        json!([[0.0, 0.0], [1.0, 1.0, "easeInOutSine"]]),
+        &mut context,
+    );
 
     // let step = 1.0 / n as f32;
 
     let values: Vec<f64> = (0..=(n as usize)).map(|i| i as f64 / n as f64).collect();
 
     values.into_iter().for_each(|x| {
-        black_box(definition.interpolate(x as f32, &mut context));
+        black_box(interpolate_float_point_definition(
+            &definition,
+            x as f32,
+            &context,
+        ));
     });
 }
 
