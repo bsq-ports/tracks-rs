@@ -58,7 +58,7 @@ glam = { version = "0.32", features = [
 palette = {version = "0.7", features = ["std"], default-features = false } # for color manipulation
 
 cfg-if = "1"
-thiserror = "2"
+# thiserror = "2"
 serde_json = { version = "1.0", optional = true }
 itertools = "0.14"
 ahash = "0.8" # for hashmaps
