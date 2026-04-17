@@ -92,14 +92,13 @@ impl PointDefinitionLike<Vec3> for Vector3PointDefinition {
         context: &BaseProviderContext,
     ) -> BasicModifier<Vec3> {
         let val: ModifierValues<Vec3> = match values.as_slice() {
-            // Single static value [T, time]
-            [ValueProvider::Static(static_val)]
-                if static_val.values.len() <= Vec3::VALUE_COUNT =>
+            // Single static value [x, y, z]
+            [ValueProvider::Static(static_val)] if static_val.values.len() == Vec3::VALUE_COUNT =>
             {
                 let values = &static_val.values;
                 ModifierValues::Static(Vec3::from_slice(values))
             }
-            // Any other case
+            // Any other case is treated as dynamic and translated/padded at evaluation time.
             _ => {
                 let count: usize = values.iter().map(|v| v.values(context).len()).sum();
                 assert_eq!(

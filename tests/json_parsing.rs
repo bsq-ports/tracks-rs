@@ -163,3 +163,62 @@ fn parses_quaternion_from_smoothed_base_provider() {
     assert!((value.w - target_quat.w).abs() < eps);
     assert!(is_last);
 }
+
+#[test]
+#[should_panic(expected = "modifier point must have 3 numbers")]
+fn panics_when_vec3_modifier_receives_extra_scalar_from_base_head_s10() {
+    let mut context = BaseProviderContext::new();
+    context.set_values(
+        "baseHeadPosition",
+        BaseValue::from(glam::Vec3::new(10.0, 20.0, 30.0)),
+    );
+
+    // `baseHeadPosition.s10` is a smooth provider specifier. Adding a scalar makes the
+    // modifier payload expand to 4 numbers, which currently trips the vec3 arity assert.
+    let definition = Vector3PointDefinition::parse(
+        json!([[0.0, 0.0, 0.0, ["baseHeadPosition.s10", 1.0, "opMul"]]]),
+        &mut context,
+    );
+
+    let _ = definition;
+}
+
+#[test]
+fn parses_vec3_modifier_from_base_head_s10_without_panicking() {
+    let mut context = BaseProviderContext::new();
+    context.set_values(
+        "baseHeadPosition",
+        BaseValue::from(glam::Vec3::new(10.0, 20.0, 30.0)),
+    );
+
+    let definition = Vector3PointDefinition::parse(
+        json!([[1.0, 1.0, 1.0, ["baseHeadPosition.s10", "opMul"]]]),
+        &mut context,
+    );
+    assert!(definition.has_base_provider());
+
+    context.update_providers(1.0);
+
+    let (value, is_last) = definition.interpolate(0.0, &context);
+    assert_eq!(value, glam::Vec3::new(10.0, 20.0, 30.0));
+    assert!(is_last);
+}
+
+#[test]
+#[should_panic(expected = "modifier point must have 1 numbers")]
+fn panics_when_float_modifier_receives_vec3_from_base_head_s10() {
+    let mut context = BaseProviderContext::new();
+    context.set_values(
+        "baseHeadPosition",
+        BaseValue::from(glam::Vec3::new(10.0, 20.0, 30.0)),
+    );
+
+    // A float modifier cannot accept the 3-component smooth provider produced by
+    // `baseHeadPosition.s10`, so this should continue to fail fast.
+    let definition = BasicPointDefinition::<f32>::parse(
+        json!([[0.0, ["baseHeadPosition.s10", "opMul"]]]),
+        &mut context,
+    );
+
+    let _ = definition;
+}

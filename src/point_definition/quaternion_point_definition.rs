@@ -46,7 +46,7 @@ impl PointDefinitionLike<Quat> for QuaternionPointDefinition {
     ) -> Self::Modifier {
         // values are stored as euler angles in the point definition, 
         // but we want to convert them to quaternions for the modifier
-
+        // euler angles [x, y, z] in degrees are converted to quaternions using the same convention as Unity (ZXY(Ex) order)
         let val = match values.as_slice() {
             [ValueProvider::Static(static_val)] if static_val.values(context).len() == 3 => {
                 let values = static_val.values(context);

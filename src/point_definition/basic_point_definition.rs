@@ -49,21 +49,20 @@ where
         context: &BaseProviderContext,
     ) -> BasicModifier<T> {
         let val: ModifierValues<T> = match values.as_slice() {
-            // Single static value [T, time]
-            [ValueProvider::Static(static_val)]
-                if static_val.values.len() <= T::VALUE_COUNT + 1 =>
+            // Single static value [T]
+            [ValueProvider::Static(static_val)] if static_val.values.len() == T::VALUE_COUNT =>
             {
                 let values = &static_val.values;
                 ModifierValues::Static(T::from_slice(values))
             }
-            // Any other case
+            // Any other case is treated as dynamic and translated/padded at evaluation time.
             _ => {
                 let count: usize = values.iter().map(|v| v.values(context).len()).sum();
                 assert_eq!(
                     count,
-                    T::VALUE_COUNT + 1,
+                    T::VALUE_COUNT,
                     "modifier point must have {} numbers",
-                    T::VALUE_COUNT + 1
+                    T::VALUE_COUNT
                 );
                 ModifierValues::Dynamic(values)
             }
