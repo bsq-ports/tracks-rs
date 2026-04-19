@@ -165,6 +165,50 @@ fn parses_quaternion_from_smoothed_base_provider() {
 }
 
 #[test]
+fn parses_quaternion_from_smoothed_base_provider_s10() {
+    let mut context = BaseProviderContext::new();
+    let target_euler = glam::Vec3::new(12.0, -34.0, 56.0);
+    let target_quat = glam::Quat::from_unity_euler_degrees(&target_euler);
+    context.set_values("baseHeadRotation", BaseValue::from(target_quat));
+
+    let definition =
+        QuaternionPointDefinition::parse(json!([["baseHeadRotation.s10"]]), &mut context);
+    assert!(definition.has_base_provider());
+
+    // With multiplier 10 and delta=1.0 this should advance fully to the target
+    context.update_providers(1.0);
+
+    let (value, is_last) = definition.interpolate(0.0, &context);
+    let eps = 1e-5_f32;
+    println!("value: {:?}, target: {:?}", value, target_quat);
+    assert!((value.x - target_quat.x).abs() < eps);
+    assert!((value.y - target_quat.y).abs() < eps);
+    assert!((value.z - target_quat.z).abs() < eps);
+    assert!((value.w - target_quat.w).abs() < eps);
+    assert!(is_last);
+}
+
+#[test]
+fn parses_vector3_from_smoothed_base_provider_s10() {
+    let mut context = BaseProviderContext::new();
+    context.set_values(
+        "baseHeadPosition",
+        BaseValue::from(glam::Vec3::new(10.0, 20.0, 30.0)),
+    );
+
+    let definition =
+        Vector3PointDefinition::parse(json!([["baseHeadPosition.s10"]]), &mut context);
+    assert!(definition.has_base_provider());
+
+    // With multiplier 10 and delta=1.0 this should advance fully to the target
+    context.update_providers(1.0);
+
+    let (value, is_last) = definition.interpolate(0.0, &context);
+    assert_eq!(value, glam::Vec3::new(10.0, 20.0, 30.0));
+    assert!(is_last);
+}
+
+#[test]
 #[should_panic(expected = "modifier point must have 3 numbers")]
 fn panics_when_vec3_modifier_receives_extra_scalar_from_base_head_s10() {
     let mut context = BaseProviderContext::new();

@@ -19,7 +19,7 @@ fn swizzle_partial_provider_returns_components() {
 
     assert!(provider.is_updateable());
 
-    provider.update(1.0);
+    ctx.update_providers(1.0);
 
     let vals = provider.values(&ctx);
     let slice = vals.as_ref();
@@ -41,7 +41,7 @@ fn smoothing_on_vector_reaches_target_on_full_delta() {
     assert!(provider.is_updateable());
 
     // full delta should move values to source exactly
-    provider.update(1.0);
+    ctx.update_providers(1.0);
 
     let vals = provider.values(&ctx);
     let slice = vals.as_ref();
@@ -63,7 +63,7 @@ fn smoothing_on_quaternion_produces_expected_euler() {
 
     assert!(provider.is_updateable());
 
-    provider.update(1.0);
+    ctx.update_providers(1.0);
 
     let vals = provider.values(&ctx);
     let slice = vals.as_ref();
@@ -89,7 +89,7 @@ fn swizzle_three_components_returns_components() {
 
     assert!(provider.is_updateable());
 
-    provider.update(1.0);
+    ctx.update_providers(1.0);
 
     let vals = provider.values(&ctx);
     let slice = vals.as_ref();
@@ -107,11 +107,11 @@ fn swizzle_reorder_and_duplicate_returns_expected() {
     );
 
     let mut provider_yx = ctx.get_value_provider("baseHeadPosition.yx");
-    provider_yx.update(0.0);
+    ctx.update_providers(0.0);
     assert_eq!(provider_yx.values(&ctx).as_ref(), &[5.0_f32, 4.0_f32]);
 
     let mut provider_xx = ctx.get_value_provider("baseHeadPosition.xx");
-    provider_xx.update(0.0);
+    ctx.update_providers(0.0);
     assert_eq!(provider_xx.values(&ctx).as_ref(), &[4.0_f32, 4.0_f32]);
 }
 
@@ -129,10 +129,78 @@ fn smoothing_vector_fractional_delta_moves_partway() {
 
     assert!(provider.is_updateable());
 
-    provider.update(1.0);
+    ctx.update_providers(1.0);
 
     let vals = provider.values(&ctx);
     let slice = vals.as_ref();
 
     assert_eq!(slice, &[5.0_f32, 10.0_f32, 15.0_f32]);
+}
+
+#[test]
+fn incremental_smoothing_vector_two_updates() {
+    let mut ctx = BaseProviderContext::new();
+
+    ctx.set_values(
+        "baseHeadPosition",
+        BaseValue::from(Vec3::new(10.0, 20.0, 30.0)),
+    );
+
+    // use multiplier 0.5 (s0_5)
+    let provider = ctx.get_value_provider("baseHeadPosition.s0_5");
+
+    assert!(provider.is_updateable());
+
+    // first update via context: moves to 50% -> [5,10,15]
+    ctx.update_providers(1.0);
+    let vals = provider.values(&ctx);
+    assert_eq!(vals.as_ref(), &[5.0_f32, 10.0_f32, 15.0_f32]);
+
+    // change the base provider simultaneously to a new target
+    ctx.set_values(
+        "baseHeadPosition",
+        BaseValue::from(Vec3::new(20.0, 40.0, 60.0)),
+    );
+
+    // second update via context: moves halfway from previous values toward new target
+    ctx.update_providers(1.0);
+    let vals2 = provider.values(&ctx);
+    let slice2 = vals2.as_ref();
+
+    let eps = 1e-6_f32;
+    assert!((slice2[0] - 12.5_f32).abs() <= eps, "x mismatch");
+    assert!((slice2[1] - 25.0_f32).abs() <= eps, "y mismatch");
+    assert!((slice2[2] - 37.5_f32).abs() <= eps, "z mismatch");
+}
+
+#[test]
+fn incremental_smoothing_small_delta_steps() {
+    let mut ctx = BaseProviderContext::new();
+
+    ctx.set_values(
+        "baseHeadPosition",
+        BaseValue::from(Vec3::new(10.0, 20.0, 30.0)),
+    );
+
+    // multiplier 1.0 (s1)
+    let provider = ctx.get_value_provider("baseHeadPosition.s1");
+
+    assert!(provider.is_updateable());
+
+    // first update with delta=0.5 via context -> half-way
+    ctx.update_providers(0.5);
+    let vals = provider.values(&ctx);
+    let eps = 1e-6_f32;
+    assert!((vals.as_ref()[0] - 5.0_f32).abs() <= eps, "first x mismatch");
+
+    // change base provider before the next update
+    ctx.set_values(
+        "baseHeadPosition",
+        BaseValue::from(Vec3::new(20.0, 40.0, 60.0)),
+    );
+
+    // second update with delta=0.5 via context -> moves half the remaining distance towards new target
+    ctx.update_providers(0.5);
+    let vals2 = provider.values(&ctx);
+    assert!((vals2.as_ref()[0] - 12.5_f32).abs() <= eps, "second x mismatch");
 }

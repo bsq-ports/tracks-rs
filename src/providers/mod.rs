@@ -31,7 +31,7 @@ pub trait AbstractValueProvider {
 pub trait UpdateableValues: AbstractValueProvider {
     /// Update the values from the source
     /// delta is the amount to progress from the source to target
-    fn update(&mut self, delta: f32);
+    fn update(&mut self, delta: f32, context: &BaseProviderContext);
 }
 
 /// Value provider
@@ -66,14 +66,14 @@ impl AbstractValueProvider for ValueProvider {
 }
 
 impl UpdateableValues for ValueProvider {
-    fn update(&mut self, delta: f32) {
+    fn update(&mut self, delta: f32, context: &crate::base_provider_context::BaseProviderContext) {
         match self {
             ValueProvider::Static(_) => {}
             ValueProvider::BaseProvider(_) => {}
             ValueProvider::QuaternionProvider(_) => {}
             ValueProvider::PartialProvider(_v) => {}
-            ValueProvider::SmoothProviders(v) => v.borrow_mut().update(delta),
-            ValueProvider::SmoothRotationProviders(v) => v.borrow_mut().update(delta),
+            ValueProvider::SmoothProviders(v) => v.borrow_mut().update(delta, context),
+            ValueProvider::SmoothRotationProviders(v) => v.borrow_mut().update(delta, context),
         }
     }
 }

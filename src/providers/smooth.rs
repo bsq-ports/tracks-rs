@@ -9,19 +9,23 @@ use super::AbstractValueProvider;
 
 #[derive(Clone, Debug)]
 pub struct SmoothProvidersValues {
-    pub(crate) source: SmallVec<[f32; 4]>,
+    pub(crate) source_provider: crate::providers::ValueProvider,
     pub(crate) mult: f32,
     pub(crate) values: SmallVec<[f32; 4]>,
 }
 
 impl SmoothProvidersValues {
-    // TODO: use a Vec4?
-    pub fn new(source: impl Into<SmallVec<[f32; 4]>>, mult: f32) -> Self {
-        let source = source.into();
+    // Initialize from a source provider; sample initial length from context
+    pub fn new(
+        source_provider: crate::providers::ValueProvider,
+        mult: f32,
+        context: &BaseProviderContext,
+    ) -> Self {
+        let src = source_provider.values(context);
         Self {
+            source_provider,
             mult,
-            values: smallvec![0.0; source.len()],
-            source,
+            values: smallvec![0.0; src.len()],
         }
     }
 }
@@ -33,10 +37,12 @@ impl AbstractValueProvider for SmoothProvidersValues {
 }
 
 impl UpdateableValues for SmoothProvidersValues {
-    fn update(&mut self, delta: f32) {
+    fn update(&mut self, delta: f32, context: &BaseProviderContext) {
         let mult_delta = self.mult * delta;
-        for i in 0..self.source.len() {
-            self.values[i] = clamp_lerp(self.values[i], self.source[i], mult_delta);
+        let src = self.source_provider.values(context);
+        for i in 0..self.values.len() {
+            let target = src.get(i).cloned().unwrap_or(0.0);
+            self.values[i] = clamp_lerp(self.values[i], target, mult_delta);
         }
     }
 }

@@ -320,7 +320,9 @@ impl BaseProviderContext {
 
     pub fn update_providers(&self, delta: f32) {
         for provider in &self.updatable_providers {
-            provider.borrow_mut().update(delta);
+            provider
+                .borrow_mut()
+                .update(delta, self);
         }
     }
 
@@ -370,35 +372,21 @@ impl BaseProviderContext {
                 1.0
             }
         };
-
         match source {
             ValueProvider::QuaternionProvider(qpv) => {
-                let src = qpv.source.values(self);
-                let src_slice = src.as_ref();
-                let quat = if src_slice.len() >= 4 {
-                    Quat::from_xyzw(src_slice[0], src_slice[1], src_slice[2], src_slice[3])
-                } else {
-                    warn!(
-                        "Quaternion provider source has less than 4 components ({}), defaulting to identity quaternion",
-                        src_slice.len()
-                    );
-                    Quat::from_array([
-                        src_slice.first().cloned().unwrap_or(0.0),
-                        src_slice.get(1).cloned().unwrap_or(0.0),
-                        src_slice.get(2).cloned().unwrap_or(0.0),
-                        src_slice.get(3).cloned().unwrap_or(1.0),
-                    ])
-                };
+                // clone the underlying source provider so the smooth rotation provider can sample it each update
+                let src_provider = (*qpv.source).clone();
 
                 ValueProvider::SmoothRotationProviders(Rc::new(RefCell::new(
-                    SmoothRotationProvidersValues::new(quat, mult),
+                    SmoothRotationProvidersValues::new(src_provider, mult),
                 )))
             }
             _ => {
-                let src = source.values(self);
-                ValueProvider::SmoothProviders(Rc::new(RefCell::new(SmoothProvidersValues::new(
-                    src, mult,
-                ))))
+                // pass the source provider (clone) so smooth provider can sample it during updates
+                let src_provider = source.clone();
+                ValueProvider::SmoothProviders(Rc::new(RefCell::new(
+                    SmoothProvidersValues::new(src_provider, mult, self),
+                )))
             }
         }
     }
