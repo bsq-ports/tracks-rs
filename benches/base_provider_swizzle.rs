@@ -62,7 +62,7 @@ fn bench_provider_swizzle_update(c: &mut Criterion) {
         let mut provider = ctx.get_value_provider("baseHeadPosition.zyx");
 
         b.iter(|| {
-            provider.update(0.016);
+            ctx.update_providers(0.016);
             black_box(provider.values(&ctx));
         });
     });
@@ -75,9 +75,9 @@ fn bench_provider_swizzle_update(c: &mut Criterion) {
                 let provider = ctx.get_value_provider("baseHeadPosition.zyx.s0_5");
                 (ctx, provider)
             },
-            |(ctx, mut provider)| {
+                |(mut ctx, provider)| {
                 for _ in 0..60 {
-                    provider.update(0.016);
+                    ctx.update_providers(0.016);
                     black_box(provider.values(&ctx));
                 }
             },
@@ -93,9 +93,9 @@ fn bench_provider_swizzle_update(c: &mut Criterion) {
                 let provider = ctx.get_value_provider("baseHeadRotation.s0_5");
                 (ctx, provider)
             },
-            |(ctx, mut provider)| {
+                |(mut ctx, provider)| {
                 for _ in 0..60 {
-                    provider.update(0.016);
+                    ctx.update_providers(0.016);
                     black_box(provider.values(&ctx));
                 }
             },
@@ -111,9 +111,9 @@ fn bench_provider_swizzle_update(c: &mut Criterion) {
                 let provider = ctx.get_value_provider("baseSongTime.s0_5.x");
                 (ctx, provider)
             },
-            |(ctx, mut provider)| {
+                |(mut ctx, provider)| {
                 for _ in 0..120 {
-                    provider.update(1.0 / 120.0);
+                    ctx.update_providers(1.0 / 120.0);
                     black_box(provider.values(&ctx));
                 }
             },
