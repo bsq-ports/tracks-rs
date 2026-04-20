@@ -31,6 +31,7 @@ pub unsafe extern "C" fn tracks_make_base_point_definition(
     let context = unsafe { &mut *context };
 
     let point_definition: base_point_definition::BasePointDefinition = match ty {
+        WrapBaseValueType::Vec2 => Vector3PointDefinition::parse(value, context).into(),
         WrapBaseValueType::Vec3 => Vector3PointDefinition::parse(value, context).into(),
         WrapBaseValueType::Quat => QuaternionPointDefinition::parse(value, context).into(),
         WrapBaseValueType::Vec4 => BasicPointDefinition::<Vec4>::parse(value, context).into(),

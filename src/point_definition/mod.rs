@@ -133,9 +133,11 @@ where
     {
         let root: JsonValue = match value.as_array().unwrap()[0] {
             JsonValue::Array(_) => value,
+            // Single-point shorthand (e.g. `[v0, v1, ...]`) — wrap as an array-of-points
+            // but do NOT append an explicit time. The parsing logic treats missing time
+            // as `0` when constructing the point data.
             _ => {
-                let mut cloned: Vec<JsonValue> = value.as_array().unwrap().clone();
-                cloned.push(json!(0));
+                let cloned: Vec<JsonValue> = value.as_array().unwrap().clone();
                 json!([cloned])
             }
         };

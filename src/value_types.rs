@@ -1,4 +1,4 @@
-use glam::{Vec3, Vec4};
+use glam::{Vec2, Vec3, Vec4};
 use smallvec::SmallVec;
 
 use crate::base_value::{BaseValue, WrapBaseValueType};
@@ -11,6 +11,7 @@ use crate::base_value::{BaseValue, WrapBaseValueType};
 /// and to perform operations like interpolation, addition, etc. on them without needing to know the specific type
 pub trait ValueType:
     Default
+    + From<BaseValue>
     + Copy
     + std::ops::Add<Output = Self>
     + std::ops::Sub<Output = Self>
@@ -144,6 +145,39 @@ impl ValueType for Vec4 {
     }
 }
 
+impl ValueType for Vec2 {
+    const VALUE_COUNT: usize = 2;
+
+    fn from_slice(values: &[f32]) -> Self {
+        Vec2::from_slice(values)
+    }
+
+    fn from_translate_slice(values: &[f32]) -> Self {
+        Vec2::from_slice(values)
+    }
+
+    fn from_translate_array(values: [f32; Self::VALUE_COUNT]) -> Self {
+        Vec2::from_array(values)
+    }
+
+    type Array
+        = [f32; Self::VALUE_COUNT]
+    where
+        [(); Self::VALUE_COUNT]:;
+
+    fn base_type() -> WrapBaseValueType {
+        WrapBaseValueType::Vec2
+    }
+
+    fn to_smallvec(self) -> SmallVec<[f32; Self::VALUE_COUNT]>
+    where
+        [(); Self::VALUE_COUNT]:,
+        [f32; Self::VALUE_COUNT]: smallvec::Array,
+    {
+        SmallVec::from([self.x, self.y])
+    }
+}
+
 impl ValueType for BaseValue {
     const VALUE_COUNT: usize = 4;
 
@@ -182,6 +216,7 @@ impl ValueType for BaseValue {
     {
         match self {
             BaseValue::Float(f) => SmallVec::from([f, 0.0, 0.0, 0.0]),
+            BaseValue::Vector2(v) => SmallVec::from([v.x, v.y, 0.0, 0.0]),
             BaseValue::Vector3(v) => SmallVec::from([v.x, v.y, v.z, 0.0]),
             BaseValue::Vector4(v) => SmallVec::from([v.x, v.y, v.z, v.w]),
             BaseValue::Quaternion(q) => SmallVec::from([q.x, q.y, q.z, q.w]),

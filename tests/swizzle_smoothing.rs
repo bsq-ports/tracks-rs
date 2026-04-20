@@ -22,7 +22,7 @@ fn swizzle_partial_provider_returns_components() {
     ctx.update_providers(1.0);
 
     let vals = provider.values(&ctx);
-    let slice = vals.as_ref();
+    let slice = vals.as_slice();
 
     assert_eq!(slice, &[1.0_f32, 2.0_f32]);
 }
@@ -44,7 +44,7 @@ fn smoothing_on_vector_reaches_target_on_full_delta() {
     ctx.update_providers(1.0);
 
     let vals = provider.values(&ctx);
-    let slice = vals.as_ref();
+    let slice = vals.as_slice();
 
     assert_eq!(slice, &[10.0_f32, 20.0_f32, 30.0_f32]);
 }
@@ -66,7 +66,7 @@ fn smoothing_on_quaternion_produces_expected_euler() {
     ctx.update_providers(1.0);
 
     let vals = provider.values(&ctx);
-    let slice = vals.as_ref();
+    let slice = vals.as_slice();
 
     // values are Unity-style euler degrees (x,y,z) as f32
     // compare approximately
@@ -92,7 +92,7 @@ fn swizzle_three_components_returns_components() {
     ctx.update_providers(1.0);
 
     let vals = provider.values(&ctx);
-    let slice = vals.as_ref();
+    let slice = vals.as_slice();
 
     assert_eq!(slice, &[1.0_f32, 2.0_f32, 3.0_f32]);
 }
@@ -108,11 +108,11 @@ fn swizzle_reorder_and_duplicate_returns_expected() {
 
     let mut provider_yx = ctx.get_value_provider("baseHeadPosition.yx");
     ctx.update_providers(0.0);
-    assert_eq!(provider_yx.values(&ctx).as_ref(), &[5.0_f32, 4.0_f32]);
+    assert_eq!(provider_yx.values(&ctx).as_slice(), &[5.0_f32, 4.0_f32]);
 
     let mut provider_xx = ctx.get_value_provider("baseHeadPosition.xx");
     ctx.update_providers(0.0);
-    assert_eq!(provider_xx.values(&ctx).as_ref(), &[4.0_f32, 4.0_f32]);
+    assert_eq!(provider_xx.values(&ctx).as_slice(), &[4.0_f32, 4.0_f32]);
 }
 
 #[test]
@@ -132,7 +132,7 @@ fn smoothing_vector_fractional_delta_moves_partway() {
     ctx.update_providers(1.0);
 
     let vals = provider.values(&ctx);
-    let slice = vals.as_ref();
+    let slice = vals.as_slice();
 
     assert_eq!(slice, &[5.0_f32, 10.0_f32, 15.0_f32]);
 }
@@ -154,7 +154,7 @@ fn incremental_smoothing_vector_two_updates() {
     // first update via context: moves to 50% -> [5,10,15]
     ctx.update_providers(1.0);
     let vals = provider.values(&ctx);
-    assert_eq!(vals.as_ref(), &[5.0_f32, 10.0_f32, 15.0_f32]);
+    assert_eq!(vals.as_slice(), &[5.0_f32, 10.0_f32, 15.0_f32]);
 
     // change the base provider simultaneously to a new target
     ctx.set_values(
@@ -165,7 +165,7 @@ fn incremental_smoothing_vector_two_updates() {
     // second update via context: moves halfway from previous values toward new target
     ctx.update_providers(1.0);
     let vals2 = provider.values(&ctx);
-    let slice2 = vals2.as_ref();
+    let slice2 = vals2.as_slice();
 
     let eps = 1e-6_f32;
     assert!((slice2[0] - 12.5_f32).abs() <= eps, "x mismatch");
@@ -191,7 +191,10 @@ fn incremental_smoothing_small_delta_steps() {
     ctx.update_providers(0.5);
     let vals = provider.values(&ctx);
     let eps = 1e-6_f32;
-    assert!((vals.as_ref()[0] - 5.0_f32).abs() <= eps, "first x mismatch");
+    assert!(
+        (vals.as_slice()[0] - 5.0_f32).abs() <= eps,
+        "first x mismatch"
+    );
 
     // change base provider before the next update
     ctx.set_values(
@@ -202,5 +205,8 @@ fn incremental_smoothing_small_delta_steps() {
     // second update with delta=0.5 via context -> moves half the remaining distance towards new target
     ctx.update_providers(0.5);
     let vals2 = provider.values(&ctx);
-    assert!((vals2.as_ref()[0] - 12.5_f32).abs() <= eps, "second x mismatch");
+    assert!(
+        (vals2.as_slice()[0] - 12.5_f32).abs() <= eps,
+        "second x mismatch"
+    );
 }

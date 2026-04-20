@@ -81,13 +81,7 @@ pub unsafe extern "C" fn base_provider_context_get_value(
     let ctx_ref = unsafe { &*ctx };
     let cstr = unsafe { CStr::from_ptr(base) };
     if let Ok(name) = cstr.to_str() {
-        let bvref = ctx_ref.get_values(name);
-        let bv = match bvref {
-            crate::base_value::BaseValueRef::Float(v) => BaseValue::Float(*v),
-            crate::base_value::BaseValueRef::Vector3(v) => BaseValue::Vector3(*v),
-            crate::base_value::BaseValueRef::Vector4(v) => BaseValue::Vector4(*v),
-            crate::base_value::BaseValueRef::Quaternion(v) => BaseValue::Quaternion(*v),
-        };
+        let bv = ctx_ref.get_values(name);
 
         bv.into()
     } else {
@@ -138,12 +132,7 @@ pub unsafe extern "C" fn base_provider_context_get_type(
     let ctx_ref = unsafe { &*ctx };
     let cstr = unsafe { CStr::from_ptr(base) };
     if let Ok(name) = cstr.to_str() {
-        match ctx_ref.get_values(name) {
-            crate::base_value::BaseValueRef::Float(_) => WrapBaseValueType::Float,
-            crate::base_value::BaseValueRef::Vector3(_) => WrapBaseValueType::Vec3,
-            crate::base_value::BaseValueRef::Vector4(_) => WrapBaseValueType::Vec4,
-            crate::base_value::BaseValueRef::Quaternion(_) => WrapBaseValueType::Quat,
-        }
+        ctx_ref.get_values(name).get_type()
     } else {
         WrapBaseValueType::Unknown
     }

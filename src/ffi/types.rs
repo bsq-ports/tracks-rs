@@ -1,3 +1,4 @@
+use glam::Vec2;
 use glam::{Quat, Vec3, Vec4};
 
 use crate::base_value::{BaseValue, WrapBaseValueType};
@@ -8,6 +9,13 @@ pub struct WrapVec3 {
     pub(crate) x: f32,
     pub(crate) y: f32,
     pub(crate) z: f32,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Default, Debug)]
+pub struct WrapVec2 {
+    pub(crate) x: f32,
+    pub(crate) y: f32,
 }
 
 #[repr(C)]
@@ -35,6 +43,7 @@ pub union WrapBaseValueUnion {
     pub(crate) quat: WrapQuat,
     pub(crate) vec4: WrapVec4,
     pub(crate) float_v: f32,
+    pub(crate) vec2: WrapVec2,
 }
 
 #[repr(C)]
@@ -47,6 +56,12 @@ pub struct WrapBaseValue {
 impl From<BaseValue> for WrapBaseValue {
     fn from(value: BaseValue) -> Self {
         match value {
+            BaseValue::Vector2(v) => Self {
+                ty: WrapBaseValueType::Vec2,
+                value: WrapBaseValueUnion {
+                    vec2: WrapVec2 { x: v.x, y: v.y },
+                },
+            },
             BaseValue::Vector3(v) => Self {
                 ty: WrapBaseValueType::Vec3,
                 value: WrapBaseValueUnion {
@@ -91,6 +106,9 @@ impl From<WrapBaseValue> for BaseValue {
     fn from(value: WrapBaseValue) -> Self {
         unsafe {
             match value.ty {
+                WrapBaseValueType::Vec2 => {
+                    BaseValue::Vector2(Vec2::new(value.value.vec2.x, value.value.vec2.y))
+                }
                 WrapBaseValueType::Vec3 => BaseValue::Vector3(Vec3::new(
                     value.value.vec3.x,
                     value.value.vec3.y,

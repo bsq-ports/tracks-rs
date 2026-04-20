@@ -1,12 +1,16 @@
 //! Collection of helper functions for tests. These are not intended to be used outside of tests, and may be removed or changed without a major version bump.
 
-
 #[cfg(feature = "json")]
 use serde_json::Value as JsonValue;
 
 #[cfg(feature = "json")]
-use crate::{point_definition::{FloatPointDefinition, Vector4PointDefinition, quaternion_point_definition, vector3_point_definition}, prelude::{BaseProviderContext, PointDefinitionLike}};
-
+use crate::{
+    point_definition::{
+        FloatPointDefinition, Vector4PointDefinition, quaternion_point_definition,
+        vector3_point_definition,
+    },
+    prelude::{BaseProviderContext, PointDefinitionLike},
+};
 
 #[cfg(feature = "json")]
 pub fn parse_float_point_definition(

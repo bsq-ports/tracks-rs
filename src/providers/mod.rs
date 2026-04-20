@@ -1,4 +1,4 @@
-use crate::base_provider_context::BaseProviderContext;
+use crate::{base_provider_context::BaseProviderContext, base_value::BaseValue};
 use std::{cell::RefCell, rc::Rc};
 
 pub mod base;
@@ -21,7 +21,7 @@ use smallvec::SmallVec;
 pub trait AbstractValueProvider {
     /// Get an array of values
     /// the values are [T, time] e.g for a Vec3 it would be [x, y, z, time]
-    fn values(&self, context: &BaseProviderContext) -> SmallVec<[f32; 4]>;
+    fn values(&self, context: &BaseProviderContext) -> BaseValue;
 }
 
 /// Update values on demand
@@ -47,7 +47,7 @@ pub enum ValueProvider {
 }
 
 impl AbstractValueProvider for ValueProvider {
-    fn values(&self, context: &BaseProviderContext) -> SmallVec<[f32; 4]> {
+    fn values(&self, context: &BaseProviderContext) -> BaseValue {
         match self {
             ValueProvider::Static(v) => v.values(context),
             ValueProvider::BaseProvider(v) => v.values(context),
@@ -135,5 +135,6 @@ fn close(result: &mut Vec<ValueProvider>, raw_values: Vec<&JsonValue>, open: usi
         .iter()
         .filter_map(|v| v.as_f64().map(|i| i as f32))
         .collect();
+    let values = BaseValue::from_slice(&values, false);
     result.push(ValueProvider::Static(StaticValues::new(values)));
 }

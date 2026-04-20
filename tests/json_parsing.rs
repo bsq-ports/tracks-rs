@@ -196,8 +196,7 @@ fn parses_vector3_from_smoothed_base_provider_s10() {
         BaseValue::from(glam::Vec3::new(10.0, 20.0, 30.0)),
     );
 
-    let definition =
-        Vector3PointDefinition::parse(json!([["baseHeadPosition.s10"]]), &mut context);
+    let definition = Vector3PointDefinition::parse(json!([["baseHeadPosition.s10"]]), &mut context);
     assert!(definition.has_base_provider());
 
     // With multiplier 10 and delta=1.0 this should advance fully to the target

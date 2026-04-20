@@ -1,13 +1,14 @@
-
 use super::UpdateableValues;
 
-use crate::{base_provider_context::BaseProviderContext, quaternion_utils::QuaternionUtilsExt};
+use crate::{
+    base_provider_context::BaseProviderContext, base_value::BaseValue,
+    quaternion_utils::QuaternionUtilsExt,
+};
 
 use super::AbstractValueProvider;
 
 use glam::{Quat, Vec3};
 use log::warn;
-use smallvec::SmallVec;
 
 #[derive(Clone, Debug)]
 pub struct SmoothRotationProvidersValues {
@@ -29,8 +30,8 @@ impl SmoothRotationProvidersValues {
 }
 
 impl AbstractValueProvider for SmoothRotationProvidersValues {
-    fn values(&self, _context: &BaseProviderContext) -> SmallVec<[f32; 4]> {
-        SmallVec::from(self.values.to_array().as_slice())
+    fn values(&self, _context: &BaseProviderContext) -> BaseValue {
+        BaseValue::Vector3(self.values)
     }
 }
 
@@ -38,17 +39,17 @@ impl UpdateableValues for SmoothRotationProvidersValues {
     fn update(&mut self, delta: f32, context: &BaseProviderContext) {
         let mult_delta = delta * self.mult;
         let src = self.source_provider.values(context);
-        
+
         // If the source has 4 or more components, interpret as quaternion; otherwise, use identity
-        let quat = if src.len() >= 4 {
-            Quat::from_xyzw(src[0], src[1], src[2], src[3])
-        } else if src.len() == 3 {
-            // if 3 components, interpret as euler degrees and convert to quaternion
-            // TODO: Replace this with that knows if the source is providing quaternions or euler angles
-            Quat::from_unity_euler_degrees(&Vec3::new(src[0], src[1], src[2]))
-        } else {
-            warn!("Source provider for SmoothRotationProvidersValues does not have 4 components; using identity quaternion");
-            Quat::IDENTITY
+        let quat = match src {
+            BaseValue::Quaternion(q) => q,
+            BaseValue::Vector3(v) => Quat::from_unity_euler_degrees(&v),
+            _ => {
+                warn!(
+                    "Source provider for SmoothRotationProvidersValues does not provide a quaternion or Vec3; using identity quaternion"
+                );
+                Quat::IDENTITY
+            }
         };
 
         self.last_quaternion = self.last_quaternion.slerp(quat, mult_delta.clamp(0.0, 1.0));

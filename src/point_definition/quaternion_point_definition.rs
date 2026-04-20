@@ -44,15 +44,14 @@ impl PointDefinitionLike<Quat> for QuaternionPointDefinition {
         operation: Operation,
         context: &BaseProviderContext,
     ) -> Self::Modifier {
-        // values are stored as euler angles in the point definition, 
+        // values are stored as euler angles in the point definition,
         // but we want to convert them to quaternions for the modifier
         // euler angles [x, y, z] in degrees are converted to quaternions using the same convention as Unity (ZXY(Ex) order)
         let val = match values.as_slice() {
             [ValueProvider::Static(static_val)] if static_val.values(context).len() == 3 => {
                 let values = static_val.values(context);
                 let raw_vector = vec3(values[0], values[1], values[2]);
-                let quat =
-                    Quat::from_unity_euler_degrees(&raw_vector);
+                let quat = Quat::from_unity_euler_degrees(&raw_vector);
                 QuaternionValues::Static(raw_vector, quat)
             }
             _ => {
@@ -77,8 +76,7 @@ impl PointDefinitionLike<Quat> for QuaternionPointDefinition {
             [ValueProvider::Static(static_val)] if static_val.values.len() == 4 => {
                 let values = &static_val.values;
                 let raw_vector_point = Vec3::new(values[0], values[1], values[2]);
-                let quat =
-                    Quat::from_unity_euler_degrees(&raw_vector_point);
+                let quat = Quat::from_unity_euler_degrees(&raw_vector_point);
 
                 (QuaternionValues::Static(raw_vector_point, quat), values[3])
             }
@@ -88,7 +86,7 @@ impl PointDefinitionLike<Quat> for QuaternionPointDefinition {
                 let time = if values_len == 4 {
                     values
                         .last()
-                        .and_then(|v| v.values(context).last().copied())
+                        .and_then(|v| v.values(context).as_slice().last().copied())
                         .unwrap_or(0.0)
                 } else {
                     0.0
