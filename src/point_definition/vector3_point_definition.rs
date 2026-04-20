@@ -94,8 +94,12 @@ impl PointDefinitionLike<Vec3> for Vector3PointDefinition {
         let val: ModifierValues<Vec3> = match values.as_slice() {
             // Single static value [x, y, z]
             [ValueProvider::Static(static_val)] if static_val.values.len() == Vec3::VALUE_COUNT => {
-                let values = &static_val.values;
-                ModifierValues::Static(Vec3::from_slice(values.as_slice()))
+                let values = static_val
+                    .values
+                    .as_vec3()
+                    .expect("Expected 3 values for Vec3 modifier");
+
+                ModifierValues::Static(values)
             }
             // Any other case is treated as dynamic and translated/padded at evaluation time.
             _ => {

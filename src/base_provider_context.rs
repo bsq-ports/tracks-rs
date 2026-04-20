@@ -6,9 +6,7 @@ use log::{error, warn};
 use crate::{
     base_value::BaseValue,
     providers::{
-        AbstractValueProvider, UpdateableValues, ValueProvider, base::BaseProviderValues,
-        quat::QuaternionProviderValues, smooth::SmoothProvidersValues,
-        smooth_rot::SmoothRotationProvidersValues,
+        UpdateableValues, ValueProvider, base::BaseProviderValues, partial::PartialProviderValues, quat::QuaternionProviderValues, smooth::SmoothProvidersValues, smooth_rot::SmoothRotationProvidersValues
     },
 };
 
@@ -349,10 +347,7 @@ impl BaseProviderContext {
             })
             .collect();
 
-        let src = source.values(self);
-        ValueProvider::PartialProvider(crate::providers::partial::PartialProviderValues::new(
-            src, parts,
-        ))
+        ValueProvider::PartialProvider(PartialProviderValues::new(source.clone(), parts))
     }
 
     /// Build a smoothing provider from a spec like `s1` or `s0_5`.
