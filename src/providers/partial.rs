@@ -1,30 +1,31 @@
 use smallvec::SmallVec;
 
-use crate::{base_provider_context::BaseProviderContext, base_value::BaseValue};
+use crate::{base_provider_context::BaseProviderContext, base_value::BaseValue, prelude::ValueProvider};
 
 use super::AbstractValueProvider;
 
 #[derive(Clone, Debug)]
 pub struct PartialProviderValues {
-    pub(crate) source: SmallVec<[f32; 4]>,
+    pub(crate) source: Box<ValueProvider>,
     pub(crate) parts: SmallVec<[usize; 4]>,
 }
 
 impl PartialProviderValues {
     pub fn new(
-        source: impl Into<SmallVec<[f32; 4]>>,
+        source: impl Into<ValueProvider>,
         parts: impl Into<SmallVec<[usize; 4]>>,
     ) -> Self {
         Self {
-            source: source.into(),
+            source: Box::new(source.into()),
             parts: parts.into(),
         }
     }
 }
 
 impl AbstractValueProvider for PartialProviderValues {
-    fn values(&self, _context: &BaseProviderContext) -> BaseValue {
-        let v = SmallVec::<[f32; 4]>::from_iter(self.parts.iter().map(|&part| self.source[part]));
+    fn values(&self, context: &BaseProviderContext) -> BaseValue {
+        let values = self.source.values(context);
+        let v = SmallVec::<[f32; 4]>::from_iter(self.parts.iter().map(|&part| values[part]));
         BaseValue::from_slice(&v, false)
     }
 }
