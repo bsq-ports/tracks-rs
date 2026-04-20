@@ -1,4 +1,4 @@
-use super::{UpdateableValues, clamp_lerp};
+use super::UpdateableValues;
 
 use crate::{base_provider_context::BaseProviderContext, base_value::BaseValue};
 
@@ -54,9 +54,6 @@ impl UpdateableValues for SmoothProvidersValues {
     fn update(&mut self, delta: f32, context: &BaseProviderContext) {
         let mult_delta = self.mult * delta;
         let src = self.source_provider.values(context);
-        for i in 0..self.values.len() {
-            let target = src[i];
-            self.values[i] = clamp_lerp(self.values[i], target, mult_delta);
-        }
+        self.values = BaseValue::lerp(self.values, src, mult_delta.clamp(0.0, 1.0));
     }
 }

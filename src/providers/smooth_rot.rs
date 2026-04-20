@@ -16,6 +16,7 @@ pub struct SmoothRotationProvidersValues {
     pub(crate) mult: f32,
     pub(crate) last_quaternion: Quat,
     pub(crate) values: Vec3,
+    warned: bool,
 }
 
 impl SmoothRotationProvidersValues {
@@ -25,6 +26,7 @@ impl SmoothRotationProvidersValues {
             mult,
             last_quaternion: Quat::IDENTITY,
             values: Default::default(),
+            warned: false,
         }
     }
 }
@@ -45,9 +47,13 @@ impl UpdateableValues for SmoothRotationProvidersValues {
             BaseValue::Quaternion(q) => q,
             BaseValue::Vector3(v) => Quat::from_unity_euler_degrees(&v),
             _ => {
-                warn!(
-                    "Source provider for SmoothRotationProvidersValues does not provide a quaternion or Vec3; using identity quaternion"
-                );
+                if !self.warned {
+                    warn!(
+                        "Source provider for SmoothRotationProvidersValues {:?} does not provide a quaternion or Vec3; using identity quaternion",
+                        self.source_provider
+                    );
+                    self.warned = true;
+                }
                 Quat::IDENTITY
             }
         };

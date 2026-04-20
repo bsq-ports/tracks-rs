@@ -106,8 +106,8 @@ impl BaseValue {
             2 => BaseValue::Vector2(Vec2::new(value[0], value[1])),
             3 => BaseValue::Vector3(Vec3::new(value[0], value[1], value[2])),
             4 if quat => BaseValue::Quaternion(Quat::from_slice(value)),
-            4 => BaseValue::Vector4(Vec4::new(value[0], value[1], value[2], value[3])),
-            _ => panic!("Invalid value length"),
+            4.. => BaseValue::Vector4(Vec4::new(value[0], value[1], value[2], value[3])),
+            _ => panic!("Invalid value length {}, expected 1 to 4", value.len()),
         }
     }
     pub fn as_float(&self) -> Option<f32> {
