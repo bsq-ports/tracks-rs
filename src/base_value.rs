@@ -1,5 +1,6 @@
 use glam::FloatExt;
 use smallvec::SmallVec;
+use smallvec::smallvec;
 
 use std::ops::Add;
 use std::ops::Div;
@@ -105,7 +106,7 @@ impl BaseValue {
             1 => BaseValue::Float(value[0]),
             2 => BaseValue::Vector2(Vec2::new(value[0], value[1])),
             3 => BaseValue::Vector3(Vec3::new(value[0], value[1], value[2])),
-            4 if quat => BaseValue::Quaternion(Quat::from_slice(value)),
+            4.. if quat => BaseValue::Quaternion(Quat::from_slice(value)),
             4.. => BaseValue::Vector4(Vec4::new(value[0], value[1], value[2], value[3])),
             _ => panic!("Invalid value length {}, expected 1 to 4", value.len()),
         }
@@ -455,17 +456,40 @@ impl IndexMut<usize> for BaseValue {
     }
 }
 
+// Stack-backed iterator for BaseValue that preserves length without heap allocs
+pub struct BaseValueIntoIter {
+    base_value: BaseValue,
+    idx: usize,
+}
+
+impl Iterator for BaseValueIntoIter {
+    type Item = f32;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.idx >= self.base_value.len() {
+            return None;
+        }
+        let v = self.base_value[self.idx];
+        self.idx += 1;
+        Some(v)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let remaining = self.base_value.len().saturating_sub(self.idx);
+        (remaining, Some(remaining))
+    }
+}
+
+impl ExactSizeIterator for BaseValueIntoIter {}
+
 impl IntoIterator for BaseValue {
     type Item = f32;
-    type IntoIter = Box<dyn Iterator<Item = f32>>;
+    type IntoIter = BaseValueIntoIter;
 
     fn into_iter(self) -> Self::IntoIter {
-        match self {
-            BaseValue::Float(v) => Box::new([v].into_iter()),
-            BaseValue::Vector2(v) => Box::new([v.x, v.y].into_iter()),
-            BaseValue::Vector3(v) => Box::new([v.x, v.y, v.z].into_iter()),
-            BaseValue::Vector4(v) => Box::new([v.x, v.y, v.z, v.w].into_iter()),
-            BaseValue::Quaternion(v) => Box::new([v.x, v.y, v.z, v.w].into_iter()),
+        BaseValueIntoIter {
+            base_value: self,
+            idx: 0,
         }
     }
 }
