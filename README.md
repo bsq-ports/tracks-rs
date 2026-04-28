@@ -1,4 +1,5 @@
 # Tracks Rust Engine
+
 This is a Rust port of the [Heck](https://github.com/Aeroluna/Heck/) Base Providers, Tracks and Point definition functionality without depending on any game runtime.
 
 This README gives short explanations and tiny examples to get started with the main areas of the crate.
@@ -31,6 +32,7 @@ fn main() {
 You can also obtain cached `ValueProvider`s from the context using `get_value_provider` (useful when parsing provider expressions like `baseHeadPosition.x` or smoothed variants `baseSongTime.s0_5`).
 
 ---
+
 ## Providers
 
 Providers are the runtime building blocks that supply numeric/vector/quaternion data to point definitions and modifiers.
@@ -157,7 +159,6 @@ Notes:
 - Provider smoothing (e.g. `s0_5`) and swizzles (e.g. `.x`, `.xy`) are handled by `BaseProviderContext::get_value_provider` when the provider string contains dots or smoothing prefixes.
 - Modifier arrays (nested JSON arrays inside a point) are parsed recursively and turned into modifier objects via `PointDefinitionLike::deserialize_modifier` and `create_modifier` implementations. See `src/modifiers/` and `src/point_definition/` for the concrete formats supported.
 
-
 ## CoroutineManager
 
 `CoroutineManager` orchestrates time-based events: it schedules and polls coroutines that animate `Track` properties over song time.
@@ -168,17 +169,18 @@ Typical host usage:
 - When an event occurs, build an `EventData` and call `start_event_coroutine` (the manager converts beatmap duration -> song-time seconds using `bpm`).
 - Each frame call `poll_events(song_time, &ctx, &mut holder)` to advance active coroutines.
 
-Minimal example — queue an animate-track event and poll until completion (requires the `json` feature for `FloatPointDefinition::parse`):
+Minimal example — queue an animate-track event and poll until completion (requires the `json` feature for JSON parsing helpers):
 
 ```rust
+use glam::Vec3;
+use serde_json::json;
 use tracks_rs::animation::coroutine_manager::CoroutineManager;
 use tracks_rs::animation::events::{EventData, EventType};
 use tracks_rs::animation::tracks_holder::TracksHolder;
-use tracks_rs::animation::track::ValuePropertyHandle;
+use tracks_rs::animation::track::{ValuePropertyHandle, PathPropertyHandle, PropertyNames};
 use tracks_rs::base_provider_context::BaseProviderContext;
 use tracks_rs::easings::functions::Functions;
-use tracks_rs::point_definition::FloatPointDefinition;
-use serde_json::json;
+use tracks_rs::point_definition::vector3_point_definition::Vector3PointDefinition;
 
 fn main() {
 	let mut ctx = BaseProviderContext::new();
@@ -190,10 +192,10 @@ fn main() {
 	track.name = "queued_track".to_string();
 	let key = holder.add_track(track);
 
-	// build a simple two-point float definition
-	let def_json = json!([[0.0, 0.0], [1.0, 1.0]]);
-	let float_def = FloatPointDefinition::parse(def_json, &mut ctx);
-	let base_def = tracks_rs::point_definition::BasePointDefinition::from(float_def);
+	// build a simple two-point Vec3 definition: [x, y, z, time]
+	let def_json = json!([[0.0, 0.0, 0.0, 0.0], [1.0, 1.0, 1.0, 1.0]]);
+	let vec3_def = Vector3PointDefinition::parse(def_json, &mut ctx);
+	let base_def = tracks_rs::point_definition::BasePointDefinition::from(vec3_def);
 
 	let event = EventData {
 		raw_duration: 1.0, // beats
@@ -210,10 +212,30 @@ fn main() {
 	let mut song_time = 0.0f32;
 	manager.start_event_coroutine(bpm, song_time, &ctx, &mut holder, event);
 
-	// advance time in a simple loop (host would use frame delta)
+   // advance time in a simple loop (host would use frame delta)
 	for _ in 0..60 {
 		song_time += 1.0 / 60.0;
 		manager.poll_events(song_time, &ctx, &mut holder);
+	}
+
+	// --- Read ValueProperty (final stored value) ---
+	let stored = holder.get_track(key).expect("track present");
+
+	// Use `PropertyNames` for canonical properties
+	let prop = &stored.properties.position;
+	if let Some(value) = prop.get_value() {
+		println!("position property value = {:?}", value);
+	} else {
+		println!("position property has no value");
+	}
+
+	// --- Read PathProperty (interpolated path data) ---
+	let path_prop = &stored.path_properties.position;
+
+	if let Some(v) = path_prop.interpolate(0.5, &ctx) {
+		println!("interpolated path value = {:?}", v);
+	} else {
+		println!("no path data available");
 	}
 }
 ```
