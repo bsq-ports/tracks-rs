@@ -3,14 +3,27 @@ use glam::{Quat, Vec3, Vec4};
 use crate::{
     base_value::BaseValue,
     modifiers::{
-        ModifierLike, modifier::BasicModifier, operation::Operation,
+        ModifierLike, basic_modifier::BasicModifier, operation::Operation,
         quaternion_modifier::QuaternionModifier,
     },
     prelude::BaseProviderContext,
 };
 
-/// Modifiers are added at the end of points to allow you to do basic arithmetic on points.
-///  How these modifiers interact can be defined using operations, all of which are done componentwise.
+/// Modifiers represent small arithmetic transformations applied to point data.
+///
+/// These are parsed from the end of a point definition and are evaluated at
+/// runtime against a `BaseProviderContext`. Modifiers operate component-wise
+/// according to an `Operation` and may be typed (float, vec3, vec4, quaternion).
+///
+/// A typed wrapper around the concrete modifier implementations.
+///
+/// - `Float`: scalar modifier (`BasicModifier<f32>`)
+/// - `Vector3`: 3-component modifier (`BasicModifier<Vec3>`)
+/// - `Vector4`: 4-component modifier (`BasicModifier<Vec4>`)
+/// - `Quaternion`: quaternion-specific modifier (`QuaternionModifier`)
+///
+/// Use the typed getters (`get_float`, `get_vector3`, ...) or the
+/// `ModifierLike` methods to evaluate the modifier.
 #[derive(Debug)]
 pub enum BaseModifier {
     Float(BasicModifier<f32>),

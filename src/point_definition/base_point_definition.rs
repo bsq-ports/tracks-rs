@@ -1,4 +1,5 @@
 use glam::Vec4;
+use smallvec::SmallVec;
 
 use crate::easings::functions::Functions;
 
@@ -88,7 +89,7 @@ impl PointDefinitionLike<BaseValue> for BasePointDefinition {
     }
 
     fn create_modifier(
-        _values: Vec<ValueProvider>,
+        _values: SmallVec<[ValueProvider; 1]>,
         _modifiers: Vec<BaseModifier>,
         _operation: Operation,
         _context: &BaseProviderContext,
@@ -99,7 +100,7 @@ impl PointDefinitionLike<BaseValue> for BasePointDefinition {
     }
 
     fn create_point_data(
-        _values: Vec<ValueProvider>,
+        _values: SmallVec<[ValueProvider; 1]>,
         _flags: Vec<String>,
         _modifiers: Vec<BaseModifier>,
         _easing: Functions,

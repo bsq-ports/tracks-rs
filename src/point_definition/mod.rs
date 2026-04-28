@@ -16,6 +16,7 @@ use serde_json::Value as JsonValue;
 
 #[cfg(feature = "json")]
 use serde_json::json;
+use smallvec::SmallVec;
 
 use crate::base_provider_context::BaseProviderContext;
 use crate::base_value::WrapBaseValueType;
@@ -55,13 +56,13 @@ where
         context: &BaseProviderContext,
     ) -> T;
     fn create_modifier(
-        values: Vec<ValueProvider>,
+        values: SmallVec<[ValueProvider; 1]>,
         modifiers: Vec<Self::Modifier>,
         operation: Operation,
         context: &BaseProviderContext,
     ) -> Self::Modifier;
     fn create_point_data(
-        values: Vec<ValueProvider>,
+        values: SmallVec<[ValueProvider; 1]>,
         flags: Vec<String>,
         modifiers: Vec<Self::Modifier>,
         easing: Functions,
@@ -110,7 +111,7 @@ where
 
         // Create modifier with collected values
         Self::create_modifier(
-            values.expect("No values found."),
+            values.expect("No values found.").into(),
             modifiers.unwrap_or_default(),
             operation.expect("No operation found."),
             context,
@@ -141,7 +142,8 @@ where
                 json!([cloned])
             }
         };
-
+        
+        // If the root is not an array at this point, return default.
         let Some(array) = root.as_array() else {
             return Self::default();
         };
@@ -201,7 +203,7 @@ where
             let Some(vs) = vals else { continue };
 
             let point_data = Self::create_point_data(
-                vs,
+                vs.into(),
                 flags.unwrap_or_default(),
                 modifiers.unwrap_or_default(),
                 easing,

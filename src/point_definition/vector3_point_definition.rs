@@ -2,12 +2,13 @@ use std::rc::Rc;
 
 use glam::{Vec3, Vec3A};
 use itertools::Itertools;
+use smallvec::SmallVec;
 
 use crate::{
     base_provider_context::BaseProviderContext,
     base_value::WrapBaseValueType,
     easings::functions::Functions,
-    modifiers::{ModifierValues, modifier::BasicModifier, operation::Operation},
+    modifiers::{ModifierValues, basic_modifier::BasicModifier, operation::Operation},
     point_data::{PointDataLike, basic_point_data::BasicPointData},
     prelude::{AbstractValueProvider, ValueProvider},
     value_types::ValueType,
@@ -86,7 +87,7 @@ impl PointDefinitionLike<Vec3> for Vector3PointDefinition {
     }
 
     fn create_modifier(
-        values: Vec<ValueProvider>,
+        values: SmallVec<[ValueProvider; 1]>,
         modifiers: Vec<BasicModifier<Vec3>>,
         operation: Operation,
         context: &BaseProviderContext,
@@ -117,7 +118,7 @@ impl PointDefinitionLike<Vec3> for Vector3PointDefinition {
     }
 
     fn create_point_data(
-        values: Vec<ValueProvider>,
+        values: SmallVec<[ValueProvider; 1]>,
         flags: Vec<String>,
         modifiers: Vec<Self::Modifier>,
         easing: Functions,

@@ -4,6 +4,12 @@ use crate::base_provider_context::BaseProviderContext;
 use crate::providers::AbstractValueProvider;
 use crate::value_types::ValueType;
 
+/// A basic, typed modifier that applies component-wise operations to point values.
+///
+/// `BasicModifier<T>` holds either static values or dynamic `ValueProvider`s,
+/// a list of nested modifiers, and an `Operation` describing how to combine
+/// nested modifier results with the base point. It implements `ModifierLike<T>`
+/// for use by the point-definition parsing and evaluation machinery.
 #[derive(Debug, Clone)]
 pub struct BasicModifier<T: ValueType> {
     values: ModifierValues<T>,

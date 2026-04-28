@@ -1,6 +1,7 @@
 use std::rc::Rc;
 
 use glam::{Quat, Vec3, vec3};
+use smallvec::SmallVec;
 
 use crate::{
     base_provider_context::BaseProviderContext,
@@ -39,7 +40,7 @@ impl PointDefinitionLike<Quat> for QuaternionPointDefinition {
     }
 
     fn create_modifier(
-        values: Vec<ValueProvider>,
+        values: SmallVec<[ValueProvider; 1]>,
         modifiers: Vec<Self::Modifier>,
         operation: Operation,
         context: &BaseProviderContext,
@@ -65,7 +66,7 @@ impl PointDefinitionLike<Quat> for QuaternionPointDefinition {
     }
 
     fn create_point_data(
-        values: Vec<ValueProvider>,
+        values: SmallVec<[ValueProvider; 1]>,
         _flags: Vec<String>,
         modifiers: Vec<Self::Modifier>,
         easing: Functions,

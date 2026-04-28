@@ -3,14 +3,25 @@ use crate::prelude::{AbstractValueProvider, ValueProvider};
 use crate::{base_provider_context::BaseProviderContext, quaternion_utils::QuaternionUtilsExt};
 use glam::Vec3A;
 use glam::{Quat, Vec3};
+use smallvec::SmallVec;
 
+/// Representation of the quaternion modifier input values.
+///
+/// For quaternions we store either a `Static` (Euler angles + quaternion) pair
+/// or `Dynamic` providers that yield Euler components at runtime. The static
+/// representation keeps both the vector (euler) and quaternion forms for
+/// convenience.
 #[derive(Debug, Clone)]
 pub enum QuaternionValues {
-    // equivalents but different repr
+    /// Static Euler vector and its quaternion equivalent.
     Static(Vec3, Quat),
-    Dynamic(Vec<ValueProvider>),
+    /// Dynamic providers for Euler components.
+    Dynamic(SmallVec<[ValueProvider; 1]>),
 }
 
+/// Quaternion-specific modifier. It evaluates to a `Quat` by converting
+/// Euler-component results into a quaternion. Nested quaternion modifiers are
+/// applied component-wise to the Euler vector before conversion.
 #[derive(Debug, Clone)]
 pub struct QuaternionModifier {
     values: QuaternionValues,
