@@ -76,11 +76,13 @@ fn parses_quaternion_point_definition_from_heck_json() {
     );
 
     let (start, start_is_last) = definition.interpolate(0.0, &context);
+    let start = start.to_quat();
     assert_eq!(start, glam::Quat::IDENTITY);
     assert!(!start_is_last);
 
     let (end, end_is_last) = definition.interpolate(0.5, &context);
     let expected = glam::Quat::from_unity_euler_degrees(&glam::Vec3::new(0.0, -90.0, 0.0));
+    let end = end.to_quat();
     assert_eq!(end, expected);
     assert!(end_is_last);
 }
@@ -156,6 +158,7 @@ fn parses_quaternion_from_smoothed_base_provider() {
     context.update_providers(1.0);
 
     let (value, is_last) = definition.interpolate(0.0, &context);
+    let value = value.to_quat();
     let eps = 1e-5_f32;
     assert!((value.x - target_quat.x).abs() < eps);
     assert!((value.y - target_quat.y).abs() < eps);
@@ -179,6 +182,7 @@ fn parses_quaternion_from_smoothed_base_provider_s10() {
     context.update_providers(1.0);
 
     let (value, is_last) = definition.interpolate(0.0, &context);
+    let value = value.to_quat();
     let eps = 1e-5_f32;
     println!("value: {:?}, target: {:?}", value, target_quat);
     assert!((value.x - target_quat.x).abs() < eps);

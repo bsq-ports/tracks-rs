@@ -72,7 +72,8 @@ fn integration_quaternion_parse_and_interpolate() {
     let def = QuaternionPointDefinition::parse(js, &mut ctx);
     assert_eq!(def.get_count(), 4);
 
-    let (q_mid, _last) = def.interpolate(0.15, &ctx);
+    let (q_mid_e, _last) = def.interpolate(0.15, &ctx);
+    let q_mid = q_mid_e.to_quat();
 
     let q_l = Quat::from_unity_euler_degrees(&Vec3::new(0.0f32, 0.0f32, 0.0f32));
     let q_r = Quat::from_unity_euler_degrees(&Vec3::new(0.0f32, -90.0f32, 0.0f32));
@@ -95,7 +96,8 @@ fn parse_with_swizzled_base_provider() {
     let def = QuaternionPointDefinition::parse(js, &mut ctx);
     assert_eq!(def.get_count(), 1);
 
-    let (qi, _last) = def.interpolate(0.0, &ctx);
+    let (qi_e, _last) = def.interpolate(0.0, &ctx);
+    let qi = qi_e.to_quat();
     // expect the quaternion returned to correspond to the original Euler angles
     quat_approx_assert(qi, q, 1e-3);
 
@@ -105,7 +107,8 @@ fn parse_with_swizzled_base_provider() {
     ctx.set_values("baseHeadRotation", BaseValue::from(new_q));
 
     // and check
-    let (qi2, _last2) = def.interpolate(0.0, &ctx);
+    let (qi2_e, _last2) = def.interpolate(0.0, &ctx);
+    let qi2 = qi2_e.to_quat();
     quat_approx_assert(qi2, new_q, 1e-3);
 }
 
@@ -145,7 +148,8 @@ fn base_provider_updates_reflect_in_quaternion_definition_no_smoothing() {
     assert_eq!(def.get_count(), 2);
 
     // interpolate at midway (0.5) -> slerp between identity and base quaternion
-    let (q_before, _last) = def.interpolate(0.5, &ctx);
+    let (q_before_e, _last) = def.interpolate(0.5, &ctx);
+    let q_before = q_before_e.to_quat();
     quat_approx_assert(q_before, initial_quat.slerp(head_rot, 0.5), 1e-3);
 
     // change base provider to a different rotation
@@ -153,9 +157,10 @@ fn base_provider_updates_reflect_in_quaternion_definition_no_smoothing() {
     let head_rot = Quat::from_unity_euler_degrees(&head_rot_euler);
     ctx.set_values("baseHeadRotation", BaseValue::from(head_rot));
 
-    let (q_after, _last2) = def.interpolate(0.5, &ctx);
+    let (q_after_e, _last2) = def.interpolate(0.5, &ctx);
 
     // it should be 0.5 interpolation between identity and the new base quaternion, not the original one, since there is no smoothing
+    let q_after = q_after_e.to_quat();
     quat_approx_assert(q_after, initial_quat.slerp(head_rot, 0.5), 1e-3);
 }
 
@@ -186,7 +191,8 @@ fn base_provider_updates_with_smoothing_swizzle_and_operator() {
     ctx.set_values("baseHeadRotation", BaseValue::from(head_rot));
 
     {
-        let (q_interpolated, _last) = def.interpolate(0.5, &ctx);
+        let (q_interpolated_e, _last) = def.interpolate(0.5, &ctx);
+        let q_interpolated = q_interpolated_e.to_quat();
 
         let e = q_interpolated.to_unity_euler_degrees();
         eprintln!("before update q_interpolated euler = {:?}", e);
@@ -196,7 +202,8 @@ fn base_provider_updates_with_smoothing_swizzle_and_operator() {
     ctx.update_providers(1.0);
 
     {
-        let (q_interpolated, _last) = def.interpolate(0.5, &ctx);
+        let (q_interpolated_e, _last) = def.interpolate(0.5, &ctx);
+        let q_interpolated = q_interpolated_e.to_quat();
 
         quat_approx_assert(
             q_interpolated,
@@ -214,7 +221,8 @@ fn base_provider_updates_with_smoothing_swizzle_and_operator() {
     ctx.update_providers(1.0);
 
     {
-        let (q_interpolated, _last) = def.interpolate(0.5, &ctx);
+        let (q_interpolated_e, _last) = def.interpolate(0.5, &ctx);
+        let q_interpolated = q_interpolated_e.to_quat();
 
         quat_approx_assert(
             q_interpolated,

@@ -191,7 +191,8 @@ impl BaseValue {
             BaseValue::Vector2(_) => 2,
             BaseValue::Vector3(_) => 3,
             BaseValue::Vector4(_) => 4,
-            BaseValue::Quaternion(_) => 4,
+            // Quaternion is stored as EulerVec3 internally (3 components)
+            BaseValue::Quaternion(_) => 3,
         }
     }
 

@@ -72,16 +72,19 @@ impl From<BaseValue> for WrapBaseValue {
                     },
                 },
             },
-            BaseValue::Quaternion(v) => Self {
-                ty: WrapBaseValueType::Quat,
-                value: WrapBaseValueUnion {
-                    quat: WrapQuat {
-                        x: v.x,
-                        y: v.y,
-                        z: v.z,
-                        w: v.w,
+            BaseValue::Quaternion(v) => {
+                let q = v.to_quat();
+                Self {
+                    ty: WrapBaseValueType::Quat,
+                    value: WrapBaseValueUnion {
+                        quat: WrapQuat {
+                            x: q.x,
+                            y: q.y,
+                            z: q.z,
+                            w: q.w,
+                        },
                     },
-                },
+                }
             },
             BaseValue::Vector4(v) => Self {
                 ty: WrapBaseValueType::Vec4,
@@ -298,14 +301,17 @@ impl From<Option<BaseValue>> for FloatOption {
 impl From<Option<BaseValue>> for QuatOption {
     fn from(option: Option<BaseValue>) -> Self {
         match option {
-            Some(BaseValue::Quaternion(v)) => QuatOption {
-                value: WrapQuat {
-                    x: v.x,
-                    y: v.y,
-                    z: v.z,
-                    w: v.w,
-                },
-                has_value: true,
+            Some(BaseValue::Quaternion(v)) => {
+                let q = v.to_quat();
+                QuatOption {
+                    value: WrapQuat {
+                        x: q.x,
+                        y: q.y,
+                        z: q.z,
+                        w: q.w,
+                    },
+                    has_value: true,
+                }
             },
             _ => QuatOption {
                 value: WrapQuat {

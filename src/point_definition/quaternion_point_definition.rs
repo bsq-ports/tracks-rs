@@ -166,6 +166,7 @@ mod tests {
 
         // Initial (time 0.0)
         let (q0, _is_last0) = def.interpolate(0.0, &ctx);
+        let q0 = q0.to_quat();
         let e0 = q0.to_unity_euler_degrees();
         assert!(approx_eq(e0.z, 0.0, 1e-3));
         assert!(approx_eq(e0.y, 0.0, 1e-3));
@@ -178,6 +179,7 @@ mod tests {
 
         // Intermediate between 0.1 and 0.2 -> t = 0.15 -> normalized 0.5 between those points
         let (q_mid, _is_last_mid) = def.interpolate(0.15, &ctx);
+        let q_mid = q_mid.to_quat();
         // Build expected by slerping the endpoint quaternions
         let q_l = Quat::from_unity_euler_degrees(&Vec3::new(0.0f32, 0.0f32, 0.0f32));
         let q_r = Quat::from_unity_euler_degrees(&Vec3::new(0.0f32, -90.0f32, 0.0f32));
@@ -198,6 +200,7 @@ mod tests {
 
         // Final (time 0.3)
         let (q_final, is_last_final) = def.interpolate(0.3, &ctx);
+        let q_final = q_final.to_quat();
         let expected_final = Quat::from_euler(
             UNITY_EULER,
             0.0f32.to_radians(),
@@ -262,6 +265,7 @@ mod tests {
 
         // initial
         let (qi0, last0) = def.interpolate(0.0, &ctx);
+        let qi0 = qi0.to_quat();
         let e0 = qi0.to_unity_euler_degrees();
         assert!(approx_eq(e0.x, 0.0, 1e-3));
         assert!(approx_eq(e0.y, 0.0, 1e-3));
@@ -274,6 +278,7 @@ mod tests {
 
         // mid (0.15) slerp between q1 and q2
         let (qmid, lastmid) = def.interpolate(0.15, &ctx);
+        let qmid = qmid.to_quat();
         let expected_mid = q1.slerp(q2, 0.5);
         assert!(approx_eq(qmid.x, expected_mid.x, 1e-3));
         assert!(approx_eq(qmid.y, expected_mid.y, 1e-3));
@@ -288,6 +293,7 @@ mod tests {
 
         // final
         let (qf, lastf) = def.interpolate(0.3, &ctx);
+        let qf = qf.to_quat();
         assert!(approx_eq(qf.x, q3.x, 1e-3));
         assert!(approx_eq(qf.y, q3.y, 1e-3));
         assert!(approx_eq(qf.z, q3.z, 1e-3));
