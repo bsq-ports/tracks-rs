@@ -172,6 +172,27 @@ impl From<Quat> for BaseValue {
     }
 }
 
+impl From<BaseValue> for f32 {
+    fn from(v: BaseValue) -> Self {
+        v.as_float().expect("Expected BaseValue to be Float")
+    }
+}
+impl From<BaseValue> for Vec3 {
+    fn from(v: BaseValue) -> Self {
+        v.as_vec3().expect("Expected BaseValue to be Vector3")
+    }
+}
+impl From<BaseValue> for Vec4 {
+    fn from(v: BaseValue) -> Self {
+        v.as_vec4().expect("Expected BaseValue to be Vector4")
+    }
+}
+impl From<BaseValue> for Quat {
+    fn from(v: BaseValue) -> Self {
+        v.as_quat().expect("Expected BaseValue to be Quaternion")
+    }
+}
+
 impl Add<BaseValue> for BaseValue {
     type Output = BaseValue;
 

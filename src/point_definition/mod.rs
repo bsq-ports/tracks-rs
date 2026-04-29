@@ -9,7 +9,6 @@ pub mod vector3_point_definition;
 pub type FloatPointDefinition = basic_point_definition::BasicPointDefinition<f32>;
 pub type Vector4PointDefinition = basic_point_definition::BasicPointDefinition<glam::Vec4>;
 
-
 use std::str::FromStr;
 
 #[cfg(feature = "json")]
@@ -136,15 +135,17 @@ where
     where
         Self: Sized,
     {
+        // Single-point shorthand (e.g. `[v0, v1, ...]`) — wrap as an array-of-points
+        // but do NOT append an explicit time. The parsing logic treats missing time
+        // as `0` when constructing the point data.
         let root: JsonValue = match value.as_array().unwrap()[0] {
             JsonValue::Array(_) => value,
             _ => {
-                let mut cloned: Vec<JsonValue> = value.as_array().unwrap().clone();
-                cloned.push(json!(0));
+                let cloned: Vec<JsonValue> = value.as_array().unwrap().clone();
                 json!([cloned])
             }
         };
-        
+
         // If the root is not an array at this point, return default.
         let Some(array) = root.as_array() else {
             return Self::default();
