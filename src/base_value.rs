@@ -28,11 +28,11 @@ impl Default for BaseValue {
     }
 }
 
-#[repr(C)]
+#[repr(u8)]
 #[derive(Copy, Clone, PartialEq, PartialOrd, Eq, Hash, Ord, Debug, Default)]
 pub enum WrapBaseValueType {
     #[default]
-    Unknown = -1,
+    Unknown = u8::MAX,
     Vec3 = 0,
     Quat = 1,
     Vec4 = 2,
