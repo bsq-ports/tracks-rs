@@ -1,11 +1,10 @@
-use crate::base_provider_context::BaseProviderContext;
+use crate::{base_provider_context::BaseProviderContext, base_value::BaseValue};
 use std::{cell::RefCell, rc::Rc};
 
 pub mod base;
 #[cfg(feature = "ffi")]
 pub mod base_ffi;
 pub mod partial;
-pub mod quat;
 pub mod smooth;
 pub mod smooth_rot;
 pub mod r#static;
@@ -13,6 +12,16 @@ pub mod r#static;
 #[cfg(feature = "json")]
 use serde_json::Value as JsonValue;
 use smallvec::SmallVec;
+
+// pub enum ValueProviderValues {
+//     /// Represents an array of values, where each value is a float. The length of the array can vary,
+//     ///  but it is typically used to represent a vector of values (e.g., Vec3 would have 3 values).
+//     Vec(SmallVec<[f32; 5]>),
+//     /// [T, time] e.g for a Vec3 it would be [x, y, z, time]
+//     PointData(BaseValue, f32),
+//     /// We know exactly the type of the value, so we can store it directly without the need for dynamic dispatch or type erasure.
+//     BaseValues(BaseValue),
+// }
 
 pub type ValueProviderValues = SmallVec<[f32; 5]>;
 
@@ -24,6 +33,10 @@ pub trait AbstractValueProvider {
     /// Get an array of values
     /// the values are [T, time] e.g for a Vec3 it would be [x, y, z, time]
     fn values(&self, context: &BaseProviderContext) -> ValueProviderValues;
+
+    fn is_rotation(&self, _context: &BaseProviderContext) -> bool {
+        false
+    }
 }
 
 /// Update values on demand
@@ -42,7 +55,6 @@ pub trait UpdateableValues: AbstractValueProvider {
 pub enum ValueProvider {
     Static(r#static::StaticValues),
     BaseProvider(base::BaseProviderValues),
-    QuaternionProvider(quat::QuaternionProviderValues),
     PartialProvider(partial::PartialProviderValues),
     SmoothProviders(Rc<RefCell<smooth::SmoothProvidersValues>>),
     SmoothRotationProviders(Rc<RefCell<smooth_rot::SmoothRotationProvidersValues>>),
@@ -53,7 +65,6 @@ impl AbstractValueProvider for ValueProvider {
         match self {
             ValueProvider::Static(v) => v.values(context),
             ValueProvider::BaseProvider(v) => v.values(context),
-            ValueProvider::QuaternionProvider(v) => v.values(context),
             ValueProvider::PartialProvider(v) => v.values(context),
             ValueProvider::SmoothProviders(v) => {
                 let borrow = v.borrow();
@@ -72,7 +83,6 @@ impl UpdateableValues for ValueProvider {
         match self {
             ValueProvider::Static(_) => {}
             ValueProvider::BaseProvider(_) => {}
-            ValueProvider::QuaternionProvider(_) => {}
             ValueProvider::PartialProvider(_v) => {}
             ValueProvider::SmoothProviders(v) => v.borrow_mut().update(delta, context),
             ValueProvider::SmoothRotationProviders(v) => v.borrow_mut().update(delta, context),
