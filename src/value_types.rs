@@ -35,11 +35,6 @@ pub trait ValueType:
     fn value_lerp(a: Self, b: Self, t: f32) -> Self {
         a + (b - a) * t
     }
-
-    fn to_smallvec(self) -> SmallVec<[f32; Self::VALUE_COUNT]>
-    where
-        [(); Self::VALUE_COUNT]:,
-        [f32; Self::VALUE_COUNT]: smallvec::Array;
 }
 
 // impl ValueType for  {
@@ -70,13 +65,6 @@ impl ValueType for f32 {
     fn base_type() -> WrapBaseValueType {
         WrapBaseValueType::Float
     }
-
-    fn to_smallvec(self) -> SmallVec<[f32; Self::VALUE_COUNT]>
-    where
-        [(); Self::VALUE_COUNT]:,
-    {
-        SmallVec::from([self])
-    }
 }
 
 impl ValueType for Vec3 {
@@ -103,13 +91,7 @@ impl ValueType for Vec3 {
         unreachable!("Vec3 is not a valid base type for BaseValue")
     }
 
-    fn to_smallvec(self) -> SmallVec<[f32; Self::VALUE_COUNT]>
-    where
-        [(); Self::VALUE_COUNT]:,
-        [f32; Self::VALUE_COUNT]: smallvec::Array,
-    {
-        SmallVec::from([self.x, self.y, self.z])
-    }
+
 }
 
 impl ValueType for Vec4 {
@@ -134,14 +116,6 @@ impl ValueType for Vec4 {
 
     fn base_type() -> WrapBaseValueType {
         WrapBaseValueType::Vec4
-    }
-
-    fn to_smallvec(self) -> SmallVec<[f32; Self::VALUE_COUNT]>
-    where
-        [(); Self::VALUE_COUNT]:,
-        [f32; Self::VALUE_COUNT]: smallvec::Array,
-    {
-        SmallVec::from([self.x, self.y, self.z, self.w])
     }
 }
 
@@ -169,13 +143,6 @@ impl ValueType for Vec2 {
         WrapBaseValueType::Vec2
     }
 
-    fn to_smallvec(self) -> SmallVec<[f32; Self::VALUE_COUNT]>
-    where
-        [(); Self::VALUE_COUNT]:,
-        [f32; Self::VALUE_COUNT]: smallvec::Array,
-    {
-        SmallVec::from([self.x, self.y])
-    }
 }
 
 impl ValueType for BaseValue {
@@ -209,17 +176,4 @@ impl ValueType for BaseValue {
         WrapBaseValueType::Unknown
     }
 
-    fn to_smallvec(self) -> SmallVec<[f32; Self::VALUE_COUNT]>
-    where
-        [(); Self::VALUE_COUNT]:,
-        [f32; Self::VALUE_COUNT]: smallvec::Array,
-    {
-        match self {
-            BaseValue::Float(f) => SmallVec::from([f, 0.0, 0.0, 0.0]),
-            BaseValue::Vector2(v) => SmallVec::from([v.x, v.y, 0.0, 0.0]),
-            BaseValue::Vector3(v) => SmallVec::from([v.x, v.y, v.z, 0.0]),
-            BaseValue::Vector4(v) => SmallVec::from([v.x, v.y, v.z, v.w]),
-            BaseValue::Quaternion(q) => SmallVec::from([q.x, q.y, q.z, q.w]),
-        }
-    }
 }

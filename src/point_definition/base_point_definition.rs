@@ -49,7 +49,7 @@ impl PointDefinitionLike<BaseValue> for BasePointDefinition {
             }
             BasePointDefinition::Quaternion(def) => {
                 let (v, done) = def.interpolate(time, context);
-                (BaseValue::Quaternion(v), done)
+                (BaseValue::Quaternion(v.into()), done)
             }
         }
     }
@@ -176,7 +176,8 @@ impl PointDefinitionLike<BaseValue> for BasePointDefinition {
                 BasePointData::Quaternion(r_data),
             ) => BaseValue::Quaternion(
                 quaternion_point_definition
-                    .interpolate_points(l_data, r_data, l_index, r_index, time, context),
+                    .interpolate_points(l_data, r_data, l_index, r_index, time, context)
+                    .into(),
             ),
             _ => panic!(
                 "Mismatched PointDefinition and PointData types during interpolation {:?} {:?} {:?}",

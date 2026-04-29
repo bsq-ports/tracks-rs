@@ -40,7 +40,7 @@ impl BasePointData {
 
     pub fn get_quaternion(&self, context: &BaseProviderContext) -> Quat {
         match self {
-            BasePointData::Quaternion(point_data) => point_data.get_point(context),
+            BasePointData::Quaternion(point_data) => point_data.get_point(context).to_quat(),
             _ => panic!("PointData is not a QuaternionPointData"),
         }
     }
@@ -127,7 +127,7 @@ impl PointDataLike<BaseValue> for BasePointData {
             BasePointData::Vector3(point_data) => BaseValue::Vector3(point_data.get_point(context)),
             BasePointData::Vector4(point_data) => BaseValue::Vector4(point_data.get_point(context)),
             BasePointData::Quaternion(point_data) => {
-                BaseValue::Quaternion(point_data.get_point(context))
+                BaseValue::Quaternion(point_data.get_point(context).into())
             }
         }
     }

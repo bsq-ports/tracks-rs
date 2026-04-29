@@ -1,4 +1,5 @@
 use super::{ModifierLike, operation::Operation, shared_has_base_provider};
+use crate::base_value::EulerVec3;
 use crate::prelude::{AbstractValueProvider, ValueProvider};
 use crate::{base_provider_context::BaseProviderContext, quaternion_utils::QuaternionUtilsExt};
 use glam::Vec3A;
@@ -14,7 +15,7 @@ use smallvec::SmallVec;
 #[derive(Debug, Clone)]
 pub enum QuaternionValues {
     /// Static Euler vector and its quaternion equivalent.
-    Static(Vec3, Quat),
+    Static(EulerVec3, Quat),
     /// Dynamic providers for Euler components.
     Dynamic(SmallVec<[ValueProvider; 1]>),
 }
@@ -46,8 +47,8 @@ impl QuaternionModifier {
         }
     }
 
-    fn translate_euler(values: &[ValueProvider], context: &BaseProviderContext) -> Vec3 {
-        let mut vec3 = Vec3::ZERO;
+    fn translate_euler(values: &[ValueProvider], context: &BaseProviderContext) -> EulerVec3 {
+        let mut vec3 = EulerVec3::IDENTITY;
 
         // Collect values from each provider into a local variable and copy them into vec3
         // avoid allocations with Vec
@@ -74,7 +75,7 @@ impl QuaternionModifier {
             }
         };
         // Use Vec3A for accumulation in hot inner loop then convert back
-        let mut acc_a = Vec3A::from(original_point);
+        let mut acc_a = Vec3A::from(original_point.0);
         for quat_point in &self.modifiers {
             let v_a = Vec3A::from(quat_point.get_vector_point(context));
             acc_a = match quat_point.get_operation() {
@@ -90,23 +91,23 @@ impl QuaternionModifier {
     }
 }
 
-impl ModifierLike<Quat> for QuaternionModifier {
+impl ModifierLike<EulerVec3> for QuaternionModifier {
     const VALUE_COUNT: usize = 3;
 
-    fn get_modified_point(&self, context: &BaseProviderContext) -> Quat {
+    fn get_modified_point(&self, context: &BaseProviderContext) -> EulerVec3 {
         if self.modifiers.is_empty() && matches!(self.values, QuaternionValues::Static(_, _)) {
             return self.get_raw_point();
         }
         // modifiers applied to the point
         let vector_point = self.get_vector_point(context);
 
-        Quat::from_unity_euler_degrees(&Vec3::new(vector_point.x, vector_point.y, vector_point.z))
+        EulerVec3::new(vector_point.x, vector_point.y, vector_point.z)
     }
 
-    fn get_raw_point(&self) -> Quat {
+    fn get_raw_point(&self) -> EulerVec3 {
         match self.values {
-            QuaternionValues::Static(_, q) => q,
-            _ => Quat::IDENTITY,
+            QuaternionValues::Static(euler, _) => euler,
+            _ => EulerVec3::IDENTITY,
         }
     }
 

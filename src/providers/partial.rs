@@ -31,20 +31,8 @@ impl AbstractValueProvider for PartialProviderValues {
         // since partial provider only works on vector components and not quaternions directly
         let is_quaternion = matches!(values, BaseValue::Quaternion(_));
 
-        let values = match values {
-            BaseValue::Quaternion(q) => q.to_unity_euler_degrees().into(),
-            _ => values,
-        };
-
         let v = SmallVec::<[f32; 4]>::from_iter(self.parts.iter().map(|&part| values[part]));
-        let result = BaseValue::from_slice(&v, false);
+        BaseValue::from_slice(&v, is_quaternion)
 
-        if is_quaternion {
-            // if the source was a quaternion, convert the result back to a quaternion
-            let euler_vec = Vec3::new(result[0], result[1], result[2]);
-            BaseValue::from(Quat::from_unity_euler_degrees(&euler_vec))
-        } else {
-            result
-        }
     }
 }

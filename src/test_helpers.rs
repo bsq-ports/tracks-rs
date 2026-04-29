@@ -3,6 +3,7 @@
 #[cfg(feature = "json")]
 use serde_json::Value as JsonValue;
 
+use crate::base_value::EulerVec3;
 #[cfg(feature = "json")]
 use crate::{
     point_definition::{
@@ -43,7 +44,7 @@ pub fn parse_quaternion_point_definition(
     value: JsonValue,
     context: &mut BaseProviderContext,
 ) -> quaternion_point_definition::QuaternionPointDefinition {
-    <quaternion_point_definition::QuaternionPointDefinition as PointDefinitionLike<glam::Quat>>::parse(
+    <quaternion_point_definition::QuaternionPointDefinition as PointDefinitionLike<EulerVec3>>::parse(
         value, context,
     )
 }
@@ -80,8 +81,8 @@ pub fn interpolate_quaternion_point_definition(
     definition: &quaternion_point_definition::QuaternionPointDefinition,
     time: f32,
     context: &BaseProviderContext,
-) -> (glam::Quat, bool) {
-    <quaternion_point_definition::QuaternionPointDefinition as PointDefinitionLike<glam::Quat>>::interpolate(
+) -> (EulerVec3, bool) {
+    <quaternion_point_definition::QuaternionPointDefinition as PointDefinitionLike<EulerVec3>>::interpolate(
         definition, time, context,
     )
 }

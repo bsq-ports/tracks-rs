@@ -28,7 +28,7 @@ impl AbstractValueProvider for QuaternionProviderValues {
         let source = self.source.values(_context);
 
         let source = match source {
-            BaseValue::Quaternion(q) => q,
+            BaseValue::Quaternion(q) => q.to_quat(),
             BaseValue::Vector4(v) => {
                 // If the source is a Vector4, interpret as quaternion components
                 Quat::from_xyzw(v.x, v.y, v.z, v.w)
@@ -48,6 +48,6 @@ impl AbstractValueProvider for QuaternionProviderValues {
         };
 
 
-        BaseValue::Quaternion(source)
+        BaseValue::Quaternion(source.into())
     }
 }

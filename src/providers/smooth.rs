@@ -32,7 +32,7 @@ impl SmoothProvidersValues {
                 crate::base_value::BaseValue::Vector4(glam::Vec4::ZERO)
             }
             crate::base_value::BaseValue::Quaternion(_) => {
-                crate::base_value::BaseValue::Quaternion(glam::Quat::IDENTITY)
+                crate::base_value::BaseValue::Quaternion(glam::Quat::IDENTITY.into())
             }
         };
 

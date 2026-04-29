@@ -5,7 +5,7 @@ use smallvec::SmallVec;
 
 use crate::{
     base_provider_context::BaseProviderContext,
-    base_value::WrapBaseValueType,
+    base_value::{EulerVec3, WrapBaseValueType},
     easings::functions::Functions,
     modifiers::{
         operation::Operation,
@@ -23,7 +23,7 @@ pub struct QuaternionPointDefinition {
     points: Rc<[QuaternionPointData]>,
 }
 
-impl PointDefinitionLike<Quat> for QuaternionPointDefinition {
+impl PointDefinitionLike<EulerVec3> for QuaternionPointDefinition {
     type Modifier = QuaternionModifier;
     type PointData = QuaternionPointData;
 
@@ -51,8 +51,8 @@ impl PointDefinitionLike<Quat> for QuaternionPointDefinition {
         let val = match values.as_slice() {
             [ValueProvider::Static(static_val)] if static_val.values(context).len() == 3 => {
                 let values = static_val.values(context);
-                let raw_vector = vec3(values[0], values[1], values[2]);
-                let quat = Quat::from_unity_euler_degrees(&raw_vector);
+                let raw_vector = EulerVec3::new(values[0], values[1], values[2]);
+                let quat = raw_vector.to_quat();
                 QuaternionValues::Static(raw_vector, quat)
             }
             _ => {
@@ -76,8 +76,8 @@ impl PointDefinitionLike<Quat> for QuaternionPointDefinition {
             // [vec3, time]
             [ValueProvider::Static(static_val)] if static_val.values.len() == 4 => {
                 let values = &static_val.values;
-                let raw_vector_point = Vec3::new(values[0], values[1], values[2]);
-                let quat = Quat::from_unity_euler_degrees(&raw_vector_point);
+                let raw_vector_point = EulerVec3::new(values[0], values[1], values[2]);
+                let quat = raw_vector_point.to_quat();
 
                 (QuaternionValues::Static(raw_vector_point, quat), values[3])
             }
@@ -107,10 +107,10 @@ impl PointDefinitionLike<Quat> for QuaternionPointDefinition {
         _r_index: usize,
         time: f32,
         context: &BaseProviderContext,
-    ) -> Quat {
-        let point_l = PointDataLike::get_point(l, context);
-        let point_r = PointDataLike::get_point(r, context);
-        point_l.slerp(point_r, time)
+    ) -> EulerVec3 {
+        let point_l = PointDataLike::get_point(l, context).to_quat();
+        let point_r = PointDataLike::get_point(r, context).to_quat();
+        point_l.slerp(point_r, time).into()
     }
 
     fn get_points(&self) -> &[Self::PointData] {
@@ -231,25 +231,25 @@ mod tests {
         let q3 = Quat::from_unity_euler_degrees(&Vec3::new(-90.0f32, -90.0f32, 0.0f32));
 
         let p0 = QuaternionPointData::new(
-            QuaternionValues::Static(Vec3::new(0.0, 0.0, 0.0), q0),
+            QuaternionValues::Static(EulerVec3::new(0.0, 0.0, 0.0), q0),
             0.0,
             vec![],
             Functions::EaseLinear,
         );
         let p1 = QuaternionPointData::new(
-            QuaternionValues::Static(Vec3::new(0.0, 0.0, 0.0), q1),
+            QuaternionValues::Static(EulerVec3::new(0.0, 0.0, 0.0), q1),
             0.1,
             vec![],
             Functions::EaseLinear,
         );
         let p2 = QuaternionPointData::new(
-            QuaternionValues::Static(Vec3::new(0.0, -90.0, 0.0), q2),
+            QuaternionValues::Static(EulerVec3::new(0.0, -90.0, 0.0), q2),
             0.2,
             vec![],
             Functions::EaseLinear,
         );
         let p3 = QuaternionPointData::new(
-            QuaternionValues::Static(Vec3::new(-90.0, -90.0, 0.0), q3),
+            QuaternionValues::Static(EulerVec3::new(-90.0, -90.0, 0.0), q3),
             0.3,
             vec![],
             Functions::EaseLinear,

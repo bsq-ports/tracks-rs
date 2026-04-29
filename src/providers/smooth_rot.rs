@@ -44,7 +44,7 @@ impl UpdateableValues for SmoothRotationProvidersValues {
 
         // If the source has 4 or more components, interpret as quaternion; otherwise, use identity
         let quat = match src {
-            BaseValue::Quaternion(q) => q,
+            BaseValue::Quaternion(q) => q.to_quat(),
             BaseValue::Vector3(v) => Quat::from_unity_euler_degrees(&v),
             _ => {
                 if !self.warned {

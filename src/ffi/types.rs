@@ -114,12 +114,15 @@ impl From<WrapBaseValue> for BaseValue {
                     value.value.vec3.y,
                     value.value.vec3.z,
                 )),
-                WrapBaseValueType::Quat => BaseValue::Quaternion(Quat::from_xyzw(
-                    value.value.quat.x,
-                    value.value.quat.y,
-                    value.value.quat.z,
-                    value.value.quat.w,
-                )),
+                WrapBaseValueType::Quat => BaseValue::Quaternion(
+                    Quat::from_xyzw(
+                        value.value.quat.x,
+                        value.value.quat.y,
+                        value.value.quat.z,
+                        value.value.quat.w,
+                    )
+                    .into(),
+                ),
                 WrapBaseValueType::Vec4 => BaseValue::Vector4(Vec4::new(
                     value.value.vec4.x,
                     value.value.vec4.y,

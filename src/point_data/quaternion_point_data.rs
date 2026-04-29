@@ -1,11 +1,9 @@
 use crate::{
-    base_provider_context::BaseProviderContext,
-    easings::functions::Functions,
-    modifiers::{
+    base_provider_context::BaseProviderContext, base_value::EulerVec3, easings::functions::Functions, modifiers::{
         ModifierLike,
         operation::Operation,
         quaternion_modifier::{QuaternionModifier, QuaternionValues},
-    },
+    }
 };
 use glam::Quat;
 
@@ -58,7 +56,7 @@ impl QuaternionPointData {
 //     }
 // }
 
-impl PointDataLike<Quat> for QuaternionPointData {
+impl PointDataLike<EulerVec3> for QuaternionPointData {
     fn get_easing(&self) -> Functions {
         self.easing
     }
@@ -71,7 +69,7 @@ impl PointDataLike<Quat> for QuaternionPointData {
         self.base_modifier.has_base_provider()
     }
 
-    fn get_point(&self, context: &BaseProviderContext) -> Quat {
+    fn get_point(&self, context: &BaseProviderContext) -> EulerVec3 {
         self.base_modifier.get_modified_point(context)
     }
 }

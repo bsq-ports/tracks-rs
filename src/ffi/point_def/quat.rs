@@ -46,6 +46,7 @@ pub unsafe extern "C" fn tracks_interpolate_quat(
 ) -> QuaternionInterpolationResult {
     let point_definition = unsafe { &*point_definition };
     let (value, is_last) = point_definition.interpolate(time, unsafe { &*context });
+    let value = value.to_quat();
     QuaternionInterpolationResult {
         value: WrapQuat {
             x: value.x,

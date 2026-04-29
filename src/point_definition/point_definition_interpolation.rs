@@ -78,6 +78,7 @@ impl PointDefinitionInterpolation {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::base_value::EulerVec3;
     use crate::easings::functions::Functions;
     use crate::modifiers::quaternion_modifier::QuaternionValues;
     use crate::point_data::basic_point_data::BasicPointData;
@@ -255,14 +256,14 @@ mod tests {
         let q2 = Quat::from_array([0.0, 0.0, 1.0, 0.0]);
 
         let prev_q = QuaternionPointDefinition::new(vec![QuaternionPointData::new(
-            QuaternionValues::Static(Vec3::ZERO, q1),
+            QuaternionValues::Static(EulerVec3::IDENTITY, q1),
             0.0,
             vec![],
             Functions::EaseLinear,
         )]);
 
         let next_q = QuaternionPointDefinition::new(vec![QuaternionPointData::new(
-            QuaternionValues::Static(Vec3::ZERO, q2),
+            QuaternionValues::Static(EulerVec3::IDENTITY, q2),
             0.0,
             vec![],
             Functions::EaseLinear,

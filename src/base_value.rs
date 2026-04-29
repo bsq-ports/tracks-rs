@@ -2,6 +2,8 @@ use glam::FloatExt;
 use smallvec::SmallVec;
 
 use std::ops::Add;
+use std::ops::Deref;
+use std::ops::DerefMut;
 use std::ops::Div;
 use std::ops::Index;
 use std::ops::IndexMut;
@@ -13,6 +15,8 @@ use glam::Vec2;
 use glam::Vec3;
 
 use glam::Vec4;
+
+use crate::quaternion_utils::QuaternionUtilsExt;
 
 ///
 /// Time based number
@@ -27,12 +31,49 @@ pub enum BaseValue {
     Vector2(Vec2),
     Vector3(Vec3),
     Vector4(Vec4),
-    Quaternion(Quat),
+    // Store quaternion as euler angles in degrees for easier interpolation and editing, convert to quaternion when needed
+    // most of the math assumes euler angles, and it's easier to work with them directly for things like partial providers and value providers that operate on components
+    // slerp/lerp is done on the quaternion representation
+    Quaternion(EulerVec3),
+}
+
+#[repr(transparent)]
+#[derive(Clone, Debug, Copy, PartialEq, Default)]
+pub struct EulerVec3(pub Vec3);
+
+impl Deref for EulerVec3 {
+    type Target = Vec3;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for EulerVec3 {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
 }
 
 impl Default for BaseValue {
     fn default() -> Self {
         BaseValue::Float(0.0)
+    }
+}
+impl From<Quat> for EulerVec3 {
+    fn from(q: Quat) -> Self {
+        EulerVec3(q.to_unity_euler_degrees())
+    }
+}
+impl EulerVec3 {
+    pub const IDENTITY: Self = Self(Vec3::ZERO);
+
+    pub fn to_quat(&self) -> Quat {
+        Quat::from_unity_euler_degrees(&self.0)
+    }
+    
+    pub fn new(x: f32, y: f32, z: f32) -> Self {
+        Self(Vec3::new(x, y, z))
     }
 }
 
@@ -73,13 +114,10 @@ impl From<BaseValue> for Vec2 {
     }
 }
 
-#[derive(Clone, Debug, Copy)]
-pub enum BaseValueRef<'a> {
-    Float(&'a f32),
-    Vector2(&'a Vec2),
-    Vector3(&'a Vec3),
-    Vector4(&'a Vec4),
-    Quaternion(&'a Quat),
+impl From<EulerVec3> for BaseValue {
+    fn from(v: EulerVec3) -> Self {
+        BaseValue::Quaternion(v)
+    }
 }
 
 #[repr(C)]
@@ -105,7 +143,9 @@ impl BaseValue {
             1 => BaseValue::Float(value[0]),
             2 => BaseValue::Vector2(Vec2::new(value[0], value[1])),
             3 => BaseValue::Vector3(Vec3::new(value[0], value[1], value[2])),
-            4.. if quat => BaseValue::Quaternion(Quat::from_slice(value)),
+            3.. if quat => {
+                BaseValue::Quaternion(EulerVec3(Vec3::new(value[0], value[1], value[2])))
+            }
             4.. => BaseValue::Vector4(Vec4::new(value[0], value[1], value[2], value[3])),
             _ => panic!("Invalid value length {}, expected 1 to 4", value.len()),
         }
@@ -140,7 +180,7 @@ impl BaseValue {
 
     pub fn as_quat(&self) -> Option<Quat> {
         match self {
-            BaseValue::Quaternion(v) => Some(*v),
+            BaseValue::Quaternion(v) => Some(Quat::from_unity_euler_degrees(&v.0)),
             _ => None,
         }
     }
@@ -175,7 +215,7 @@ impl BaseValue {
             BaseValue::Vector2(v) => smallvec::smallvec![v.x, v.y],
             BaseValue::Vector3(v) => smallvec::smallvec![v.x, v.y, v.z],
             BaseValue::Vector4(v) => smallvec::smallvec![v.x, v.y, v.z, v.w],
-            BaseValue::Quaternion(v) => smallvec::smallvec![v.x, v.y, v.z, v.w],
+            BaseValue::Quaternion(v) => smallvec::smallvec![v.x, v.y, v.z],
         }
     }
 
@@ -188,7 +228,7 @@ impl BaseValue {
             (BaseValue::Quaternion(v1), BaseValue::Quaternion(v2)) => {
                 // lerp or slerp?
 
-                Quat::slerp(v1, v2, t).into()
+                Quat::slerp(v1.to_quat(), v2.to_quat(), t).into()
             }
             _ => panic!("Invalid interpolation"),
         }
@@ -201,77 +241,6 @@ impl BaseValue {
             BaseValue::Vector3(_) => WrapBaseValueType::Vec3,
             BaseValue::Vector4(_) => WrapBaseValueType::Vec4,
             BaseValue::Quaternion(_) => WrapBaseValueType::Quat,
-        }
-    }
-}
-
-impl BaseValueRef<'_> {
-    pub fn as_float(&self) -> Option<&f32> {
-        match self {
-            BaseValueRef::Float(v) => Some(v),
-            _ => None,
-        }
-    }
-
-    pub fn as_vec2(&self) -> Option<&Vec2> {
-        match self {
-            BaseValueRef::Vector2(v) => Some(v),
-            _ => None,
-        }
-    }
-
-    pub fn as_vec3(&self) -> Option<&Vec3> {
-        match self {
-            BaseValueRef::Vector3(v) => Some(v),
-            _ => None,
-        }
-    }
-
-    pub fn as_vec4(&self) -> Option<&Vec4> {
-        match self {
-            BaseValueRef::Vector4(v) => Some(v),
-            _ => None,
-        }
-    }
-
-    pub fn as_quat(&self) -> Option<&Quat> {
-        match self {
-            BaseValueRef::Quaternion(v) => Some(v),
-            _ => None,
-        }
-    }
-
-    pub fn len(&self) -> usize {
-        match self {
-            BaseValueRef::Float(_) => 1,
-            BaseValueRef::Vector2(_) => 2,
-            BaseValueRef::Vector3(_) => 3,
-            BaseValueRef::Vector4(_) => 4,
-            BaseValueRef::Quaternion(_) => 4,
-        }
-    }
-
-    pub fn is_empty(&self) -> bool {
-        false
-    }
-
-    pub fn as_slice(&self) -> &[f32] {
-        match self {
-            BaseValueRef::Float(v) => std::slice::from_ref(v),
-            BaseValueRef::Vector2(v) => v.as_ref(),
-            BaseValueRef::Vector3(v) => v.as_ref(),
-            BaseValueRef::Vector4(v) => v.as_ref(),
-            BaseValueRef::Quaternion(v) => v.as_ref(),
-        }
-    }
-
-    pub fn as_small_vec(&self) -> SmallVec<[f32; 4]> {
-        match self {
-            BaseValueRef::Float(v) => smallvec::smallvec![**v],
-            BaseValueRef::Vector2(v) => smallvec::smallvec![v.x, v.y],
-            BaseValueRef::Vector3(v) => smallvec::smallvec![v.x, v.y, v.z],
-            BaseValueRef::Vector4(v) => smallvec::smallvec![v.x, v.y, v.z, v.w],
-            BaseValueRef::Quaternion(v) => smallvec::smallvec![v.x, v.y, v.z, v.w],
         }
     }
 }
@@ -308,7 +277,7 @@ impl From<Vec2> for BaseValue {
 
 impl From<Quat> for BaseValue {
     fn from(v: Quat) -> Self {
-        BaseValue::Quaternion(v)
+        BaseValue::Quaternion(EulerVec3(v.to_unity_euler_degrees()))
     }
 }
 
@@ -323,8 +292,9 @@ impl Add<BaseValue> for BaseValue {
             (BaseValue::Vector4(v1), BaseValue::Vector4(v2)) => BaseValue::Vector4(v1 + v2),
             (BaseValue::Quaternion(v1), BaseValue::Quaternion(v2)) => {
                 // Add or multiply quaternions?
+                let result = v1.to_quat() * v2.to_quat();
 
-                BaseValue::Quaternion((v1 * v2).normalize())
+                BaseValue::Quaternion(EulerVec3(result.to_unity_euler_degrees()))
             }
             _ => panic!("Invalid addition"),
         }
@@ -340,11 +310,6 @@ impl Sub<BaseValue> for BaseValue {
             (BaseValue::Vector2(v1), BaseValue::Vector2(v2)) => BaseValue::Vector2(v1 - v2),
             (BaseValue::Vector3(v1), BaseValue::Vector3(v2)) => BaseValue::Vector3(v1 - v2),
             (BaseValue::Vector4(v1), BaseValue::Vector4(v2)) => BaseValue::Vector4(v1 - v2),
-            (BaseValue::Quaternion(v1), BaseValue::Quaternion(v2)) => {
-                // Subtract or divide quaternions?
-
-                BaseValue::Quaternion((v1 * v2.inverse()).normalize())
-            }
             _ => panic!("Invalid subtraction"),
         }
     }
@@ -359,11 +324,6 @@ impl Mul<BaseValue> for BaseValue {
             (BaseValue::Vector2(v1), BaseValue::Vector2(v2)) => BaseValue::Vector2(v1 * v2),
             (BaseValue::Vector3(v1), BaseValue::Vector3(v2)) => BaseValue::Vector3(v1 * v2),
             (BaseValue::Vector4(v1), BaseValue::Vector4(v2)) => BaseValue::Vector4(v1 * v2),
-            (BaseValue::Quaternion(v1), BaseValue::Quaternion(v2)) => {
-                // Multiply or slerp quaternions?
-
-                BaseValue::Quaternion((v1 * v2).normalize())
-            }
             _ => panic!("Invalid multiplication"),
         }
     }
@@ -378,11 +338,6 @@ impl Div<BaseValue> for BaseValue {
             (BaseValue::Vector2(v1), BaseValue::Vector2(v2)) => BaseValue::Vector2(v1 / v2),
             (BaseValue::Vector3(v1), BaseValue::Vector3(v2)) => BaseValue::Vector3(v1 / v2),
             (BaseValue::Vector4(v1), BaseValue::Vector4(v2)) => BaseValue::Vector4(v1 / v2),
-            (BaseValue::Quaternion(v1), BaseValue::Quaternion(v2)) => {
-                // Divide or slerp quaternions?
-                // TODO: Quaternion division is not well defined, we can either do v1 * v2.inverse() or slerp between identity and v1 * v2.inverse() based on the length of v2
-                BaseValue::Quaternion((v1 * v2.inverse()).normalize())
-            }
             _ => panic!("Invalid division"),
         }
     }
@@ -399,7 +354,7 @@ impl Mul<f32> for BaseValue {
             BaseValue::Vector2(v) => BaseValue::Vector2(v * rhs),
             BaseValue::Vector3(v) => BaseValue::Vector3(v * rhs),
             BaseValue::Vector4(v) => BaseValue::Vector4(v * rhs),
-            BaseValue::Quaternion(v) => BaseValue::Quaternion(v * rhs),
+            BaseValue::Quaternion(v) => BaseValue::Quaternion(EulerVec3(v.0 * rhs)),
         }
     }
 }
@@ -413,7 +368,7 @@ impl Div<f32> for BaseValue {
             BaseValue::Vector2(v) => BaseValue::Vector2(v / rhs),
             BaseValue::Vector3(v) => BaseValue::Vector3(v / rhs),
             BaseValue::Vector4(v) => BaseValue::Vector4(v / rhs),
-            BaseValue::Quaternion(v) => BaseValue::Quaternion(v / rhs),
+            BaseValue::Quaternion(v) => BaseValue::Quaternion(EulerVec3(v.0 / rhs)),
         }
     }
 }
@@ -431,8 +386,7 @@ impl Index<usize> for BaseValue {
                 0 => &v.x,
                 1 => &v.y,
                 2 => &v.z,
-                3 => &v.w,
-                _ => panic!("Invalid index for Quaternion"),
+                _ => panic!("Invalid index for EulerVec3"),
             },
         }
     }
@@ -448,8 +402,7 @@ impl IndexMut<usize> for BaseValue {
                 0 => &mut v.x,
                 1 => &mut v.y,
                 2 => &mut v.z,
-                3 => &mut v.w,
-                _ => panic!("Invalid index for Quaternion"),
+                _ => panic!("Invalid index for EulerVec3"),
             },
         }
     }
@@ -490,42 +443,5 @@ impl IntoIterator for BaseValue {
             base_value: self,
             idx: 0,
         }
-    }
-}
-
-impl<'a> From<&'a BaseValue> for BaseValueRef<'a> {
-    fn from(v: &'a BaseValue) -> Self {
-        match v {
-            BaseValue::Float(v) => BaseValueRef::Float(v),
-            BaseValue::Vector2(v) => BaseValueRef::Vector2(v),
-            BaseValue::Vector3(v) => BaseValueRef::Vector3(v),
-            BaseValue::Vector4(v) => BaseValueRef::Vector4(v),
-            BaseValue::Quaternion(v) => BaseValueRef::Quaternion(v),
-        }
-    }
-}
-impl<'a> From<&'a f32> for BaseValueRef<'a> {
-    fn from(v: &'a f32) -> Self {
-        BaseValueRef::Float(v)
-    }
-}
-impl<'a> From<&'a Vec3> for BaseValueRef<'a> {
-    fn from(v: &'a Vec3) -> Self {
-        BaseValueRef::Vector3(v)
-    }
-}
-impl<'a> From<&'a Vec2> for BaseValueRef<'a> {
-    fn from(v: &'a Vec2) -> Self {
-        BaseValueRef::Vector2(v)
-    }
-}
-impl<'a> From<&'a Vec4> for BaseValueRef<'a> {
-    fn from(v: &'a Vec4) -> Self {
-        BaseValueRef::Vector4(v)
-    }
-}
-impl<'a> From<&'a Quat> for BaseValueRef<'a> {
-    fn from(v: &'a Quat) -> Self {
-        BaseValueRef::Quaternion(v)
     }
 }
