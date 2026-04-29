@@ -55,7 +55,7 @@ impl PointDefinitionLike<Quat> for QuaternionPointDefinition {
             {
                 let values = &static_val.values;
                 let raw_vector = vec3(values[0], values[1], values[2]);
-                let quat = Quat::from_unity_euler_degrees(&raw_vector);
+                let quat = Quat::from_unity_euler_degrees(raw_vector);
                 QuaternionValues::Static(raw_vector, quat)
             }
             _ => {
@@ -82,7 +82,7 @@ impl PointDefinitionLike<Quat> for QuaternionPointDefinition {
             {
                 let values = &static_val.values;
                 let raw_vector_point = Vec3::new(values[0], values[1], values[2]);
-                let quat = Quat::from_unity_euler_degrees(&raw_vector_point);
+                let quat = Quat::from_unity_euler_degrees(raw_vector_point);
 
                 let time = values[Vec3::VALUE_COUNT];
 
@@ -182,8 +182,8 @@ mod tests {
         // Intermediate between 0.1 and 0.2 -> t = 0.15 -> normalized 0.5 between those points
         let (q_mid, _is_last_mid) = def.interpolate(0.15, &ctx);
         // Build expected by slerping the endpoint quaternions
-        let q_l = Quat::from_unity_euler_degrees(&Vec3::new(0.0f32, 0.0f32, 0.0f32));
-        let q_r = Quat::from_unity_euler_degrees(&Vec3::new(0.0f32, -90.0f32, 0.0f32));
+        let q_l = Quat::from_unity_euler_degrees(Vec3::new(0.0f32, 0.0f32, 0.0f32));
+        let q_r = Quat::from_unity_euler_degrees(Vec3::new(0.0f32, -90.0f32, 0.0f32));
         let expected_mid = q_l.slerp(q_r, 0.5);
 
         // compare quaternion components
@@ -227,11 +227,11 @@ mod tests {
         let ctx = BaseProviderContext::new();
 
         // Build quaternions from the same euler angles as the previous test
-        let q0 = Quat::from_unity_euler_degrees(&Vec3::new(0.0, 0.0, 0.0));
-        let q1 = Quat::from_unity_euler_degrees(&Vec3::new(0.0, 0.0, 0.0));
+        let q0 = Quat::from_unity_euler_degrees(Vec3::new(0.0, 0.0, 0.0));
+        let q1 = Quat::from_unity_euler_degrees(Vec3::new(0.0, 0.0, 0.0));
 
-        let q2 = Quat::from_unity_euler_degrees(&Vec3::new(0.0f32, -90.0f32, 0.0f32));
-        let q3 = Quat::from_unity_euler_degrees(&Vec3::new(-90.0f32, -90.0f32, 0.0f32));
+        let q2 = Quat::from_unity_euler_degrees(Vec3::new(0.0f32, -90.0f32, 0.0f32));
+        let q3 = Quat::from_unity_euler_degrees(Vec3::new(-90.0f32, -90.0f32, 0.0f32));
 
         let p0 = QuaternionPointData::new(
             QuaternionValues::Static(Vec3::new(0.0, 0.0, 0.0), q0),

@@ -1,5 +1,6 @@
 use super::{ModifierLike, operation::Operation, shared_has_base_provider};
 use crate::prelude::{AbstractValueProvider, ValueProvider};
+use crate::value_types::ValueType;
 use crate::{base_provider_context::BaseProviderContext, quaternion_utils::QuaternionUtilsExt};
 use glam::Vec3A;
 use glam::{Quat, Vec3};
@@ -55,7 +56,7 @@ impl QuaternionModifier {
         'outer: for provider in values {
             let vals = provider.values(context);
             for v in vals {
-                if count >= Self::VALUE_COUNT {
+                if count >= Vec3::VALUE_COUNT {
                     break 'outer;
                 }
                 vec3[count] = v;
@@ -100,7 +101,7 @@ impl ModifierLike<Quat> for QuaternionModifier {
         // modifiers applied to the point
         let vector_point = self.get_vector_point(context);
 
-        Quat::from_unity_euler_degrees(&Vec3::new(vector_point.x, vector_point.y, vector_point.z))
+        Quat::from_unity_euler_degrees(Vec3::new(vector_point.x, vector_point.y, vector_point.z))
     }
 
     fn get_raw_point(&self) -> Quat {

@@ -72,8 +72,8 @@ fn integration_quaternion_parse_and_interpolate() {
 
     let (q_mid, _last) = def.interpolate(0.15, &ctx);
 
-    let q_l = Quat::from_unity_euler_degrees(&Vec3::new(0.0f32, 0.0f32, 0.0f32));
-    let q_r = Quat::from_unity_euler_degrees(&Vec3::new(0.0f32, -90.0f32, 0.0f32));
+    let q_l = Quat::from_unity_euler_degrees(Vec3::new(0.0f32, 0.0f32, 0.0f32));
+    let q_r = Quat::from_unity_euler_degrees(Vec3::new(0.0f32, -90.0f32, 0.0f32));
     let expected_mid = q_l.slerp(q_r, 0.5);
 
     quat_approx_assert(q_mid, expected_mid, 1e-3);
@@ -85,7 +85,7 @@ fn parse_with_swizzled_base_provider() {
 
     // set base rotation to a known euler triple (store as Vec3 so a swizzle returns euler components)
     let euler = Vec3::new(10.0_f32, 20.0_f32, -30.0_f32);
-    let q = Quat::from_unity_euler_degrees(&euler);
+    let q = Quat::from_unity_euler_degrees(euler);
     ctx.set_values("baseHeadRotation", BaseValue::from(q));
 
     // Use a provider for the three euler components and a trailing time value
@@ -99,7 +99,7 @@ fn parse_with_swizzled_base_provider() {
 
     // now update
     let new_euler = Vec3::new(-45.0_f32, 60.0_f32, 90.0_f32);
-    let new_q = Quat::from_unity_euler_degrees(&new_euler);
+    let new_q = Quat::from_unity_euler_degrees(new_euler);
     ctx.set_values("baseHeadRotation", BaseValue::from(new_q));
 
     // and check
@@ -112,7 +112,7 @@ fn simple_base_swizzle_usage() {
     let mut ctx = BaseProviderContext::new();
     ctx.set_values(
         "baseHeadRotation",
-        BaseValue::from(Quat::from_unity_euler_degrees(&Vec3::new(4.0, 5.0, 6.0))),
+        BaseValue::from(Quat::from_unity_euler_degrees(Vec3::new(4.0, 5.0, 6.0))),
     );
 
     let provider = ctx.get_value_provider("baseHeadRotation.yx");
@@ -128,7 +128,7 @@ fn base_provider_updates_reflect_in_quaternion_definition_no_smoothing() {
 
     // static start point (identity)
     let initial_euler = Vec3::new(0.0, 0.0, 0.0);
-    let initial_quat = Quat::from_unity_euler_degrees(&initial_euler);
+    let initial_quat = Quat::from_unity_euler_degrees(initial_euler);
     let js = json!([
         [initial_euler.x, initial_euler.y, initial_euler.z, 0.0],
         ["baseHeadRotation", 1.0]
@@ -136,7 +136,7 @@ fn base_provider_updates_reflect_in_quaternion_definition_no_smoothing() {
 
     // initial base euler values (degrees)
     let head_rot_euler = Vec3::new(0.0, 0.0, 30.0);
-    let head_rot = Quat::from_unity_euler_degrees(&head_rot_euler);
+    let head_rot = Quat::from_unity_euler_degrees(head_rot_euler);
     ctx.set_values("baseHeadRotation", BaseValue::from(head_rot));
 
     let def = QuaternionPointDefinition::parse(js.clone(), &mut ctx);
@@ -148,7 +148,7 @@ fn base_provider_updates_reflect_in_quaternion_definition_no_smoothing() {
 
     // change base provider to a different rotation
     let head_rot_euler = Vec3::new(0.0, 0.0, 90.0);
-    let head_rot = Quat::from_unity_euler_degrees(&head_rot_euler);
+    let head_rot = Quat::from_unity_euler_degrees(head_rot_euler);
     ctx.set_values("baseHeadRotation", BaseValue::from(head_rot));
 
     let (q_after, _last2) = def.interpolate(0.5, &ctx);
@@ -173,12 +173,12 @@ fn base_provider_updates_with_smoothing_swizzle_and_operator() {
     let def = QuaternionPointDefinition::parse(js, &mut ctx);
 
     let head_rot_euler = Vec3::new(0.0, 0.0, 30.0);
-    let head_rot = Quat::from_unity_euler_degrees(&head_rot_euler);
+    let head_rot = Quat::from_unity_euler_degrees(head_rot_euler);
 
     // apply the swizzle and operator to the expected rotation
     let expected_rot = |quat: Quat| {
         let euler = quat.to_unity_euler_degrees();
-        Quat::from_unity_euler_degrees(&Vec3::new(euler.z + 10.0, euler.x, euler.y))
+        Quat::from_unity_euler_degrees(Vec3::new(euler.z + 10.0, euler.x, euler.y))
     };
 
     // initial base euler values
@@ -209,7 +209,7 @@ fn base_provider_updates_with_smoothing_swizzle_and_operator() {
     // required for smoothing to work correctly since it needs to know the current state as the starting point for smoothing to the new target
 
     let head_rot_euler = Vec3::new(0.0, 0.0, 90.0);
-    let head_rot = Quat::from_unity_euler_degrees(&head_rot_euler);
+    let head_rot = Quat::from_unity_euler_degrees(head_rot_euler);
     ctx.set_values("baseHeadRotation", BaseValue::from(head_rot));
     ctx.update_providers(1.0);
 

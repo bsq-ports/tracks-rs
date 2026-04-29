@@ -93,7 +93,7 @@ fn parses_quaternion_point_definition_from_heck_json() {
     assert!(!start_is_last);
 
     let (end, end_is_last) = definition.interpolate(0.5, &context);
-    let expected = glam::Quat::from_unity_euler_degrees(&glam::Vec3::new(0.0, -90.0, 0.0));
+    let expected = glam::Quat::from_unity_euler_degrees(glam::Vec3::new(0.0, -90.0, 0.0));
     assert_eq!(end, expected);
     assert!(end_is_last);
 }
@@ -158,7 +158,7 @@ fn parses_float_from_smoothed_and_swizzled_base_provider() {
 fn parses_quaternion_from_smoothed_base_provider() {
     let mut context = BaseProviderContext::new();
     let target_euler = glam::Vec3::new(12.0, -34.0, 56.0);
-    let target_quat = glam::Quat::from_unity_euler_degrees(&target_euler);
+    let target_quat = glam::Quat::from_unity_euler_degrees(target_euler);
     context.set_values("baseHeadRotation", BaseValue::from(target_quat));
 
     let definition =
@@ -181,7 +181,7 @@ fn parses_quaternion_from_smoothed_base_provider() {
 fn parses_quaternion_from_smoothed_base_provider_s10() {
     let mut context = BaseProviderContext::new();
     let target_euler = glam::Vec3::new(12.0, -34.0, 56.0);
-    let target_quat = glam::Quat::from_unity_euler_degrees(&target_euler);
+    let target_quat = glam::Quat::from_unity_euler_degrees(target_euler);
     context.set_values("baseHeadRotation", BaseValue::from(target_quat));
 
     let definition =

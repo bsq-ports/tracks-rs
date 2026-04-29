@@ -27,7 +27,8 @@ pub struct QuatContext {
 impl QuatContext {
     pub fn new() -> Self {
         let mut context = BaseProviderContext::new();
-        let definition = QuaternionPointDefinition::parse(json!([0, "baseCombo", 0]), &mut context);
+        let definition =
+            QuaternionPointDefinition::parse(json!([0, "baseHeadRotation", 0]), &mut context);
         Self {
             definition,
             context: RefCell::new(context),
@@ -70,7 +71,7 @@ pub fn draw_quat(
 ) {
     {
         context.context.borrow_mut().set_values(
-            "baseCombo",
+            "baseHeadRotation",
             ((epoch.sin() as f32 + 1.0) * 0.5 * 45.0).into(),
         );
         let mut chart = chart.clone().restore(root);

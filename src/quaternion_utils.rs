@@ -6,7 +6,7 @@ pub const TRACKS_EULER_ROT: EulerRot = EulerRot::ZXYEx;
 
 pub trait QuaternionUtilsExt {
     fn to_unity_euler_degrees(&self) -> Vec3;
-    fn from_unity_euler_degrees(euler: &Vec3) -> Quat;
+    fn from_unity_euler_degrees(euler: Vec3) -> Quat;
 }
 
 impl QuaternionUtilsExt for Quat {
@@ -21,7 +21,7 @@ impl QuaternionUtilsExt for Quat {
     }
 
     /// Convert euler degrees to quaternion
-    fn from_unity_euler_degrees(euler: &Vec3) -> Quat {
+    fn from_unity_euler_degrees(euler: Vec3) -> Quat {
         Quat::from_euler(
             TRACKS_EULER_ROT,
             euler.z.to_radians(),
@@ -50,7 +50,7 @@ mod tests {
 
         for e in cases {
             // build via convenience function
-            let q = Quat::from_unity_euler_degrees(&e);
+            let q = Quat::from_unity_euler_degrees(e);
             // round-trip back to euler degrees
             let e2 = q.to_unity_euler_degrees();
 
@@ -81,7 +81,7 @@ mod tests {
         // is equivalent to constructing with the underlying from_euler call used by the impl
         let e = Vec3::new(12.0_f32, -34.0_f32, 56.0_f32);
 
-        let q_via_helper = Quat::from_unity_euler_degrees(&e);
+        let q_via_helper = Quat::from_unity_euler_degrees(e);
 
         // The implementation uses TRACKS_EULER_ROT and passes components (z, x, y) as radians
         let q_expected = Quat::from_euler(

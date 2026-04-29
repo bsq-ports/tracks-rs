@@ -55,7 +55,7 @@ fn smoothing_on_quaternion_produces_expected_euler() {
 
     // pick an euler triple and convert to quaternion
     let euler = Vec3::new(12.0_f32, -34.0_f32, 56.0_f32);
-    let q = Quat::from_unity_euler_degrees(&euler);
+    let q = Quat::from_unity_euler_degrees(euler);
 
     ctx.set_values("baseHeadRotation", BaseValue::from(q));
 
