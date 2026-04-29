@@ -1,5 +1,4 @@
 use glam::{Vec3, Vec4};
-use smallvec::SmallVec;
 
 use crate::base_value::{BaseValue, WrapBaseValueType};
 
@@ -146,5 +145,4 @@ impl ValueType for BaseValue {
     fn base_type() -> WrapBaseValueType {
         WrapBaseValueType::Unknown
     }
-
 }

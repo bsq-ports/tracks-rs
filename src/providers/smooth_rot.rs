@@ -1,13 +1,14 @@
-
 use super::UpdateableValues;
 
-use crate::{base_provider_context::BaseProviderContext, providers::ValueProviderValues, quaternion_utils::QuaternionUtilsExt};
+use crate::{
+    base_provider_context::BaseProviderContext, providers::ValueProviderValues,
+    quaternion_utils::QuaternionUtilsExt,
+};
 
 use super::AbstractValueProvider;
 
 use glam::{Quat, Vec3};
 use log::warn;
-use smallvec::SmallVec;
 
 #[derive(Clone, Debug)]
 pub struct SmoothRotationProvidersValues {
@@ -40,7 +41,7 @@ impl UpdateableValues for SmoothRotationProvidersValues {
     fn update(&mut self, delta: f32, context: &BaseProviderContext) {
         let mult_delta = delta * self.mult;
         let src = self.source_provider.values(context);
-        
+
         // If the source has 4 or more components, interpret as quaternion; otherwise, use identity
         let quat = if src.len() >= 4 {
             Quat::from_xyzw(src[0], src[1], src[2], src[3])

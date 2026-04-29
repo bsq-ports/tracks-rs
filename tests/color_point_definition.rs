@@ -2,8 +2,8 @@ use glam::Vec4;
 use serde_json::json;
 use tracks_rs::base_provider_context::BaseProviderContext;
 use tracks_rs::base_value::BaseValue;
-use tracks_rs::prelude::PointDefinitionLike;
 use tracks_rs::point_definition::basic_point_definition::BasicPointDefinition;
+use tracks_rs::prelude::PointDefinitionLike;
 
 fn approx_eq(a: f32, b: f32, eps: f32) -> bool {
     (a - b).abs() <= eps
@@ -11,10 +11,7 @@ fn approx_eq(a: f32, b: f32, eps: f32) -> bool {
 
 #[test]
 fn integration_color_parse_and_interpolate() {
-    let js = json!([
-        [0.0, 0.0, 0.0, 0.0, 0.0],
-        [1.0, 2.0, 3.0, 4.0, 1.0]
-    ]);
+    let js = json!([[0.0, 0.0, 0.0, 0.0, 0.0], [1.0, 2.0, 3.0, 4.0, 1.0]]);
 
     let mut ctx = BaseProviderContext::new();
     type Vector4PointDefinition = BasicPointDefinition<Vec4>;
@@ -63,10 +60,7 @@ fn parse_with_swizzled_base_provider_for_color() {
 fn base_provider_updates_reflect_in_color_definition_no_smoothing() {
     let mut ctx = BaseProviderContext::new();
 
-    let js = json!([
-        [0.0, 0.0, 0.0, 0.0, 0.0],
-        ["baseEnvironmentColor0", 1.0]
-    ]);
+    let js = json!([[0.0, 0.0, 0.0, 0.0, 0.0], ["baseEnvironmentColor0", 1.0]]);
     type Vector4PointDefinition = BasicPointDefinition<Vec4>;
 
     // initial base color
@@ -79,7 +73,7 @@ fn base_provider_updates_reflect_in_color_definition_no_smoothing() {
     let expected_half = |v: Vec4| v * 0.5;
     let (v_before, _last) = def.interpolate(0.5, &ctx);
     // inspect point values
-    let pts = def.get_points();
+    let _pts = def.get_points();
     let p0 = def.interpolate(0.0, &ctx).0;
     let p1 = def.interpolate(1.0, &ctx).0;
     println!("p0 = {:?}, p1 = {:?}", p0, p1);
@@ -110,7 +104,11 @@ fn base_provider_updates_with_smoothing_swizzle_and_operator_for_color() {
     // Use smoothing and operator add on a swizzled provider
     let js = json!([
         [0.0, 0.0, 0.0, 0.0, 0.0],
-        ["baseEnvironmentColor0.xyzw.s1", [0.1, 0.2, 0.3, 0.4, "opAdd"], 1.0]
+        [
+            "baseEnvironmentColor0.xyzw.s1",
+            [0.1, 0.2, 0.3, 0.4, "opAdd"],
+            1.0
+        ]
     ]);
     type Vector4PointDefinition = BasicPointDefinition<Vec4>;
 

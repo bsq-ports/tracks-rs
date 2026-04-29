@@ -1,8 +1,8 @@
-use glam::{Quat, Vec3};
 use smallvec::SmallVec;
 
 use crate::{
-    base_provider_context::BaseProviderContext, base_value::BaseValue, prelude::ValueProvider, providers::ValueProviderValues, quaternion_utils::QuaternionUtilsExt
+    base_provider_context::BaseProviderContext, prelude::ValueProvider,
+    providers::ValueProviderValues,
 };
 
 use super::AbstractValueProvider;

@@ -82,12 +82,7 @@ pub unsafe extern "C" fn base_provider_context_get_value(
     let cstr = unsafe { CStr::from_ptr(base) };
     if let Ok(name) = cstr.to_str() {
         let bvref = ctx_ref.get_values(name);
-        let bv = match bvref {
-            BaseValue::Float(v) => BaseValue::Float(v),
-            BaseValue::Vector3(v) => BaseValue::Vector3(v),
-            BaseValue::Vector4(v) => BaseValue::Vector4(v),
-            BaseValue::Quaternion(v) => BaseValue::Quaternion(v),
-        };
+        let bv = bvref;
 
         bv.into()
     } else {

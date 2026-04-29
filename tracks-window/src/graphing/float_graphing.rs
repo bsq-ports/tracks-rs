@@ -12,7 +12,8 @@ use serde_json::json;
 
 use tracks_rs::{
     base_provider_context::BaseProviderContext,
-    point_definition::{PointDefinitionLike, basic_point_definition::BasicPointDefinition}, test_helpers::parse_float_point_definition,
+    point_definition::{PointDefinitionLike, basic_point_definition::BasicPointDefinition},
+    test_helpers::parse_float_point_definition,
 };
 
 pub struct FloatContext {
@@ -23,8 +24,10 @@ pub struct FloatContext {
 impl FloatContext {
     pub fn new() -> Self {
         let mut context = BaseProviderContext::new();
-        let definition =
-            parse_float_point_definition(json!([[0.0, 0.0], [1.0, 1.0, "easeInOutSine"]]), &mut context);
+        let definition = parse_float_point_definition(
+            json!([[0.0, 0.0], [1.0, 1.0, "easeInOutSine"]]),
+            &mut context,
+        );
         Self {
             definition,
             context: RefCell::new(context),

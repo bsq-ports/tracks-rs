@@ -2,8 +2,8 @@ use glam::Vec3;
 use serde_json::json;
 use tracks_rs::base_provider_context::BaseProviderContext;
 use tracks_rs::base_value::BaseValue;
-use tracks_rs::prelude::PointDefinitionLike;
 use tracks_rs::point_definition::vector3_point_definition::Vector3PointDefinition;
+use tracks_rs::prelude::PointDefinitionLike;
 
 fn approx_eq(a: f32, b: f32, eps: f32) -> bool {
     (a - b).abs() <= eps
@@ -11,10 +11,7 @@ fn approx_eq(a: f32, b: f32, eps: f32) -> bool {
 
 #[test]
 fn integration_vec3_parse_and_interpolate() {
-    let js = json!([
-        [0.0, 0.0, 0.0, 0.0],
-        [1.0, 2.0, 3.0, 1.0]
-    ]);
+    let js = json!([[0.0, 0.0, 0.0, 0.0], [1.0, 2.0, 3.0, 1.0]]);
 
     let mut ctx = BaseProviderContext::new();
     let def = Vector3PointDefinition::parse(js, &mut ctx);
@@ -52,10 +49,7 @@ fn parse_with_swizzled_base_provider_for_vec3() {
 fn base_provider_updates_reflect_in_vec3_definition_no_smoothing() {
     let mut ctx = BaseProviderContext::new();
 
-    let js = json!([
-        [0.0, 0.0, 0.0, 0.0],
-        ["baseHeadPosition", 1.0]
-    ]);
+    let js = json!([[0.0, 0.0, 0.0, 0.0], ["baseHeadPosition", 1.0]]);
 
     let def = Vector3PointDefinition::parse(js.clone(), &mut ctx);
     let base = Vec3::new(1.0, 0.0, 0.0);
@@ -98,13 +92,10 @@ fn base_provider_updates_with_smoothing_swizzle_and_operator_for_vec3() {
     ctx.set_values("baseHeadPosition", BaseValue::from(base));
 
     let added = Vec3::new(0.1, 0.2, 0.3);
-    let expected = |v: Vec3| v + added;
+    let _expected = |v: Vec3| v + added;
 
-    let (v_before, _l) = def.interpolate(0.5, &ctx);
-    let js = json!([
-        [0.0, 0.0, 0.0, 0.0],
-        ["baseHeadPosition", 1.0]
-    ]);
+    let (_v_before, _l) = def.interpolate(0.5, &ctx);
+    let js = json!([[0.0, 0.0, 0.0, 0.0], ["baseHeadPosition", 1.0]]);
 
     let def = Vector3PointDefinition::parse(js.clone(), &mut ctx);
     let base = Vec3::new(1.0, 0.0, 0.0);
@@ -130,5 +121,4 @@ fn base_provider_updates_with_smoothing_swizzle_and_operator_for_vec3() {
     assert!(approx_eq(v_after.x, expected_half(new_base).x, 1e-6));
     assert!(approx_eq(v_after.y, expected_half(new_base).y, 1e-6));
     assert!(approx_eq(v_after.z, expected_half(new_base).z, 1e-6));
-
 }

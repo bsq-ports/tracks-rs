@@ -72,7 +72,6 @@ fn integration_quaternion_parse_and_interpolate() {
 
     let (q_mid, _last) = def.interpolate(0.15, &ctx);
 
-
     let q_l = Quat::from_unity_euler_degrees(&Vec3::new(0.0f32, 0.0f32, 0.0f32));
     let q_r = Quat::from_unity_euler_degrees(&Vec3::new(0.0f32, -90.0f32, 0.0f32));
     let expected_mid = q_l.slerp(q_r, 0.5);

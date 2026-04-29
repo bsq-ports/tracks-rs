@@ -27,7 +27,7 @@ fn parses_float_point_definition_from_heck_json() {
 
     let (value, is_last) = definition.interpolate(0.0, &context);
     assert!((value - 0.5).abs() < 1e-6);
-    assert_eq!(is_last, true);
+    assert!(is_last);
 }
 
 #[test]
@@ -54,7 +54,7 @@ fn parses_color_point_definition_from_heck_json() {
 
     let (value, is_last) = definition.interpolate(0.0, &context);
     assert_eq!(value, glam::Vec4::new(0.25, 0.5, 0.75, 1.0));
-    assert_eq!(is_last, true);
+    assert!(is_last);
 }
 
 #[test]
@@ -134,7 +134,7 @@ fn parses_vector4_with_base_provider_modifier_op_mul() {
 
     let (value, is_last) = definition.interpolate(0.0, &context);
     assert_eq!(value, glam::Vec4::new(0.5, 0.125, 0.5, 1.0));
-    assert_eq!(is_last, false);
+    assert!(!is_last);
 }
 
 #[test]
@@ -151,7 +151,7 @@ fn parses_float_from_smoothed_and_swizzled_base_provider() {
 
     let (value, is_last) = definition.interpolate(0.0, &context);
     assert!((value - 1.0).abs() < 1e-6);
-    assert_eq!(is_last, true);
+    assert!(is_last);
 }
 
 #[test]
@@ -174,7 +174,7 @@ fn parses_quaternion_from_smoothed_base_provider() {
     assert!((value.y - target_quat.y).abs() < eps);
     assert!((value.z - target_quat.z).abs() < eps);
     assert!((value.w - target_quat.w).abs() < eps);
-    assert_eq!(is_last, true);
+    assert!(is_last);
 }
 
 #[test]
@@ -198,7 +198,7 @@ fn parses_quaternion_from_smoothed_base_provider_s10() {
     assert!((value.y - target_quat.y).abs() < eps);
     assert!((value.z - target_quat.z).abs() < eps);
     assert!((value.w - target_quat.w).abs() < eps);
-    assert_eq!(is_last, true);
+    assert!(is_last);
 }
 
 #[test]
@@ -217,7 +217,7 @@ fn parses_vector3_from_smoothed_base_provider_s10() {
 
     let (value, is_last) = definition.interpolate(0.0, &context);
     assert_eq!(value, glam::Vec3::new(10.0, 20.0, 30.0));
-    assert_eq!(is_last, true);
+    assert!(is_last);
 }
 
 // ---------------------------------------------------------------------------
@@ -238,11 +238,17 @@ fn is_last_two_point_boundaries_float() {
 
     // At time 0 -> first point should be selected, not last
     let (_v0, is_last0) = def.interpolate(0.0, &ctx);
-    assert!(!is_last0, "At the first point boundary is_last should be false");
+    assert!(
+        !is_last0,
+        "At the first point boundary is_last should be false"
+    );
 
     // At time 1 -> equals last point time -> is_last should be true
     let (_v1, is_last1) = def.interpolate(1.0, &ctx);
-    assert!(is_last1, "At the last point boundary is_last should be true");
+    assert!(
+        is_last1,
+        "At the last point boundary is_last should be true"
+    );
 }
 
 #[test]
@@ -253,7 +259,10 @@ fn is_last_single_point_shorthand_float() {
     // `is_last` should be true.
     let def = BasicPointDefinition::<f32>::parse(json!([0.5]), &mut ctx);
     let (_v, is_last) = def.interpolate(0.0, &ctx);
-    assert!(is_last, "Single-point shorthand at time 0 should be considered last");
+    assert!(
+        is_last,
+        "Single-point shorthand at time 0 should be considered last"
+    );
 }
 
 #[test]
@@ -263,7 +272,10 @@ fn is_last_single_point_explicit_array_float() {
     // This is also the last point; for time==0 the last-point condition holds.
     let def = BasicPointDefinition::<f32>::parse(json!([[0.5, 0.0]]), &mut ctx);
     let (_v, is_last) = def.interpolate(0.0, &ctx);
-    assert!(is_last, "Single explicit point at time 0 should be considered last");
+    assert!(
+        is_last,
+        "Single explicit point at time 0 should be considered last"
+    );
 }
 
 #[test]
@@ -293,7 +305,7 @@ fn panics_when_vec3_modifier_receives_extra_scalar_from_base_head_s10() {
 
     // `baseHeadPosition.s10` is a smooth provider specifier. Adding a scalar makes the
     // modifier payload expand to 4 numbers, which currently trips the vec3 arity assert.
-    let definition = Vector3PointDefinition::parse(
+    let _definition = Vector3PointDefinition::parse(
         json!([[0.0, 0.0, 0.0, ["baseHeadPosition.s10", 1.0, "opMul"]]]),
         &mut context,
     );
@@ -317,7 +329,7 @@ fn parses_vec3_modifier_from_base_head_s10_without_panicking() {
 
     let (value, is_last) = definition.interpolate(0.0, &context);
     assert_eq!(value, glam::Vec3::new(10.0, 20.0, 30.0));
-    assert_eq!(is_last, false);
+    assert!(!is_last);
 }
 
 #[test]
@@ -331,7 +343,7 @@ fn panics_when_float_modifier_receives_vec3_from_base_head_s10() {
 
     // A float modifier cannot accept the 3-component smooth provider produced by
     // `baseHeadPosition.s10`, so this should continue to fail fast.
-    let definition = BasicPointDefinition::<f32>::parse(
+    let _definition = BasicPointDefinition::<f32>::parse(
         json!([[0.0, ["baseHeadPosition.s10", "opMul"]]]),
         &mut context,
     );

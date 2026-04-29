@@ -12,7 +12,6 @@ use plotters::{
 use serde_json::json;
 use tracks_rs::{
     base_provider_context::BaseProviderContext,
-    base_value::BaseValue,
     point_definition::{PointDefinitionLike, Vector4PointDefinition},
 };
 

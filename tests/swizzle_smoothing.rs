@@ -1,8 +1,8 @@
 use glam::{Quat, Vec3};
+use tracks_rs::base_provider_context::BaseProviderContext;
 use tracks_rs::base_value::BaseValue;
 use tracks_rs::providers::AbstractValueProvider;
 use tracks_rs::quaternion_utils::QuaternionUtilsExt;
-use tracks_rs::base_provider_context::BaseProviderContext;
 
 #[test]
 fn swizzle_partial_provider_returns_components() {
@@ -191,7 +191,10 @@ fn incremental_smoothing_small_delta_steps() {
     ctx.update_providers(0.5);
     let vals = provider.values(&ctx);
     let eps = 1e-6_f32;
-    assert!((vals.as_ref()[0] - 5.0_f32).abs() <= eps, "first x mismatch");
+    assert!(
+        (vals.as_ref()[0] - 5.0_f32).abs() <= eps,
+        "first x mismatch"
+    );
 
     // change base provider before the next update
     ctx.set_values(
@@ -202,5 +205,8 @@ fn incremental_smoothing_small_delta_steps() {
     // second update with delta=0.5 via context -> moves half the remaining distance towards new target
     ctx.update_providers(0.5);
     let vals2 = provider.values(&ctx);
-    assert!((vals2.as_ref()[0] - 12.5_f32).abs() <= eps, "second x mismatch");
+    assert!(
+        (vals2.as_ref()[0] - 12.5_f32).abs() <= eps,
+        "second x mismatch"
+    );
 }

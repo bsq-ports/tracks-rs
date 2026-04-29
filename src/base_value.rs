@@ -3,8 +3,6 @@ use smallvec::SmallVec;
 
 use std::ops::Add;
 use std::ops::Div;
-use std::ops::Index;
-use std::ops::IndexMut;
 use std::ops::Mul;
 use std::ops::Sub;
 

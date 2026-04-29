@@ -1,6 +1,5 @@
 use std::rc::Rc;
 
-use itertools::Itertools;
 use smallvec::SmallVec;
 
 use crate::{
@@ -95,10 +94,8 @@ where
                 // https://github.com/Aeroluna/Heck/blob/1dc9f470a7f8d3e64d0e3bc34e2f2279190eb8b8/Heck/Animation/PointDefinition/Vector3PointDefinition.cs#L80-L81
                 let time = values.last()
                     .and_then(|vp| vp.values(context).last().copied())
-                    .expect(&format!(
-                        "Expected at least one value provider with at least {} values for point data, with the last one being time",
-                        T::VALUE_COUNT + 1
-                    ));
+                    .unwrap_or_else(|| panic!("Expected at least one value provider with at least {} values for point data, with the last one being time",
+                        T::VALUE_COUNT + 1));
 
                 (ModifierValues::Dynamic(values), time)
             }

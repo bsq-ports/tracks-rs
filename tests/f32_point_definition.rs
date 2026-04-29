@@ -1,8 +1,8 @@
 use serde_json::json;
 use tracks_rs::base_provider_context::BaseProviderContext;
 use tracks_rs::base_value::BaseValue;
-use tracks_rs::prelude::PointDefinitionLike;
 use tracks_rs::point_definition::basic_point_definition::BasicPointDefinition;
+use tracks_rs::prelude::PointDefinitionLike;
 
 fn approx_eq(a: f32, b: f32, eps: f32) -> bool {
     (a - b).abs() <= eps
@@ -10,10 +10,7 @@ fn approx_eq(a: f32, b: f32, eps: f32) -> bool {
 
 #[test]
 fn integration_f32_parse_and_interpolate() {
-    let js = json!([
-        [0.0, 0.0],
-        [1.0, 1.0]
-    ]);
+    let js = json!([[0.0, 0.0], [1.0, 1.0]]);
 
     let mut ctx = BaseProviderContext::new();
     type FloatPointDefinition = BasicPointDefinition<f32>;
@@ -50,10 +47,7 @@ fn parse_with_base_combo_provider_for_f32() {
 fn base_combo_updates_reflect_in_f32_definition_no_smoothing() {
     let mut ctx = BaseProviderContext::new();
 
-    let js = json!([
-        [0.0, 0.0],
-        ["baseCombo", 1.0]
-    ]);
+    let js = json!([[0.0, 0.0], ["baseCombo", 1.0]]);
     type FloatPointDefinition = BasicPointDefinition<f32>;
 
     let base = 1.0_f32;
@@ -83,10 +77,7 @@ fn base_combo_updates_reflect_in_f32_definition_no_smoothing() {
 fn base_combo_updates_with_smoothing_and_operator_for_f32() {
     let mut ctx = BaseProviderContext::new();
 
-    let js = json!([
-        [0.0, 0.0],
-        ["baseCombo.s1", [0.5, "opAdd"], 1.0]
-    ]);
+    let js = json!([[0.0, 0.0], ["baseCombo.s1", [0.5, "opAdd"], 1.0]]);
     type FloatPointDefinition = BasicPointDefinition<f32>;
 
     let def = FloatPointDefinition::parse(js, &mut ctx);

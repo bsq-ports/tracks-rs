@@ -1,7 +1,9 @@
 use crate::{
     base_provider_context::BaseProviderContext,
     easings::functions::Functions,
-    modifiers::{ModifierLike, ModifierValues, basic_modifier::BasicModifier, operation::Operation},
+    modifiers::{
+        ModifierLike, ModifierValues, basic_modifier::BasicModifier, operation::Operation,
+    },
     value_types::ValueType,
 };
 

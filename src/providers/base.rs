@@ -1,4 +1,4 @@
-use smallvec::{SmallVec, smallvec};
+use smallvec::smallvec;
 
 use crate::{
     base_provider_context::BaseProviderContext, base_value::BaseValue,

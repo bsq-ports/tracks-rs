@@ -2,7 +2,10 @@ use std::{ffi::c_void, slice};
 
 use smallvec::SmallVec;
 
-use crate::{base_provider_context::BaseProviderContext, ffi::types::WrappedValues, providers::ValueProviderValues};
+use crate::{
+    base_provider_context::BaseProviderContext, ffi::types::WrappedValues,
+    providers::ValueProviderValues,
+};
 
 use super::AbstractValueProvider;
 
