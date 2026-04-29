@@ -13,7 +13,8 @@ use crate::{
     },
     point_data::{PointDataLike, quaternion_point_data::QuaternionPointData},
     prelude::{AbstractValueProvider, ValueProvider},
-    quaternion_utils::QuaternionUtilsExt, value_types::ValueType,
+    quaternion_utils::QuaternionUtilsExt,
+    value_types::ValueType,
 };
 
 use super::PointDefinitionLike;
@@ -45,15 +46,16 @@ impl PointDefinitionLike<Quat> for QuaternionPointDefinition {
         operation: Operation,
         context: &BaseProviderContext,
     ) -> Self::Modifier {
-        // values are stored as euler angles in the point definition, 
+        // values are stored as euler angles in the point definition,
         // but we want to convert them to quaternions for the modifier
         // euler angles [x, y, z] in degrees are converted to quaternions using the same convention as Unity (ZXY(Ex) order)
         let val = match values.as_slice() {
-            [ValueProvider::Static(static_val)] if static_val.values(context).len() == Vec3::VALUE_COUNT => {
+            [ValueProvider::Static(static_val)]
+                if static_val.values(context).len() == Vec3::VALUE_COUNT =>
+            {
                 let values = &static_val.values;
                 let raw_vector = vec3(values[0], values[1], values[2]);
-                let quat =
-                    Quat::from_unity_euler_degrees(&raw_vector);
+                let quat = Quat::from_unity_euler_degrees(&raw_vector);
                 QuaternionValues::Static(raw_vector, quat)
             }
             _ => {
@@ -75,25 +77,26 @@ impl PointDefinitionLike<Quat> for QuaternionPointDefinition {
     ) -> Self::PointData {
         let (base_values, time) = match values.as_slice() {
             // [vec3, time]
-            [ValueProvider::Static(static_val)] if static_val.values(context).len() == Vec3::VALUE_COUNT + 1 => {
+            [ValueProvider::Static(static_val)]
+                if static_val.values(context).len() == Vec3::VALUE_COUNT + 1 =>
+            {
                 let values = &static_val.values;
                 let raw_vector_point = Vec3::new(values[0], values[1], values[2]);
-                let quat =
-                    Quat::from_unity_euler_degrees(&raw_vector_point);
+                let quat = Quat::from_unity_euler_degrees(&raw_vector_point);
 
-                (QuaternionValues::Static(raw_vector_point, quat), values[3])
+                let time = values[Vec3::VALUE_COUNT];
+
+                (QuaternionValues::Static(raw_vector_point, quat), time)
             }
             _ => {
-                let map = values.iter().map(|v| v.values(context).len());
-                let values_len: usize = map.sum();
-                let time = if values_len == 4 {
-                    values
-                        .last()
-                        .and_then(|v| v.values(context).last().copied())
-                        .unwrap_or(0.0)
-                } else {
-                    0.0
-                };
+                // https://github.com/Aeroluna/Heck/blob/1dc9f470a7f8d3e64d0e3bc34e2f2279190eb8b8/Heck/Animation/PointDefinition/Vector3PointDefinition.cs#L80-L81
+                let time = values.last()
+                    .and_then(|vp| vp.values(context).last().copied())
+                    .expect(&format!(
+                        "Expected at least one value provider with at least {} values for point data, with the last one being time",
+                        Vec3::VALUE_COUNT + 1
+                    ));
+
                 (QuaternionValues::Dynamic(values), time)
             }
         };

@@ -10,6 +10,16 @@ use tracks_rs::{
     quaternion_utils::QuaternionUtilsExt,
 };
 
+// NOTE: The `is_last`/`last` boolean returned by `interpolate(time)` follows the
+// Heck C# semantics used in the reference implementation:
+// - If the last point's time is <= requested `time`, `last` is true and the last
+//   point's value is returned.
+// - If the first point's time is >= requested `time`, `last` is false and the
+//   first point's value is returned.
+// - For times strictly between two points, `last` is false and interpolation is
+//   performed between the surrounding points.
+// Tests below assert `is_last` according to this rule.
+
 #[test]
 fn parses_float_point_definition_from_heck_json() {
     let mut context = BaseProviderContext::new();
@@ -17,7 +27,7 @@ fn parses_float_point_definition_from_heck_json() {
 
     let (value, is_last) = definition.interpolate(0.0, &context);
     assert!((value - 0.5).abs() < 1e-6);
-    assert!(is_last);
+    assert_eq!(is_last, true);
 }
 
 #[test]
@@ -44,7 +54,7 @@ fn parses_color_point_definition_from_heck_json() {
 
     let (value, is_last) = definition.interpolate(0.0, &context);
     assert_eq!(value, glam::Vec4::new(0.25, 0.5, 0.75, 1.0));
-    assert!(is_last);
+    assert_eq!(is_last, true);
 }
 
 #[test]
@@ -54,16 +64,19 @@ fn parses_single_point_shorthand_forms_from_heck_json() {
     let float_definition = BasicPointDefinition::<f32>::parse(json!([0.5]), &mut context);
     let (float_value, float_is_last) = float_definition.interpolate(0.0, &context);
     assert!((float_value - 0.5).abs() < 1e-6);
+    // Single-point shorthand should be considered the last point at time 0
     assert!(float_is_last);
 
     let vec3_definition = Vector3PointDefinition::parse(json!([1.0, 2.0, 3.0]), &mut context);
     let (vec3_value, vec3_is_last) = vec3_definition.interpolate(0.0, &context);
     assert_eq!(vec3_value, glam::Vec3::new(1.0, 2.0, 3.0));
+    // Single-point shorthand should be considered the last point at time 0
     assert!(vec3_is_last);
 
     let vec4_definition = Vector4PointDefinition::parse(json!([0.1, 0.2, 0.3, 0.4]), &mut context);
     let (vec4_value, vec4_is_last) = vec4_definition.interpolate(0.0, &context);
     assert_eq!(vec4_value, glam::Vec4::new(0.1, 0.2, 0.3, 0.4));
+    // Single-point shorthand should be considered the last point at time 0
     assert!(vec4_is_last);
 }
 
@@ -121,7 +134,7 @@ fn parses_vector4_with_base_provider_modifier_op_mul() {
 
     let (value, is_last) = definition.interpolate(0.0, &context);
     assert_eq!(value, glam::Vec4::new(0.5, 0.125, 0.5, 1.0));
-    assert!(is_last);
+    assert_eq!(is_last, false);
 }
 
 #[test]
@@ -138,7 +151,7 @@ fn parses_float_from_smoothed_and_swizzled_base_provider() {
 
     let (value, is_last) = definition.interpolate(0.0, &context);
     assert!((value - 1.0).abs() < 1e-6);
-    assert!(is_last);
+    assert_eq!(is_last, true);
 }
 
 #[test]
@@ -161,7 +174,7 @@ fn parses_quaternion_from_smoothed_base_provider() {
     assert!((value.y - target_quat.y).abs() < eps);
     assert!((value.z - target_quat.z).abs() < eps);
     assert!((value.w - target_quat.w).abs() < eps);
-    assert!(is_last);
+    assert_eq!(is_last, true);
 }
 
 #[test]
@@ -185,7 +198,7 @@ fn parses_quaternion_from_smoothed_base_provider_s10() {
     assert!((value.y - target_quat.y).abs() < eps);
     assert!((value.z - target_quat.z).abs() < eps);
     assert!((value.w - target_quat.w).abs() < eps);
-    assert!(is_last);
+    assert_eq!(is_last, true);
 }
 
 #[test]
@@ -196,8 +209,7 @@ fn parses_vector3_from_smoothed_base_provider_s10() {
         BaseValue::from(glam::Vec3::new(10.0, 20.0, 30.0)),
     );
 
-    let definition =
-        Vector3PointDefinition::parse(json!([["baseHeadPosition.s10"]]), &mut context);
+    let definition = Vector3PointDefinition::parse(json!([["baseHeadPosition.s10"]]), &mut context);
     assert!(definition.has_base_provider());
 
     // With multiplier 10 and delta=1.0 this should advance fully to the target
@@ -205,7 +217,69 @@ fn parses_vector3_from_smoothed_base_provider_s10() {
 
     let (value, is_last) = definition.interpolate(0.0, &context);
     assert_eq!(value, glam::Vec3::new(10.0, 20.0, 30.0));
-    assert!(is_last);
+    assert_eq!(is_last, true);
+}
+
+// ---------------------------------------------------------------------------
+// is_last behavior tests
+// These tests codify the rule from the reference C# implementation:
+// - If the last point's time <= requested `time`, `is_last` should be true.
+// - If the first point's time >= requested `time` (and the previous condition
+//   didn't fire), `is_last` is false and the first point is returned.
+// - For times strictly between two points, `is_last` is false.
+// We add small cases for float and Vec3 to make expectations explicit.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn is_last_two_point_boundaries_float() {
+    let mut ctx = BaseProviderContext::new();
+    // Two points: value 0 at time 0, value 1 at time 1
+    let def = BasicPointDefinition::<f32>::parse(json!([[0.0, 0.0], [1.0, 1.0]]), &mut ctx);
+
+    // At time 0 -> first point should be selected, not last
+    let (_v0, is_last0) = def.interpolate(0.0, &ctx);
+    assert!(!is_last0, "At the first point boundary is_last should be false");
+
+    // At time 1 -> equals last point time -> is_last should be true
+    let (_v1, is_last1) = def.interpolate(1.0, &ctx);
+    assert!(is_last1, "At the last point boundary is_last should be true");
+}
+
+#[test]
+fn is_last_single_point_shorthand_float() {
+    let mut ctx = BaseProviderContext::new();
+    // Single-point shorthand: `[0.5]` becomes a single point (time implicitly 0).
+    // According to the rule, for time==0 the last-point check should hit and
+    // `is_last` should be true.
+    let def = BasicPointDefinition::<f32>::parse(json!([0.5]), &mut ctx);
+    let (_v, is_last) = def.interpolate(0.0, &ctx);
+    assert!(is_last, "Single-point shorthand at time 0 should be considered last");
+}
+
+#[test]
+fn is_last_single_point_explicit_array_float() {
+    let mut ctx = BaseProviderContext::new();
+    // Single-point as explicit array with time 0: [[value, time]]
+    // This is also the last point; for time==0 the last-point condition holds.
+    let def = BasicPointDefinition::<f32>::parse(json!([[0.5, 0.0]]), &mut ctx);
+    let (_v, is_last) = def.interpolate(0.0, &ctx);
+    assert!(is_last, "Single explicit point at time 0 should be considered last");
+}
+
+#[test]
+fn is_last_two_point_boundaries_vec3() {
+    let mut ctx = BaseProviderContext::new();
+    // Vec3 version: two points at times 0 and 1
+    let def = Vector3PointDefinition::parse(
+        json!([[0.0, 0.0, 0.0, 0.0], [1.0, 2.0, 3.0, 1.0]]),
+        &mut ctx,
+    );
+
+    let (_s, s_last) = def.interpolate(0.0, &ctx);
+    assert!(!s_last, "Vec3: at first boundary is_last should be false");
+
+    let (_e, e_last) = def.interpolate(1.0, &ctx);
+    assert!(e_last, "Vec3: at last boundary is_last should be true");
 }
 
 #[test]
@@ -223,8 +297,6 @@ fn panics_when_vec3_modifier_receives_extra_scalar_from_base_head_s10() {
         json!([[0.0, 0.0, 0.0, ["baseHeadPosition.s10", 1.0, "opMul"]]]),
         &mut context,
     );
-
-    let _ = definition;
 }
 
 #[test]
@@ -245,7 +317,7 @@ fn parses_vec3_modifier_from_base_head_s10_without_panicking() {
 
     let (value, is_last) = definition.interpolate(0.0, &context);
     assert_eq!(value, glam::Vec3::new(10.0, 20.0, 30.0));
-    assert!(is_last);
+    assert_eq!(is_last, false);
 }
 
 #[test]
@@ -263,6 +335,4 @@ fn panics_when_float_modifier_receives_vec3_from_base_head_s10() {
         json!([[0.0, ["baseHeadPosition.s10", "opMul"]]]),
         &mut context,
     );
-
-    let _ = definition;
 }

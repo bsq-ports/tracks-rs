@@ -12,7 +12,8 @@ use plotters::{
 use serde_json::json;
 use tracks_rs::{
     base_provider_context::BaseProviderContext,
-    point_definition::{PointDefinitionLike, vector4_point_definition::Vector4PointDefinition},
+    base_value::BaseValue,
+    point_definition::{PointDefinitionLike, Vector4PointDefinition},
 };
 
 pub struct ColorContext {

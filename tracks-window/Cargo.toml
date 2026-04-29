@@ -8,12 +8,12 @@ name = "tracks-window"
 path = "src/main.rs"
 
 [dependencies]
-tracks_rs = { path = "../" }
+tracks_rs = { path = "../", features = ["json"]} 
 
 minifb = { version = "0.28" }
 plotters = { version = "0.3" }
 serde_json = "1.0"
-glam = "0.30"
+glam = "0.32"
 
 [patch.crates-io]
 pathfinder_simd = { git = "https://github.com/theoparis/pathfinder.git" }

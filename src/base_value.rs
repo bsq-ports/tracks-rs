@@ -13,12 +13,7 @@ use glam::Vec3;
 
 use glam::Vec4;
 
-///
-/// Time based number
-///
-#[repr(transparent)]
-#[derive(Clone, Debug, Copy)]
-pub struct TimeValue(f32);
+use crate::quaternion_utils::QuaternionUtilsExt;
 
 #[derive(Clone, Debug, Copy, PartialEq)]
 pub enum BaseValue {
@@ -32,14 +27,6 @@ impl Default for BaseValue {
     fn default() -> Self {
         BaseValue::Float(0.0)
     }
-}
-
-#[derive(Clone, Debug, Copy)]
-pub enum BaseValueRef<'a> {
-    Float(&'a f32),
-    Vector3(&'a Vec3),
-    Vector4(&'a Vec4),
-    Quaternion(&'a Quat),
 }
 
 #[repr(C)]
@@ -96,7 +83,7 @@ impl BaseValue {
         }
     }
 
-    pub fn len(&self) -> usize {
+    pub fn len_raw(&self) -> usize {
         match self {
             BaseValue::Float(_) => 1,
             BaseValue::Vector3(_) => 3,
@@ -109,7 +96,7 @@ impl BaseValue {
         false
     }
 
-    pub fn as_slice(&self) -> &[f32] {
+    pub fn as_slice_raw(&self) -> &[f32] {
         match self {
             BaseValue::Float(v) => std::slice::from_ref(v),
             BaseValue::Vector3(v) => v.as_ref(),
@@ -118,12 +105,22 @@ impl BaseValue {
         }
     }
 
-    pub fn into_small_vec(self) -> SmallVec<[f32; 4]> {
+    pub fn into_small_vec_raw(self) -> SmallVec<[f32; 4]> {
         match self {
             BaseValue::Float(v) => smallvec::smallvec![v],
             BaseValue::Vector3(v) => smallvec::smallvec![v.x, v.y, v.z],
             BaseValue::Vector4(v) => smallvec::smallvec![v.x, v.y, v.z, v.w],
             BaseValue::Quaternion(v) => smallvec::smallvec![v.x, v.y, v.z, v.w],
+        }
+    }
+
+    pub fn into_small_vec_euler(self) -> SmallVec<[f32; 4]> {
+        match self {
+            BaseValue::Quaternion(v) => {
+                let euler = v.to_unity_euler_degrees();
+                smallvec::smallvec![euler.x, euler.y, euler.z]
+            }
+            _ => self.into_small_vec_raw(),
         }
     }
 
@@ -151,67 +148,6 @@ impl BaseValue {
     }
 }
 
-impl BaseValueRef<'_> {
-    pub fn as_float(&self) -> Option<&f32> {
-        match self {
-            BaseValueRef::Float(v) => Some(v),
-            _ => None,
-        }
-    }
-
-    pub fn as_vec3(&self) -> Option<&Vec3> {
-        match self {
-            BaseValueRef::Vector3(v) => Some(v),
-            _ => None,
-        }
-    }
-
-    pub fn as_vec4(&self) -> Option<&Vec4> {
-        match self {
-            BaseValueRef::Vector4(v) => Some(v),
-            _ => None,
-        }
-    }
-
-    pub fn as_quat(&self) -> Option<&Quat> {
-        match self {
-            BaseValueRef::Quaternion(v) => Some(v),
-            _ => None,
-        }
-    }
-
-    pub fn len(&self) -> usize {
-        match self {
-            BaseValueRef::Float(_) => 1,
-            BaseValueRef::Vector3(_) => 3,
-            BaseValueRef::Vector4(_) => 4,
-            BaseValueRef::Quaternion(_) => 4,
-        }
-    }
-
-    pub fn is_empty(&self) -> bool {
-        false
-    }
-
-    pub fn as_slice(&self) -> &[f32] {
-        match self {
-            BaseValueRef::Float(v) => std::slice::from_ref(v),
-            BaseValueRef::Vector3(v) => v.as_ref(),
-            BaseValueRef::Vector4(v) => v.as_ref(),
-            BaseValueRef::Quaternion(v) => v.as_ref(),
-        }
-    }
-
-    pub fn as_small_vec(&self) -> SmallVec<[f32; 4]> {
-        match self {
-            BaseValueRef::Float(v) => smallvec::smallvec![**v],
-            BaseValueRef::Vector3(v) => smallvec::smallvec![v.x, v.y, v.z],
-            BaseValueRef::Vector4(v) => smallvec::smallvec![v.x, v.y, v.z, v.w],
-            BaseValueRef::Quaternion(v) => smallvec::smallvec![v.x, v.y, v.z, v.w],
-        }
-    }
-}
-
 impl From<f32> for BaseValue {
     fn from(v: f32) -> Self {
         BaseValue::Float(v)
@@ -233,6 +169,27 @@ impl From<Vec4> for BaseValue {
 impl From<Quat> for BaseValue {
     fn from(v: Quat) -> Self {
         BaseValue::Quaternion(v)
+    }
+}
+
+impl From<BaseValue> for f32 {
+    fn from(v: BaseValue) -> Self {
+        v.as_float().expect("Expected BaseValue to be Float")
+    }
+}
+impl From<BaseValue> for Vec3 {
+    fn from(v: BaseValue) -> Self {
+        v.as_vec3().expect("Expected BaseValue to be Vector3")
+    }
+}
+impl From<BaseValue> for Vec4 {
+    fn from(v: BaseValue) -> Self {
+        v.as_vec4().expect("Expected BaseValue to be Vector4")
+    }
+}
+impl From<BaseValue> for Quat {
+    fn from(v: BaseValue) -> Self {
+        v.as_quat().expect("Expected BaseValue to be Quaternion")
     }
 }
 
@@ -333,109 +290,5 @@ impl Div<f32> for BaseValue {
             BaseValue::Vector4(v) => BaseValue::Vector4(v / rhs),
             BaseValue::Quaternion(v) => BaseValue::Quaternion(v / rhs),
         }
-    }
-}
-
-impl Index<usize> for BaseValue {
-    type Output = f32;
-
-    fn index(&self, index: usize) -> &Self::Output {
-        match self {
-            BaseValue::Float(f) => f,
-            BaseValue::Vector3(v) => &v[index],
-            BaseValue::Vector4(v) => &v[index],
-            BaseValue::Quaternion(v) => match index {
-                0 => &v.x,
-                1 => &v.y,
-                2 => &v.z,
-                3 => &v.w,
-                _ => panic!("Invalid index for Quaternion"),
-            },
-        }
-    }
-}
-impl IndexMut<usize> for BaseValue {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        match self {
-            BaseValue::Float(f) => f,
-            BaseValue::Vector3(v) => &mut v[index],
-            BaseValue::Vector4(v) => &mut v[index],
-            BaseValue::Quaternion(v) => match index {
-                0 => &mut v.x,
-                1 => &mut v.y,
-                2 => &mut v.z,
-                3 => &mut v.w,
-                _ => panic!("Invalid index for Quaternion"),
-            },
-        }
-    }
-}
-
-// Stack-backed iterator for BaseValue that preserves length without heap allocs
-pub struct BaseValueIntoIter {
-    base_value: BaseValue,
-    idx: usize,
-}
-
-impl Iterator for BaseValueIntoIter {
-    type Item = f32;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.idx >= self.base_value.len() {
-            return None;
-        }
-        let v = self.base_value[self.idx];
-        self.idx += 1;
-        Some(v)
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        let remaining = self.base_value.len().saturating_sub(self.idx);
-        (remaining, Some(remaining))
-    }
-}
-
-impl ExactSizeIterator for BaseValueIntoIter {}
-
-impl IntoIterator for BaseValue {
-    type Item = f32;
-    type IntoIter = BaseValueIntoIter;
-
-    fn into_iter(self) -> Self::IntoIter {
-        BaseValueIntoIter {
-            base_value: self,
-            idx: 0,
-        }
-    }
-}
-
-impl<'a> From<&'a BaseValue> for BaseValueRef<'a> {
-    fn from(v: &'a BaseValue) -> Self {
-        match v {
-            BaseValue::Float(v) => BaseValueRef::Float(v),
-            BaseValue::Vector3(v) => BaseValueRef::Vector3(v),
-            BaseValue::Vector4(v) => BaseValueRef::Vector4(v),
-            BaseValue::Quaternion(v) => BaseValueRef::Quaternion(v),
-        }
-    }
-}
-impl<'a> From<&'a f32> for BaseValueRef<'a> {
-    fn from(v: &'a f32) -> Self {
-        BaseValueRef::Float(v)
-    }
-}
-impl<'a> From<&'a Vec3> for BaseValueRef<'a> {
-    fn from(v: &'a Vec3) -> Self {
-        BaseValueRef::Vector3(v)
-    }
-}
-impl<'a> From<&'a Vec4> for BaseValueRef<'a> {
-    fn from(v: &'a Vec4) -> Self {
-        BaseValueRef::Vector4(v)
-    }
-}
-impl<'a> From<&'a Quat> for BaseValueRef<'a> {
-    fn from(v: &'a Quat) -> Self {
-        BaseValueRef::Quaternion(v)
     }
 }

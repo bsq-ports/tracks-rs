@@ -9,7 +9,6 @@ pub mod vector3_point_definition;
 pub type FloatPointDefinition = basic_point_definition::BasicPointDefinition<f32>;
 pub type Vector4PointDefinition = basic_point_definition::BasicPointDefinition<glam::Vec4>;
 
-
 use std::str::FromStr;
 
 #[cfg(feature = "json")]
@@ -136,15 +135,17 @@ where
     where
         Self: Sized,
     {
+        // Single-point shorthand (e.g. `[v0, v1, ...]`) — wrap as an array-of-points
         let root: JsonValue = match value.as_array().unwrap()[0] {
             JsonValue::Array(_) => value,
             _ => {
                 let mut cloned: Vec<JsonValue> = value.as_array().unwrap().clone();
+                // append a time value of 0 so [x] becomes [[x, 0]]
                 cloned.push(json!(0));
                 json!([cloned])
             }
         };
-        
+
         // If the root is not an array at this point, return default.
         let Some(array) = root.as_array() else {
             return Self::default();
@@ -217,31 +218,34 @@ where
         Self::new(points)
     }
 
-    // The main interpolation method. Returns a tuple (interpolated value, is_last_point)
-    fn interpolate(&self, time: f32, context: &BaseProviderContext) -> (T, bool) {
+    /// Interpolates the point definition at a given time, returning the interpolated value and a boolean indicating if it's the last point.
+    /// The boolean is true if the time is at or beyond the last point, and false otherwise.
+    fn interpolate(&self, interpolate_time: f32, context: &BaseProviderContext) -> (T, bool) {
         let points = self.get_points();
 
         if points.is_empty() {
-            return (T::default(), true);
+            // last is FALSE in original code
+            // https://github.com/Aeroluna/Heck/blob/master/Heck/Animation/PointDefinition/PointDefinition.cs
+            return (T::default(), false);
         }
 
         let last_point = points.last().unwrap();
-        if last_point.get_time() <= time {
+        if last_point.get_time() <= interpolate_time {
             return (last_point.get_point(context), true);
         }
 
-        let first_point = points.first().unwrap();
-        if first_point.get_time() >= time {
+        let first_point: &<Self as PointDefinitionLike<T>>::PointData = points.first().unwrap();
+        if first_point.get_time() >= interpolate_time {
             return (first_point.get_point(context), false);
         }
 
-        let (l, r) = search_index(points, time);
+        let (l, r) = search_index(points, interpolate_time);
         let point_l = &points[l];
         let point_r = &points[r];
 
         let time_delta = point_r.get_time() - point_l.get_time();
         let normal_time = if time_delta != 0.0 {
-            (time - point_l.get_time()) / (time_delta)
+            (interpolate_time - point_l.get_time()) / (time_delta)
         } else {
             0.0
         };
