@@ -90,23 +90,23 @@ where
             }
 
             _ => {
-                // validate and get time
-                let collected_values = values
-                    .iter()
-                    .map(|v| v.values(context))
-                    .fold_while([0.0; T::VALUE_COUNT + 1], |mut acc, v| {
-                        for (i, val) in v.into_iter().enumerate() {
-                            if i < T::VALUE_COUNT {
-                                acc[i] = val;
-                            }
+                // validate and get time by concatenating provider outputs sequentially
+                let mut collected = [0.0f32; T::VALUE_COUNT + 1];
+                let mut idx: usize = 0;
+                for vp in values.iter() {
+                    for v in vp.values(context) {
+                        if idx < T::VALUE_COUNT {
+                            collected[idx] = v;
+                            idx += 1;
+                        } else {
+                            // treat any extra value as time (the last extra value wins)
+                            // TODO: Can we optimize this by only collecting T+1 and exiting?
+                            collected[T::VALUE_COUNT] = v;
                         }
-                        itertools::FoldWhile::Continue(acc)
-                    })
-                    .into_inner();
+                    }
+                }
 
-                // TODO: I don't know if this is the best way to get time
-                // or if we should collect all values then get time from the last value provider
-                let time = collected_values[T::VALUE_COUNT];
+                let time = collected[T::VALUE_COUNT];
 
                 (ModifierValues::Dynamic(values), time)
             }
