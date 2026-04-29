@@ -1,4 +1,4 @@
-use crate::{base_provider_context::BaseProviderContext, base_value::BaseValue};
+use crate::base_provider_context::BaseProviderContext;
 use std::{cell::RefCell, rc::Rc};
 
 pub mod base;
@@ -14,6 +14,8 @@ pub mod r#static;
 use serde_json::Value as JsonValue;
 use smallvec::SmallVec;
 
+pub type ValueProviderValues = SmallVec<[f32; 5]>;
+
 /// Abstract value provider
 /// that provides values
 /// based on the context
@@ -21,7 +23,7 @@ use smallvec::SmallVec;
 pub trait AbstractValueProvider {
     /// Get an array of values
     /// the values are [T, time] e.g for a Vec3 it would be [x, y, z, time]
-    fn values(&self, context: &BaseProviderContext) -> BaseValue;
+    fn values(&self, context: &BaseProviderContext) -> ValueProviderValues;
 }
 
 /// Update values on demand
@@ -47,7 +49,7 @@ pub enum ValueProvider {
 }
 
 impl AbstractValueProvider for ValueProvider {
-    fn values(&self, context: &BaseProviderContext) -> BaseValue {
+    fn values(&self, context: &BaseProviderContext) -> ValueProviderValues {
         match self {
             ValueProvider::Static(v) => v.values(context),
             ValueProvider::BaseProvider(v) => v.values(context),
@@ -135,6 +137,5 @@ fn close(result: &mut Vec<ValueProvider>, raw_values: Vec<&JsonValue>, open: usi
         .iter()
         .filter_map(|v| v.as_f64().map(|i| i as f32))
         .collect();
-    let values = BaseValue::from_slice(&values, false);
     result.push(ValueProvider::Static(StaticValues::new(values)));
 }

@@ -1,8 +1,8 @@
 use std::{ffi::c_void, slice};
 
-use crate::{
-    base_provider_context::BaseProviderContext, base_value::BaseValue, ffi::types::WrappedValues,
-};
+use smallvec::SmallVec;
+
+use crate::{base_provider_context::BaseProviderContext, ffi::types::WrappedValues, providers::ValueProviderValues};
 
 use super::AbstractValueProvider;
 
@@ -20,10 +20,10 @@ impl BaseFFIProviderValues {
 }
 
 impl AbstractValueProvider for BaseFFIProviderValues {
-    fn values(&self, context: &BaseProviderContext) -> BaseValue {
+    fn values(&self, context: &BaseProviderContext) -> ValueProviderValues {
         let c_values: WrappedValues = unsafe { (*self.fetch)(context, self.user_data) };
         // move to owned values
         let arr = unsafe { slice::from_raw_parts(c_values.values, c_values.length) };
-        BaseValue::from_slice(arr, false)
+        SmallVec::from_slice(arr)
     }
 }

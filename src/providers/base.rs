@@ -1,4 +1,7 @@
-use crate::{base_provider_context::BaseProviderContext, base_value::BaseValue};
+
+use smallvec::SmallVec;
+
+use crate::{base_provider_context::BaseProviderContext, providers::ValueProviderValues};
 
 use super::AbstractValueProvider;
 
@@ -14,7 +17,8 @@ impl BaseProviderValues {
 }
 
 impl AbstractValueProvider for BaseProviderValues {
-    fn values(&self, context: &BaseProviderContext) -> BaseValue {
-        context.get_values(&self.base)
+    fn values(&self, context: &BaseProviderContext) -> ValueProviderValues {
+        let value = context.get_values(&self.base);
+        value.as_small_vec().into_iter().collect()
     }
 }

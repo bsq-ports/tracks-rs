@@ -1,10 +1,10 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{borrow::Borrow, cell::RefCell, collections::HashMap, rc::Rc};
 
 use glam::{Quat, Vec3, Vec4};
 use log::{error, warn};
 
 use crate::{
-    base_value::BaseValue,
+    base_value::{BaseValue, BaseValueRef},
     providers::{
         UpdateableValues, ValueProvider, base::BaseProviderValues, partial::PartialProviderValues, quat::QuaternionProviderValues, smooth::SmoothProvidersValues, smooth_rot::SmoothRotationProvidersValues
     },
@@ -69,52 +69,52 @@ impl BaseProviderContext {
         Default::default()
     }
 
-    pub fn get_values(&self, base: &str) -> BaseValue {
+    pub fn get_values<'a>(&'a self, base: &str) -> BaseValueRef<'a> {
         match base {
-            "baseCombo" => self.base_combo.into(),
+            "baseCombo" => self.base_combo.borrow().into(),
 
-            "baseMultipliedScore" => self.multiplied_score.into(),
+            "baseMultipliedScore" => self.multiplied_score.borrow().into(),
             "baseImmediateMaxPossibleMultipliedScore" => {
-                self.immediate_max_possible_multiplied_score.into()
+                self.immediate_max_possible_multiplied_score.borrow().into()
             }
 
-            "baseModifiedScore" => self.modified_score.into(),
+            "baseModifiedScore" => self.modified_score.borrow().into(),
             "baseImmediateMaxPossibleModifiedScore" => {
-                self.immediate_max_possible_modified_score.into()
+                self.immediate_max_possible_modified_score.borrow().into()
             }
-            "baseRelativeScore" => self.relative_score.into(),
-            "baseMultiplier" => self.multiplier.into(),
-            "baseEnergy" => self.energy.into(),
-            "baseSongTime" => self.song_time.into(),
-            "baseSongLength" => self.song_length.into(),
+            "baseRelativeScore" => self.relative_score.borrow().into(),
+            "baseMultiplier" => self.multiplier.borrow().into(),
+            "baseEnergy" => self.energy.borrow().into(),
+            "baseSongTime" => self.song_time.borrow().into(),
+            "baseSongLength" => self.song_length.borrow().into(),
 
-            "baseEnvironmentColor0" => self.environment_color_0.into(),
-            "baseEnvironmentColor0Boost" => self.environment_color_0_boost.into(),
-            "baseEnvironmentColor1" => self.environment_color_1.into(),
-            "baseEnvironmentColor1Boost" => self.environment_color_1_boost.into(),
-            "baseEnvironmentColorW" => self.environment_color_w.into(),
-            "baseEnvironmentColorWBoost" => self.environment_color_w_boost.into(),
-            "baseNote0Color" => self.note_color_0.into(),
-            "baseNote1Color" => self.note_color_1.into(),
-            "baseObstaclesColor" => self.obstacles_color.into(),
-            "baseSaberAColor" => self.saber_color_a.into(),
-            "baseSaberBColor" => self.saber_color_b.into(),
+            "baseEnvironmentColor0" => self.environment_color_0.borrow().into(),
+            "baseEnvironmentColor0Boost" => self.environment_color_0_boost.borrow().into(),
+            "baseEnvironmentColor1" => self.environment_color_1.borrow().into(),
+            "baseEnvironmentColor1Boost" => self.environment_color_1_boost.borrow().into(),
+            "baseEnvironmentColorW" => self.environment_color_w.borrow().into(),
+            "baseEnvironmentColorWBoost" => self.environment_color_w_boost.borrow().into(),
+            "baseNote0Color" => self.note_color_0.borrow().into(),
+            "baseNote1Color" => self.note_color_1.borrow().into(),
+            "baseObstaclesColor" => self.obstacles_color.borrow().into(),
+            "baseSaberAColor" => self.saber_color_a.borrow().into(),
+            "baseSaberBColor" => self.saber_color_b.borrow().into(),
 
-            "baseHeadLocalPosition" => self.head_local_position.into(),
-            "baseHeadLocalRotation" => self.head_local_rotation.into(),
-            "baseHeadLocalScale" => self.head_local_scale.into(),
-            "baseHeadPosition" => self.head_position.into(),
-            "baseHeadRotation" => self.head_rotation.into(),
-            "baseLeftHandLocalPosition" => self.left_hand_local_position.into(),
-            "baseLeftHandLocalRotation" => self.left_hand_local_rotation.into(),
-            "baseLeftHandLocalScale" => self.left_hand_local_scale.into(),
-            "baseLeftHandPosition" => self.left_hand_position.into(),
-            "baseLeftHandRotation" => self.left_hand_rotation.into(),
-            "baseRightHandLocalPosition" => self.right_hand_local_position.into(),
-            "baseRightHandLocalRotation" => self.right_hand_local_rotation.into(),
-            "baseRightHandLocalScale" => self.right_hand_local_scale.into(),
-            "baseRightHandPosition" => self.right_hand_position.into(),
-            "baseRightHandRotation" => self.right_hand_rotation.into(),
+            "baseHeadLocalPosition" => self.head_local_position.borrow().into(),
+            "baseHeadLocalRotation" => self.head_local_rotation.borrow().into(),
+            "baseHeadLocalScale" => self.head_local_scale.borrow().into(),
+            "baseHeadPosition" => self.head_position.borrow().into(),
+            "baseHeadRotation" => self.head_rotation.borrow().into(),
+            "baseLeftHandLocalPosition" => self.left_hand_local_position.borrow().into(),
+            "baseLeftHandLocalRotation" => self.left_hand_local_rotation.borrow().into(),
+            "baseLeftHandLocalScale" => self.left_hand_local_scale.borrow().into(),
+            "baseLeftHandPosition" => self.left_hand_position.borrow().into(),
+            "baseLeftHandRotation" => self.left_hand_rotation.borrow().into(),
+            "baseRightHandLocalPosition" => self.right_hand_local_position.borrow().into(),
+            "baseRightHandLocalRotation" => self.right_hand_local_rotation.borrow().into(),
+            "baseRightHandLocalScale" => self.right_hand_local_scale.borrow().into(),
+            "baseRightHandPosition" => self.right_hand_position.borrow().into(),
+            "baseRightHandRotation" => self.right_hand_rotation.borrow().into(),
             _ => panic!("Base provider not found {base}"),
         }
     }
@@ -267,7 +267,7 @@ impl BaseProviderContext {
         // Quick path: single-name base
         let base_value = ValueProvider::BaseProvider(BaseProviderValues::new(base_name.to_owned()));
         let mut result = match self.get_values(base_name) {
-            BaseValue::Quaternion(_) => {
+            BaseValueRef::Quaternion(_) => {
                 ValueProvider::QuaternionProvider(QuaternionProviderValues::new(base_value))
             }
             _ => base_value,
@@ -318,7 +318,9 @@ impl BaseProviderContext {
 
     pub fn update_providers(&self, delta: f32) {
         for provider in &self.updatable_providers {
-            provider.borrow_mut().update(delta, self);
+            provider
+                .borrow_mut()
+                .update(delta, self);
         }
     }
 
@@ -377,11 +379,9 @@ impl BaseProviderContext {
             _ => {
                 // pass the source provider (clone) so smooth provider can sample it during updates
                 let src_provider = source.clone();
-                ValueProvider::SmoothProviders(Rc::new(RefCell::new(SmoothProvidersValues::new(
-                    src_provider,
-                    mult,
-                    self,
-                ))))
+                ValueProvider::SmoothProviders(Rc::new(RefCell::new(
+                    SmoothProvidersValues::new(src_provider, mult, self),
+                )))
             }
         }
     }
