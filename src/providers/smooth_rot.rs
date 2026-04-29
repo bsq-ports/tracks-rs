@@ -35,6 +35,10 @@ impl AbstractValueProvider for SmoothRotationProvidersValues {
     fn values(&self, _context: &BaseProviderContext) -> ValueProviderValues {
         ValueProviderValues::from_slice(&self.values.to_array())
     }
+
+    fn is_rotation(&self, _context: &BaseProviderContext) -> bool {
+        true
+    }
 }
 
 impl UpdateableValues for SmoothRotationProvidersValues {
@@ -42,14 +46,16 @@ impl UpdateableValues for SmoothRotationProvidersValues {
         let mult_delta = delta * self.mult;
         let src = self.source_provider.values(context);
 
-        let quat = if src.len() >= 3 {
+        let quat = if self.source_provider.is_rotation(context) && src.len() >= 3 {
             // if 3 components, interpret as euler degrees and convert to quaternion
             Quat::from_unity_euler_degrees(Vec3::new(src[0], src[1], src[2]))
         } else {
             if self.warned {
                 warn!(
-                    "Source provider for SmoothRotationProvidersValues does not have enough components; using identity quaternion. Source values: {:?}",
-                    src
+                    "Expected a rotation provider with at least 3 components for smooth rotation, but got a provider with {} components. Defaulting to identity quaternion. Provider: {:?} {}",
+                    src.len(),
+                    self.source_provider,
+                    self.source_provider.is_rotation(context)
                 );
             }
             self.warned = true;

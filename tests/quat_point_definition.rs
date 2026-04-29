@@ -80,6 +80,36 @@ fn integration_quaternion_parse_and_interpolate() {
 }
 
 #[test]
+fn quaternion_point_definition_parse_from_smoothed_provider_s14() {
+    let mut ctx = BaseProviderContext::new();
+
+    // choose an euler triple and convert to quaternion
+    let euler = Vec3::new(12.0_f32, -34.0_f32, 56.0_f32);
+    let q = Quat::from_unity_euler_degrees(euler);
+
+    ctx.set_values("baseHeadRotation", BaseValue::from(q));
+
+    // Parse a quaternion point definition that references the smoothed rotation provider
+    let def = QuaternionPointDefinition::parse(json!(["baseHeadRotation.s14"]), &mut ctx);
+    assert!(def.has_base_provider());
+
+    // With a large multiplier (14) and delta=1.0 the smoothing should progress to the target
+    ctx.update_providers(1.0);
+
+    let (value, is_last) = def.interpolate(0.0, &ctx);
+
+    let eps = 1e-4_f32;
+    assert!((value.x - q.x).abs() <= eps, "x mismatch");
+    assert!((value.y - q.y).abs() <= eps, "y mismatch");
+    assert!((value.z - q.z).abs() <= eps, "z mismatch");
+    assert!((value.w - q.w).abs() <= eps, "w mismatch");
+    assert!(
+        is_last,
+        "parsed quaternion from smoothed provider should be last after full update"
+    );
+}
+
+#[test]
 fn parse_with_swizzled_base_provider() {
     let mut ctx = BaseProviderContext::new();
 

@@ -7,12 +7,14 @@ use super::AbstractValueProvider;
 #[derive(Clone, Debug)]
 pub struct StaticValues {
     pub values: SmallVec<[f32; 4]>,
+    pub is_rotation: bool,
 }
 
 impl StaticValues {
-    pub fn new(values: impl Into<SmallVec<[f32; 4]>>) -> Self {
+    pub fn new(values: impl Into<SmallVec<[f32; 4]>>, is_rotation: bool) -> Self {
         Self {
             values: values.into(),
+            is_rotation: is_rotation,
         }
     }
 }
@@ -20,5 +22,9 @@ impl StaticValues {
 impl AbstractValueProvider for StaticValues {
     fn values(&self, _context: &BaseProviderContext) -> ValueProviderValues {
         ValueProviderValues::from_slice(self.values.as_slice())
+    }
+
+    fn is_rotation(&self, _context: &BaseProviderContext) -> bool {
+        self.is_rotation
     }
 }

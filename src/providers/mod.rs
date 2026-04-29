@@ -34,9 +34,7 @@ pub trait AbstractValueProvider {
     /// the values are [T, time] e.g for a Vec3 it would be [x, y, z, time]
     fn values(&self, context: &BaseProviderContext) -> ValueProviderValues;
 
-    fn is_rotation(&self, _context: &BaseProviderContext) -> bool {
-        false
-    }
+    fn is_rotation(&self, _context: &BaseProviderContext) -> bool;
 }
 
 /// Update values on demand
@@ -74,6 +72,16 @@ impl AbstractValueProvider for ValueProvider {
                 let borrow = v.borrow();
                 borrow.values(context)
             }
+        }
+    }
+
+    fn is_rotation(&self, _context: &BaseProviderContext) -> bool {
+        match self {
+            ValueProvider::Static(_) => false,
+            ValueProvider::BaseProvider(v) => v.is_rotation(_context),
+            ValueProvider::PartialProvider(v) => v.is_rotation(_context),
+            ValueProvider::SmoothProviders(v) => v.borrow().is_rotation(_context),
+            ValueProvider::SmoothRotationProviders(v) => v.borrow().is_rotation(_context),
         }
     }
 }
@@ -142,5 +150,5 @@ fn close(result: &mut Vec<ValueProvider>, raw_values: Vec<&JsonValue>, open: usi
         .iter()
         .filter_map(|v| v.as_f64().map(|i| i as f32))
         .collect();
-    result.push(ValueProvider::Static(StaticValues::new(values)));
+    result.push(ValueProvider::Static(StaticValues::new(values, false)));
 }

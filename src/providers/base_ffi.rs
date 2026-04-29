@@ -29,4 +29,10 @@ impl AbstractValueProvider for BaseFFIProviderValues {
         let arr = unsafe { slice::from_raw_parts(c_values.values, c_values.length) };
         SmallVec::from_slice(arr)
     }
+    
+    fn is_rotation(&self, _context: &BaseProviderContext) -> bool {
+        // FFI providers are assumed to be non-rotational by default, but this can be overridden by the provider implementation if needed.
+        // TODO:
+        false
+    }
 }

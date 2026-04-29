@@ -34,6 +34,9 @@ impl AbstractValueProvider for SmoothProvidersValues {
     fn values(&self, _context: &BaseProviderContext) -> ValueProviderValues {
         ValueProviderValues::from_slice(self.values.as_slice())
     }
+    fn is_rotation(&self, _context: &BaseProviderContext) -> bool {
+        false
+    }
 }
 
 impl UpdateableValues for SmoothProvidersValues {

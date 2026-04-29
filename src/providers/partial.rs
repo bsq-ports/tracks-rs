@@ -28,4 +28,8 @@ impl AbstractValueProvider for PartialProviderValues {
 
         ValueProviderValues::from_iter(self.parts.iter().map(|&part| values[part]))
     }
+
+    fn is_rotation(&self, context: &BaseProviderContext) -> bool {
+        self.source.is_rotation(context)
+    }
 }

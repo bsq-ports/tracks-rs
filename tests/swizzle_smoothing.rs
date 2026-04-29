@@ -210,3 +210,38 @@ fn incremental_smoothing_small_delta_steps() {
         "second x mismatch"
     );
 }
+
+#[test]
+fn update_base_head_rotation_over_time() {
+    let mut ctx = BaseProviderContext::new();
+
+    // start with identity quaternion
+    let q0 = Quat::IDENTITY;
+    ctx.set_values("baseHeadRotation", BaseValue::from(q0));
+
+    // use smoothing multiplier 1 (progression per delta)
+    let provider = ctx.get_value_provider("baseHeadRotation.s1");
+    assert!(provider.is_updateable());
+
+    // set a new target rotation expressed as Euler degrees
+    let target_euler = Vec3::new(30.0_f32, -20.0_f32, 45.0_f32);
+    let q_target = Quat::from_unity_euler_degrees(target_euler);
+    ctx.set_values("baseHeadRotation", BaseValue::from(q_target));
+
+    // step smoothing in small increments and ensure values approach the target
+    let mut prev_dist = f32::INFINITY;
+    // compute initial distance (from identity/euler-zero) to target for final comparison
+    let initial_dist = target_euler.length();
+    for _ in 0..6 {
+        ctx.update_providers(0.2);
+        let vals = provider.values(&ctx);
+        let s = vals.as_ref();
+        let cur = Vec3::new(s[0], s[1], s[2]);
+        let dist = (cur - target_euler).length();
+        assert!(dist <= prev_dist + 1e-4, "smoothing should approach target (dist {} prev {})", dist, prev_dist);
+        prev_dist = dist;
+    }
+
+    // after several steps we should have made significant progress toward the target
+    assert!(prev_dist < initial_dist * 0.5, "final distance {} not less than half of initial {}", prev_dist, initial_dist);
+}
