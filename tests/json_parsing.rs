@@ -220,6 +220,68 @@ fn parses_vector3_from_smoothed_base_provider_s10() {
     assert_eq!(is_last, true);
 }
 
+// ---------------------------------------------------------------------------
+// is_last behavior tests
+// These tests codify the rule from the reference C# implementation:
+// - If the last point's time <= requested `time`, `is_last` should be true.
+// - If the first point's time >= requested `time` (and the previous condition
+//   didn't fire), `is_last` is false and the first point is returned.
+// - For times strictly between two points, `is_last` is false.
+// We add small cases for float and Vec3 to make expectations explicit.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn is_last_two_point_boundaries_float() {
+    let mut ctx = BaseProviderContext::new();
+    // Two points: value 0 at time 0, value 1 at time 1
+    let def = BasicPointDefinition::<f32>::parse(json!([[0.0, 0.0], [1.0, 1.0]]), &mut ctx);
+
+    // At time 0 -> first point should be selected, not last
+    let (_v0, is_last0) = def.interpolate(0.0, &ctx);
+    assert!(!is_last0, "At the first point boundary is_last should be false");
+
+    // At time 1 -> equals last point time -> is_last should be true
+    let (_v1, is_last1) = def.interpolate(1.0, &ctx);
+    assert!(is_last1, "At the last point boundary is_last should be true");
+}
+
+#[test]
+fn is_last_single_point_shorthand_float() {
+    let mut ctx = BaseProviderContext::new();
+    // Single-point shorthand: `[0.5]` becomes a single point (time implicitly 0).
+    // According to the rule, for time==0 the last-point check should hit and
+    // `is_last` should be true.
+    let def = BasicPointDefinition::<f32>::parse(json!([0.5]), &mut ctx);
+    let (_v, is_last) = def.interpolate(0.0, &ctx);
+    assert!(is_last, "Single-point shorthand at time 0 should be considered last");
+}
+
+#[test]
+fn is_last_single_point_explicit_array_float() {
+    let mut ctx = BaseProviderContext::new();
+    // Single-point as explicit array with time 0: [[value, time]]
+    // This is also the last point; for time==0 the last-point condition holds.
+    let def = BasicPointDefinition::<f32>::parse(json!([[0.5, 0.0]]), &mut ctx);
+    let (_v, is_last) = def.interpolate(0.0, &ctx);
+    assert!(is_last, "Single explicit point at time 0 should be considered last");
+}
+
+#[test]
+fn is_last_two_point_boundaries_vec3() {
+    let mut ctx = BaseProviderContext::new();
+    // Vec3 version: two points at times 0 and 1
+    let def = Vector3PointDefinition::parse(
+        json!([[0.0, 0.0, 0.0, 0.0], [1.0, 2.0, 3.0, 1.0]]),
+        &mut ctx,
+    );
+
+    let (_s, s_last) = def.interpolate(0.0, &ctx);
+    assert!(!s_last, "Vec3: at first boundary is_last should be false");
+
+    let (_e, e_last) = def.interpolate(1.0, &ctx);
+    assert!(e_last, "Vec3: at last boundary is_last should be true");
+}
+
 #[test]
 #[should_panic(expected = "modifier point must have 3 numbers")]
 fn panics_when_vec3_modifier_receives_extra_scalar_from_base_head_s10() {
