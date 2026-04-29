@@ -1,4 +1,5 @@
-use glam::{Vec3, Vec4};
+use glam::FloatExt;
+use glam::{Quat, Vec3, Vec4};
 
 use crate::base_value::{BaseValue, WrapBaseValueType};
 
@@ -30,8 +31,14 @@ pub trait ValueType:
 
     fn from_slice(values: &[f32]) -> Self;
 
+    #[inline]
     fn value_lerp(a: Self, b: Self, t: f32) -> Self {
         a + (b - a) * t
+    }
+
+    #[inline]
+    fn value_lerp_clamped(a: Self, b: Self, t: f32) -> Self {
+        Self::value_lerp(a, b, t.clamp(0.0, 1.0))
     }
 }
 
@@ -112,37 +119,5 @@ impl ValueType for Vec4 {
 
     fn base_type() -> WrapBaseValueType {
         WrapBaseValueType::Vec4
-    }
-}
-
-impl ValueType for BaseValue {
-    const VALUE_COUNT: usize = 4;
-
-    fn from_slice(values: &[f32]) -> Self {
-        match values.len() {
-            1 => BaseValue::Float(values[0]),
-            2 => BaseValue::Vector3(Vec3::new(values[0], values[1], 0.0)),
-            3 => BaseValue::Vector3(Vec3::new(values[0], values[1], values[2])),
-            4 => BaseValue::Vector4(Vec4::new(values[0], values[1], values[2], values[3])),
-            _ => panic!("Invalid number of values for BaseValue: {}", values.len()),
-        }
-    }
-    fn from_translate_array(_values: [f32; Self::VALUE_COUNT]) -> Self {
-        unreachable!(
-            "from_translate_array should not be called for BaseValue, as it does not have a fixed number of components"
-        );
-    }
-
-    fn from_translate_slice(values: &[f32]) -> Self {
-        BaseValue::Vector4(Vec4::new(values[0], values[1], values[2], values[3]))
-    }
-
-    type Array
-        = [f32; Self::VALUE_COUNT]
-    where
-        [(); Self::VALUE_COUNT]:;
-
-    fn base_type() -> WrapBaseValueType {
-        WrapBaseValueType::Unknown
     }
 }

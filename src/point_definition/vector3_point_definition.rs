@@ -1,7 +1,6 @@
 use std::rc::Rc;
 
 use glam::{Vec3, Vec3A};
-use itertools::Itertools;
 use smallvec::SmallVec;
 
 use crate::{
@@ -194,6 +193,6 @@ impl PointDefinitionLike<Vec3> for Vector3PointDefinition {
         let point_l = PointDataLike::get_point(l, context);
         let point_r = PointDataLike::get_point(r, context);
 
-        Vec3::value_lerp(point_l, point_r, time)
+        Vec3::value_lerp_clamped(point_l, point_r, time)
     }
 }

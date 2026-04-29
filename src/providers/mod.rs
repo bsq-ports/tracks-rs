@@ -102,11 +102,6 @@ impl ValueProvider {
     }
 }
 
-// Helper function for linear interpolation
-fn clamp_lerp(start: f32, end: f32, t: f32) -> f32 {
-    start + (end - start) * t.clamp(0.0, 1.0)
-}
-
 // Values deserialization
 /// Creates a new instance of [`BaseProviderValues`] using the provided base values.
 ///

@@ -126,6 +126,6 @@ where
         let point_l = PointDataLike::get_point(l, context);
         let point_r = PointDataLike::get_point(r, context);
 
-        T::value_lerp(point_l, point_r, time)
+        T::value_lerp_clamped(point_l, point_r, time)
     }
 }
