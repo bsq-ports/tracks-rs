@@ -1,6 +1,5 @@
 use glam::FloatExt;
 use smallvec::SmallVec;
-use smallvec::smallvec;
 
 use std::ops::Add;
 use std::ops::Div;

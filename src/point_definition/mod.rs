@@ -9,6 +9,7 @@ pub mod vector3_point_definition;
 pub type FloatPointDefinition = basic_point_definition::BasicPointDefinition<f32>;
 pub type Vector4PointDefinition = basic_point_definition::BasicPointDefinition<glam::Vec4>;
 
+
 use std::str::FromStr;
 
 #[cfg(feature = "json")]
@@ -28,9 +29,12 @@ use crate::{
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub enum GroupType {
-    Value,
-    Flag,
-    Modifier,
+    /// Raw numeric or provider values.
+    Value = 0,
+    /// Flag strings (non-base strings), e.g. easing/flags.
+    Flag = 1,
+    /// Modifier groups (arrays) describing nested modifiers.
+    Modifier = 2,
 }
 
 /// Point definitions are used to describe what happens over the course of an animation,
@@ -273,16 +277,15 @@ fn search_index<P: PointDataLike<T>, T>(points: &[P], time: f32) -> (usize, usiz
 // Helper method to group values from a JSON value.
 // In a more complete implementation, you'd examine the JSON structure.
 #[cfg(feature = "json")]
-fn group_values(value: &JsonValue) -> Vec<(GroupType, Vec<&JsonValue>)> {
+fn group_values(value: &JsonValue) -> std::collections::HashMap<GroupType, Vec<&JsonValue>> {
     use std::collections::HashMap;
 
     let JsonValue::Array(array) = value else {
-        return vec![];
+        return HashMap::new();
     };
-    let values: Vec<&JsonValue> = array.iter().collect();
 
     let mut result: HashMap<GroupType, Vec<&JsonValue>> = HashMap::new();
-    for val in &values {
+    for val in array {
         // group values by their type in the array
         let entry = match val {
             JsonValue::String(s) if !s.starts_with("base") => GroupType::Flag,
@@ -291,8 +294,6 @@ fn group_values(value: &JsonValue) -> Vec<(GroupType, Vec<&JsonValue>)> {
         };
         result.entry(entry).or_default().push(val);
     }
-
-    let result: Vec<(GroupType, Vec<&JsonValue>)> = result.into_iter().collect();
 
     result
 }

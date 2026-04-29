@@ -2,7 +2,7 @@ use glam::{Quat, Vec3};
 use tracks_rs::base_value::BaseValue;
 use tracks_rs::providers::AbstractValueProvider;
 use tracks_rs::quaternion_utils::QuaternionUtilsExt;
-use tracks_rs::{base_provider_context::BaseProviderContext, providers::UpdateableValues};
+use tracks_rs::base_provider_context::BaseProviderContext;
 
 #[test]
 fn swizzle_partial_provider_returns_components() {
@@ -15,7 +15,7 @@ fn swizzle_partial_provider_returns_components() {
     );
 
     // request a swizzled provider
-    let mut provider = ctx.get_value_provider("baseHeadPosition.xy");
+    let provider = ctx.get_value_provider("baseHeadPosition.xy");
 
     assert!(provider.is_updateable());
 
@@ -36,7 +36,7 @@ fn smoothing_on_vector_reaches_target_on_full_delta() {
         BaseValue::from(Vec3::new(10.0, 20.0, 30.0)),
     );
 
-    let mut provider = ctx.get_value_provider("baseHeadPosition.s1");
+    let provider = ctx.get_value_provider("baseHeadPosition.s1");
 
     assert!(provider.is_updateable());
 
@@ -59,7 +59,7 @@ fn smoothing_on_quaternion_produces_expected_euler() {
 
     ctx.set_values("baseHeadRotation", BaseValue::from(q));
 
-    let mut provider = ctx.get_value_provider("baseHeadRotation.s1");
+    let provider = ctx.get_value_provider("baseHeadRotation.s1");
 
     assert!(provider.is_updateable());
 
@@ -85,7 +85,7 @@ fn swizzle_three_components_returns_components() {
         BaseValue::from(Vec3::new(1.0, 2.0, 3.0)),
     );
 
-    let mut provider = ctx.get_value_provider("baseHeadPosition.xyz");
+    let provider = ctx.get_value_provider("baseHeadPosition.xyz");
 
     assert!(provider.is_updateable());
 
@@ -106,11 +106,11 @@ fn swizzle_reorder_and_duplicate_returns_expected() {
         BaseValue::from(Vec3::new(4.0, 5.0, 6.0)),
     );
 
-    let mut provider_yx = ctx.get_value_provider("baseHeadPosition.yx");
+    let provider_yx = ctx.get_value_provider("baseHeadPosition.yx");
     ctx.update_providers(0.0);
     assert_eq!(provider_yx.values(&ctx).as_slice(), &[5.0_f32, 4.0_f32]);
 
-    let mut provider_xx = ctx.get_value_provider("baseHeadPosition.xx");
+    let provider_xx = ctx.get_value_provider("baseHeadPosition.xx");
     ctx.update_providers(0.0);
     assert_eq!(provider_xx.values(&ctx).as_slice(), &[4.0_f32, 4.0_f32]);
 }
@@ -125,7 +125,7 @@ fn smoothing_vector_fractional_delta_moves_partway() {
     );
 
     // use multiplier 0.5 (s0_5) and full delta=1.0 -> t = 0.5
-    let mut provider = ctx.get_value_provider("baseHeadPosition.s0_5");
+    let provider = ctx.get_value_provider("baseHeadPosition.s0_5");
 
     assert!(provider.is_updateable());
 
