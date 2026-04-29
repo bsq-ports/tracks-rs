@@ -1,11 +1,11 @@
 use glam::{Quat, Vec3, Vec4};
 
 use crate::{
-    base_value::BaseValue,
     point_data::{
         PointDataLike, basic_point_data::BasicPointData, quaternion_point_data::QuaternionPointData,
     },
     prelude::{BaseProviderContext, Functions},
+    types::base_value::BaseValue,
 };
 
 #[derive(Debug, Clone)]
@@ -127,7 +127,7 @@ impl PointDataLike<BaseValue> for BasePointData {
             BasePointData::Vector3(point_data) => BaseValue::Vector3(point_data.get_point(context)),
             BasePointData::Vector4(point_data) => BaseValue::Vector4(point_data.get_point(context)),
             BasePointData::Quaternion(point_data) => {
-                BaseValue::Quaternion(point_data.get_point(context).into())
+                BaseValue::Quaternion(point_data.get_point(context))
             }
         }
     }

@@ -9,7 +9,6 @@ pub mod vector3_point_definition;
 pub type FloatPointDefinition = basic_point_definition::BasicPointDefinition<f32>;
 pub type Vector4PointDefinition = basic_point_definition::BasicPointDefinition<glam::Vec4>;
 
-
 use std::str::FromStr;
 
 #[cfg(feature = "json")]
@@ -20,9 +19,9 @@ use serde_json::json;
 use smallvec::SmallVec;
 
 use crate::base_provider_context::BaseProviderContext;
-use crate::base_value::WrapBaseValueType;
 use crate::modifiers::ModifierLike;
 use crate::point_data::PointDataLike;
+use crate::types::base_value::WrapBaseValueType;
 use crate::{
     easings::functions::Functions, modifiers::operation::Operation, providers::ValueProvider,
 };
@@ -146,7 +145,7 @@ where
                 json!([cloned])
             }
         };
-        
+
         // If the root is not an array at this point, return default.
         let Some(array) = root.as_array() else {
             return Self::default();

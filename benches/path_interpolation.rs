@@ -3,12 +3,12 @@ use std::hint::black_box;
 use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
 use serde_json::json;
 use tracks_rs::base_provider_context::BaseProviderContext;
-use tracks_rs::base_value::WrapBaseValueType;
 use tracks_rs::point_definition::base_point_definition::BasePointDefinition;
 use tracks_rs::point_definition::point_definition_interpolation::PointDefinitionInterpolation;
 use tracks_rs::test_helpers::{
     parse_float_point_definition, parse_quaternion_point_definition, parse_vector3_point_definition,
 };
+use tracks_rs::types::base_value::WrapBaseValueType;
 
 fn make_float_pair(ctx: &mut BaseProviderContext) -> (BasePointDefinition, BasePointDefinition) {
     let prev = parse_float_point_definition(json!([[0.0, 0.0], [10.0, 1.0]]), ctx);

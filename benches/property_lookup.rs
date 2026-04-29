@@ -3,7 +3,7 @@ use std::hint::black_box;
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use tracks_rs::animation::property::{PathProperty, ValueProperty};
 use tracks_rs::animation::track::{PathPropertyHandle, Track, V2_POSITION, ValuePropertyHandle};
-use tracks_rs::base_value::{BaseValue, WrapBaseValueType};
+use tracks_rs::types::base_value::{BaseValue, WrapBaseValueType};
 
 fn make_track(custom_count: usize) -> Track {
     let mut track = Track::default();

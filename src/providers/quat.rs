@@ -1,8 +1,11 @@
 use super::ValueProvider;
 
 use crate::{
-    base_provider_context::BaseProviderContext, base_value::BaseValue,
-    quaternion_utils::QuaternionUtilsExt,
+    base_provider_context::BaseProviderContext,
+    types::{
+        base_value::{BaseValue, EulerVec3},
+        quaternion_utils::QuaternionUtilsExt,
+    },
 };
 
 use super::AbstractValueProvider;
@@ -27,27 +30,26 @@ impl AbstractValueProvider for QuaternionProviderValues {
     fn values(&self, _context: &BaseProviderContext) -> BaseValue {
         let source = self.source.values(_context);
 
-        let source = match source {
-            BaseValue::Quaternion(q) => q.to_quat(),
+        let source: EulerVec3 = match source {
+            BaseValue::Quaternion(q) => q,
             BaseValue::Vector4(v) => {
                 // If the source is a Vector4, interpret as quaternion components
-                Quat::from_xyzw(v.x, v.y, v.z, v.w)
-            },
+                Quat::from_xyzw(v.x, v.y, v.z, v.w).into()
+            }
             BaseValue::Vector3(vec3) => {
                 // If the source is a Vector3, interpret as Euler angles in degrees and convert to quaternion
-                Quat::from_unity_euler_degrees(&vec3)
-            },
+                Quat::from_unity_euler_degrees(&vec3).into()
+            }
             _ => {
                 // If the source is not a quaternion or vector, return identity quaternion
                 warn!(
                     "Source provider for QuaternionProviderValues {:?} does not provide a quaternion or vector; using identity quaternion",
                     self.source
                 );
-                Quat::IDENTITY
+                EulerVec3::IDENTITY
             }
         };
 
-
-        BaseValue::Quaternion(source.into())
+        BaseValue::Quaternion(source)
     }
 }

@@ -1,7 +1,7 @@
 use super::{ModifierLike, operation::Operation, shared_has_base_provider};
-use crate::base_value::EulerVec3;
+use crate::base_provider_context::BaseProviderContext;
 use crate::prelude::{AbstractValueProvider, ValueProvider};
-use crate::{base_provider_context::BaseProviderContext, quaternion_utils::QuaternionUtilsExt};
+use crate::types::base_value::EulerVec3;
 use glam::Vec3A;
 use glam::{Quat, Vec3};
 use smallvec::SmallVec;

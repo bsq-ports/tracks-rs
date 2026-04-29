@@ -1,8 +1,8 @@
 use std::time::SystemTime;
 
 use crate::{
-    base_value::{BaseValue, WrapBaseValueType},
     point_definition::point_definition_interpolation::PointDefinitionInterpolation,
+    types::base_value::{BaseValue, WrapBaseValueType},
 };
 
 // pub type ValuePropertyCell = Cell<ValueProperty>;

@@ -1,8 +1,8 @@
 use super::UpdateableValues;
 
 use crate::{
-    base_provider_context::BaseProviderContext, base_value::BaseValue,
-    quaternion_utils::QuaternionUtilsExt,
+    base_provider_context::BaseProviderContext,
+    types::{base_value::BaseValue, quaternion_utils::QuaternionUtilsExt},
 };
 
 use super::AbstractValueProvider;

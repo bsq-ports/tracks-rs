@@ -2,7 +2,6 @@ use glam::Vec4;
 
 use crate::{
     base_provider_context::BaseProviderContext,
-    base_value::WrapBaseValueType,
     ffi::{
         json::{self, FFIJsonValue},
         types::WrapBaseValue,
@@ -12,6 +11,7 @@ use crate::{
         quaternion_point_definition::QuaternionPointDefinition,
         vector3_point_definition::Vector3PointDefinition,
     },
+    types::base_value::WrapBaseValueType,
 };
 
 /// BASE POINT DEFINITION

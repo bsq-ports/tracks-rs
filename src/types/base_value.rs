@@ -16,7 +16,7 @@ use glam::Vec3;
 
 use glam::Vec4;
 
-use crate::quaternion_utils::QuaternionUtilsExt;
+use super::quaternion_utils::QuaternionUtilsExt;
 
 ///
 /// Time based number
@@ -71,7 +71,7 @@ impl EulerVec3 {
     pub fn to_quat(&self) -> Quat {
         Quat::from_unity_euler_degrees(&self.0)
     }
-    
+
     pub fn new(x: f32, y: f32, z: f32) -> Self {
         Self(Vec3::new(x, y, z))
     }

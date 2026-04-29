@@ -1,7 +1,6 @@
 use glam::{Vec2, Vec3, Vec4};
-use smallvec::SmallVec;
 
-use crate::base_value::{BaseValue, WrapBaseValueType};
+use crate::types::base_value::{BaseValue, WrapBaseValueType};
 
 /// Represents a type that can be used as a value in the system, such as a float, vector, or quaternion.
 /// This trait defines the necessary operations and conversions for these types, allowing them to be used
@@ -90,8 +89,6 @@ impl ValueType for Vec3 {
     fn base_type() -> WrapBaseValueType {
         unreachable!("Vec3 is not a valid base type for BaseValue")
     }
-
-
 }
 
 impl ValueType for Vec4 {
@@ -142,7 +139,6 @@ impl ValueType for Vec2 {
     fn base_type() -> WrapBaseValueType {
         WrapBaseValueType::Vec2
     }
-
 }
 
 impl ValueType for BaseValue {
@@ -175,5 +171,4 @@ impl ValueType for BaseValue {
     fn base_type() -> WrapBaseValueType {
         WrapBaseValueType::Unknown
     }
-
 }

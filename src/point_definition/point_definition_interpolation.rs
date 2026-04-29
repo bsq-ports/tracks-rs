@@ -1,6 +1,6 @@
 use crate::{
     base_provider_context::BaseProviderContext,
-    base_value::{BaseValue, WrapBaseValueType},
+    types::base_value::{BaseValue, WrapBaseValueType},
 };
 
 use super::{PointDefinitionLike, base_point_definition::BasePointDefinition};
@@ -78,11 +78,11 @@ impl PointDefinitionInterpolation {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::base_value::EulerVec3;
     use crate::easings::functions::Functions;
     use crate::modifiers::quaternion_modifier::QuaternionValues;
     use crate::point_data::basic_point_data::BasicPointData;
     use crate::point_data::quaternion_point_data::QuaternionPointData;
+    use crate::types::base_value::EulerVec3;
     use crate::{base_provider_context::BaseProviderContext, modifiers::ModifierValues};
     use glam::{Quat, Vec3, Vec4};
 

@@ -1,7 +1,7 @@
 use glam::Vec2;
 use glam::{Quat, Vec3, Vec4};
 
-use crate::base_value::{BaseValue, WrapBaseValueType};
+use crate::types::base_value::{BaseValue, WrapBaseValueType};
 
 #[repr(C)]
 #[derive(Copy, Clone, Default, Debug)]
@@ -85,7 +85,7 @@ impl From<BaseValue> for WrapBaseValue {
                         },
                     },
                 }
-            },
+            }
             BaseValue::Vector4(v) => Self {
                 ty: WrapBaseValueType::Vec4,
                 value: WrapBaseValueUnion {
@@ -312,7 +312,7 @@ impl From<Option<BaseValue>> for QuatOption {
                     },
                     has_value: true,
                 }
-            },
+            }
             _ => QuatOption {
                 value: WrapQuat {
                     x: 0.0,

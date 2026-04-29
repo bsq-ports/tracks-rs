@@ -1,6 +1,6 @@
 use super::UpdateableValues;
 
-use crate::{base_provider_context::BaseProviderContext, base_value::BaseValue};
+use crate::{base_provider_context::BaseProviderContext, types::base_value::BaseValue};
 
 use super::AbstractValueProvider;
 
@@ -21,19 +21,11 @@ impl SmoothProvidersValues {
         // Initialize current values to zero/identity of the same shape as the source.
         let src = source_provider.values(context);
         let zero = match src {
-            crate::base_value::BaseValue::Float(_) => crate::base_value::BaseValue::Float(0.0),
-            crate::base_value::BaseValue::Vector2(_) => {
-                crate::base_value::BaseValue::Vector2(glam::Vec2::ZERO)
-            }
-            crate::base_value::BaseValue::Vector3(_) => {
-                crate::base_value::BaseValue::Vector3(glam::Vec3::ZERO)
-            }
-            crate::base_value::BaseValue::Vector4(_) => {
-                crate::base_value::BaseValue::Vector4(glam::Vec4::ZERO)
-            }
-            crate::base_value::BaseValue::Quaternion(_) => {
-                crate::base_value::BaseValue::Quaternion(glam::Quat::IDENTITY.into())
-            }
+            BaseValue::Float(_) => BaseValue::Float(0.0),
+            BaseValue::Vector2(_) => BaseValue::Vector2(glam::Vec2::ZERO),
+            BaseValue::Vector3(_) => BaseValue::Vector3(glam::Vec3::ZERO),
+            BaseValue::Vector4(_) => BaseValue::Vector4(glam::Vec4::ZERO),
+            BaseValue::Quaternion(_) => BaseValue::Quaternion(glam::Quat::IDENTITY.into()),
         };
 
         Self {

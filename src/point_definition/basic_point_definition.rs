@@ -5,12 +5,12 @@ use smallvec::SmallVec;
 
 use crate::{
     base_provider_context::BaseProviderContext,
-    base_value::WrapBaseValueType,
     easings::functions::Functions,
     modifiers::{ModifierValues, basic_modifier::BasicModifier, operation::Operation},
     point_data::{PointDataLike, basic_point_data::BasicPointData},
     prelude::{AbstractValueProvider, ValueProvider},
-    value_types::ValueType,
+    types::base_value::WrapBaseValueType,
+    types::value_types::ValueType,
 };
 
 use super::PointDefinitionLike;

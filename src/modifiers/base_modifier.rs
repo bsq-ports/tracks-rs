@@ -1,12 +1,12 @@
 use glam::{Quat, Vec3, Vec4};
 
 use crate::{
-    base_value::BaseValue,
     modifiers::{
         ModifierLike, basic_modifier::BasicModifier, operation::Operation,
         quaternion_modifier::QuaternionModifier,
     },
     prelude::BaseProviderContext,
+    types::base_value::BaseValue,
 };
 
 /// Modifiers represent small arithmetic transformations applied to point data.

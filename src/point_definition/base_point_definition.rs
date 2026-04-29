@@ -14,7 +14,7 @@ use crate::providers::ValueProvider;
 
 use crate::base_provider_context::BaseProviderContext;
 
-use crate::base_value::{BaseValue, WrapBaseValueType};
+use crate::types::base_value::{BaseValue, WrapBaseValueType};
 
 use super::PointDefinitionLike;
 
@@ -49,7 +49,7 @@ impl PointDefinitionLike<BaseValue> for BasePointDefinition {
             }
             BasePointDefinition::Quaternion(def) => {
                 let (v, done) = def.interpolate(time, context);
-                (BaseValue::Quaternion(v.into()), done)
+                (BaseValue::Quaternion(v), done)
             }
         }
     }
@@ -176,8 +176,7 @@ impl PointDefinitionLike<BaseValue> for BasePointDefinition {
                 BasePointData::Quaternion(r_data),
             ) => BaseValue::Quaternion(
                 quaternion_point_definition
-                    .interpolate_points(l_data, r_data, l_index, r_index, time, context)
-                    .into(),
+                    .interpolate_points(l_data, r_data, l_index, r_index, time, context),
             ),
             _ => panic!(
                 "Mismatched PointDefinition and PointData types during interpolation {:?} {:?} {:?}",

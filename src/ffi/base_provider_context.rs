@@ -1,7 +1,7 @@
 use crate::base_provider_context::BaseProviderContext;
-use crate::base_value::{BaseValue, WrapBaseValueType};
 use crate::ffi::types::{WrapBaseValue, WrappedValues};
 use crate::providers::base_ffi::{BaseFFIProvider, BaseFFIProviderValues};
+use crate::types::base_value::{BaseValue, WrapBaseValueType};
 use std::ffi::{CStr, c_void};
 use std::ptr;
 

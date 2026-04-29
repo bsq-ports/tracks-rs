@@ -6,12 +6,12 @@ use tracks_rs::animation::events::{EventData, EventType};
 use tracks_rs::animation::track::{Track, V2_POSITION, ValuePropertyHandle};
 use tracks_rs::animation::tracks_holder::TracksHolder;
 use tracks_rs::base_provider_context::BaseProviderContext;
-use tracks_rs::base_value::BaseValue;
 use tracks_rs::easings::functions::Functions;
 use tracks_rs::test_helpers::{
     parse_quaternion_point_definition, parse_vector3_point_definition,
     parse_vector4_point_definition,
 };
+use tracks_rs::types::base_value::BaseValue;
 
 use tracks_rs::animation::track::{V2_COLOR, V2_LOCAL_ROTATION, V2_SCALE};
 

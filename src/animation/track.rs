@@ -2,7 +2,7 @@ use std::{fmt::Display, rc::Rc, str::FromStr};
 
 use crate::{
     animation::property::{PathProperty, ValueProperty},
-    base_value::WrapBaseValueType,
+    types::base_value::WrapBaseValueType,
 };
 
 use super::game_object::GameObject;
@@ -534,7 +534,7 @@ mod tests {
     use std::{thread::sleep, time::Duration};
 
     use super::*;
-    use crate::base_value::BaseValue;
+    use crate::types::base_value::BaseValue;
     use glam::{Quat, Vec3, Vec4};
 
     #[test]

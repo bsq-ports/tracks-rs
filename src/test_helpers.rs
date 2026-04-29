@@ -3,7 +3,7 @@
 #[cfg(feature = "json")]
 use serde_json::Value as JsonValue;
 
-use crate::base_value::EulerVec3;
+use crate::types::base_value::EulerVec3;
 #[cfg(feature = "json")]
 use crate::{
     point_definition::{

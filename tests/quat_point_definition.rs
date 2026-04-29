@@ -1,9 +1,9 @@
 use glam::{Quat, Vec3};
 use serde_json::json;
 use tracks_rs::base_provider_context::BaseProviderContext;
-use tracks_rs::base_value::BaseValue;
 use tracks_rs::prelude::AbstractValueProvider;
-use tracks_rs::quaternion_utils::QuaternionUtilsExt;
+use tracks_rs::types::base_value::BaseValue;
+use tracks_rs::types::quaternion_utils::QuaternionUtilsExt;
 use tracks_rs::{
     point_definition::quaternion_point_definition::QuaternionPointDefinition,
     prelude::PointDefinitionLike,
@@ -19,7 +19,6 @@ fn ang_diff(a: f32, b: f32) -> f32 {
 }
 
 fn quat_approx_assert(q1: Quat, q2: Quat, eps: f32) {
-
     let q1_euler = q1.to_unity_euler_degrees();
     let q2_euler = q2.to_unity_euler_degrees();
 
@@ -44,7 +43,6 @@ fn quat_approx_assert(q1: Quat, q2: Quat, eps: f32) {
 }
 
 fn not_quat_approx_assert(q1: Quat, q2: Quat, eps: f32) {
-
     let q1_euler = q1.to_unity_euler_degrees();
     let q2_euler = q2.to_unity_euler_degrees();
 
@@ -194,8 +192,7 @@ fn base_provider_updates_with_smoothing_swizzle_and_operator() {
         let (q_interpolated_e, _last) = def.interpolate(0.5, &ctx);
         let q_interpolated = q_interpolated_e.to_quat();
 
-        let e = q_interpolated.to_unity_euler_degrees();
-        eprintln!("before update q_interpolated euler = {:?}", e);
+        let _ = q_interpolated.to_unity_euler_degrees();
         not_quat_approx_assert(q_interpolated, expected_rot(q_interpolated), eps);
     }
 

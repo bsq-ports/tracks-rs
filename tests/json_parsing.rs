@@ -1,13 +1,12 @@
 use serde_json::json;
 use tracks_rs::{
     base_provider_context::BaseProviderContext,
-    base_value::BaseValue,
     point_definition::{
         PointDefinitionLike, Vector4PointDefinition, basic_point_definition::BasicPointDefinition,
         quaternion_point_definition::QuaternionPointDefinition,
         vector3_point_definition::Vector3PointDefinition,
     },
-    quaternion_utils::QuaternionUtilsExt,
+    types::{base_value::BaseValue, quaternion_utils::QuaternionUtilsExt},
 };
 
 #[test]

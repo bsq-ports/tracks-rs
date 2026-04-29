@@ -1,8 +1,8 @@
 use glam::{Quat, Vec3};
-use tracks_rs::base_value::BaseValue;
-use tracks_rs::providers::AbstractValueProvider;
-use tracks_rs::quaternion_utils::QuaternionUtilsExt;
 use tracks_rs::base_provider_context::BaseProviderContext;
+use tracks_rs::providers::AbstractValueProvider;
+use tracks_rs::types::base_value::BaseValue;
+use tracks_rs::types::quaternion_utils::QuaternionUtilsExt;
 
 #[test]
 fn swizzle_partial_provider_returns_components() {

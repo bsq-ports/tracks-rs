@@ -1,8 +1,10 @@
 use crate::{
     base_provider_context::BaseProviderContext,
     easings::functions::Functions,
-    modifiers::{ModifierLike, ModifierValues, basic_modifier::BasicModifier, operation::Operation},
-    value_types::ValueType,
+    modifiers::{
+        ModifierLike, ModifierValues, basic_modifier::BasicModifier, operation::Operation,
+    },
+    types::value_types::ValueType,
 };
 
 use super::PointDataLike;

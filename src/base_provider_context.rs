@@ -4,10 +4,12 @@ use glam::{Quat, Vec3, Vec4};
 use log::{error, warn};
 
 use crate::{
-    base_value::BaseValue,
     providers::{
-        UpdateableValues, ValueProvider, base::BaseProviderValues, partial::PartialProviderValues, quat::QuaternionProviderValues, smooth::SmoothProvidersValues, smooth_rot::SmoothRotationProvidersValues
+        UpdateableValues, ValueProvider, base::BaseProviderValues, partial::PartialProviderValues,
+        quat::QuaternionProviderValues, smooth::SmoothProvidersValues,
+        smooth_rot::SmoothRotationProvidersValues,
     },
+    types::base_value::BaseValue,
 };
 
 /// Context for base value providers

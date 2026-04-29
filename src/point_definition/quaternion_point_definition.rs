@@ -1,11 +1,9 @@
 use std::rc::Rc;
 
-use glam::{Quat, Vec3, vec3};
 use smallvec::SmallVec;
 
 use crate::{
     base_provider_context::BaseProviderContext,
-    base_value::{EulerVec3, WrapBaseValueType},
     easings::functions::Functions,
     modifiers::{
         operation::Operation,
@@ -13,7 +11,7 @@ use crate::{
     },
     point_data::{PointDataLike, quaternion_point_data::QuaternionPointData},
     prelude::{AbstractValueProvider, ValueProvider},
-    quaternion_utils::QuaternionUtilsExt,
+    types::base_value::{EulerVec3, WrapBaseValueType},
 };
 
 use super::PointDefinitionLike;
@@ -127,7 +125,7 @@ impl PointDefinitionLike<EulerVec3> for QuaternionPointDefinition {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use glam::{EulerRot, Quat};
+    use glam::{EulerRot, Quat, Vec3};
 
     #[cfg(not(feature = "json"))]
     compile_error!("Tests for QuaternionPointDefinition require the 'json' feature to be enabled");
@@ -137,7 +135,7 @@ mod tests {
     use crate::{
         base_provider_context::BaseProviderContext,
         point_data::quaternion_point_data::QuaternionPointData,
-        point_definition::PointDefinitionLike,
+        point_definition::PointDefinitionLike, types::quaternion_utils::QuaternionUtilsExt,
     };
 
     // Use Unity's Euler rotation order (ZXY(Ex)) for expected values in tests

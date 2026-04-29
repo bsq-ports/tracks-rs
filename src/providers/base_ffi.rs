@@ -1,7 +1,8 @@
 use std::{ffi::c_void, slice};
 
 use crate::{
-    base_provider_context::BaseProviderContext, base_value::BaseValue, ffi::types::WrappedValues,
+    base_provider_context::BaseProviderContext, ffi::types::WrappedValues,
+    types::base_value::BaseValue,
 };
 
 use super::AbstractValueProvider;

@@ -1,11 +1,13 @@
 use crate::{
-    base_provider_context::BaseProviderContext, base_value::EulerVec3, easings::functions::Functions, modifiers::{
+    base_provider_context::BaseProviderContext,
+    easings::functions::Functions,
+    modifiers::{
         ModifierLike,
         operation::Operation,
         quaternion_modifier::{QuaternionModifier, QuaternionValues},
-    }
+    },
+    types::base_value::EulerVec3,
 };
-use glam::Quat;
 
 use super::PointDataLike;
 

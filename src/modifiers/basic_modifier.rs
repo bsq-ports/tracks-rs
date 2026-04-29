@@ -2,7 +2,7 @@ use super::{ModifierLike, operation::Operation};
 use super::{ModifierValues, shared_has_base_provider};
 use crate::base_provider_context::BaseProviderContext;
 use crate::providers::AbstractValueProvider;
-use crate::value_types::ValueType;
+use crate::types::value_types::ValueType;
 
 /// A basic, typed modifier that applies component-wise operations to point values.
 ///

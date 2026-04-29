@@ -2,8 +2,8 @@ use criterion::{BatchSize, BenchmarkId, Criterion, criterion_group, criterion_ma
 use glam::{Quat, Vec3, Vec4};
 use std::hint::black_box;
 use tracks_rs::base_provider_context::BaseProviderContext;
-use tracks_rs::base_value::BaseValue;
 use tracks_rs::providers::{AbstractValueProvider, UpdateableValues};
+use tracks_rs::types::base_value::BaseValue;
 
 fn seed_context(ctx: &mut BaseProviderContext) {
     ctx.set_values(

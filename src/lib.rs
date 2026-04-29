@@ -42,10 +42,7 @@ pub mod point_data;
 pub mod point_definition;
 pub mod providers;
 
-pub mod base_value;
-pub mod value_types;
-
-pub mod quaternion_utils;
+pub mod types;
 
 /// Lightweight prelude for external consumers.
 ///

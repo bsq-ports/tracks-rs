@@ -396,13 +396,13 @@ mod tests {
     use crate::animation::track::ValuePropertyHandle;
     use crate::animation::tracks_holder::TracksHolder;
     use crate::base_provider_context::BaseProviderContext;
-    use crate::base_value::WrapBaseValueType;
     use crate::easings::functions::Functions;
     use crate::modifiers::ModifierValues;
     use crate::point_data::basic_point_data::BasicPointData;
     use crate::point_definition::base_point_definition::BasePointDefinition;
     use crate::point_definition::basic_point_definition::BasicPointDefinition;
     use crate::point_definition::vector3_point_definition;
+    use crate::types::base_value::WrapBaseValueType;
     use glam::Vec3;
     use glam::Vec4;
 
@@ -1442,7 +1442,8 @@ mod tests {
                     let time = easing.interpolate(normalized);
                     let on_last = {
                         let (value, finished) = pd.interpolate(time, &BaseProviderContext::new());
-                        prop_csharp.set_value(Some(crate::base_value::BaseValue::Float(value)));
+                        prop_csharp
+                            .set_value(Some(crate::types::base_value::BaseValue::Float(value)));
                         finished
                     };
                     cs_skip = !non_lazy && on_last;
