@@ -10,6 +10,16 @@ use tracks_rs::{
     quaternion_utils::QuaternionUtilsExt,
 };
 
+// NOTE: The `is_last`/`last` boolean returned by `interpolate(time)` follows the
+// Heck C# semantics used in the reference implementation:
+// - If the last point's time is <= requested `time`, `last` is true and the last
+//   point's value is returned.
+// - If the first point's time is >= requested `time`, `last` is false and the
+//   first point's value is returned.
+// - For times strictly between two points, `last` is false and interpolation is
+//   performed between the surrounding points.
+// Tests below assert `is_last` according to this rule.
+
 #[test]
 fn parses_float_point_definition_from_heck_json() {
     let mut context = BaseProviderContext::new();
@@ -17,7 +27,7 @@ fn parses_float_point_definition_from_heck_json() {
 
     let (value, is_last) = definition.interpolate(0.0, &context);
     assert!((value - 0.5).abs() < 1e-6);
-    assert!(is_last);
+    assert_eq!(is_last, true);
 }
 
 #[test]
@@ -44,7 +54,7 @@ fn parses_color_point_definition_from_heck_json() {
 
     let (value, is_last) = definition.interpolate(0.0, &context);
     assert_eq!(value, glam::Vec4::new(0.25, 0.5, 0.75, 1.0));
-    assert!(is_last);
+    assert_eq!(is_last, true);
 }
 
 #[test]
@@ -54,16 +64,19 @@ fn parses_single_point_shorthand_forms_from_heck_json() {
     let float_definition = BasicPointDefinition::<f32>::parse(json!([0.5]), &mut context);
     let (float_value, float_is_last) = float_definition.interpolate(0.0, &context);
     assert!((float_value - 0.5).abs() < 1e-6);
+    // Single-point shorthand should be considered the last point at time 0
     assert!(float_is_last);
 
     let vec3_definition = Vector3PointDefinition::parse(json!([1.0, 2.0, 3.0]), &mut context);
     let (vec3_value, vec3_is_last) = vec3_definition.interpolate(0.0, &context);
     assert_eq!(vec3_value, glam::Vec3::new(1.0, 2.0, 3.0));
+    // Single-point shorthand should be considered the last point at time 0
     assert!(vec3_is_last);
 
     let vec4_definition = Vector4PointDefinition::parse(json!([0.1, 0.2, 0.3, 0.4]), &mut context);
     let (vec4_value, vec4_is_last) = vec4_definition.interpolate(0.0, &context);
     assert_eq!(vec4_value, glam::Vec4::new(0.1, 0.2, 0.3, 0.4));
+    // Single-point shorthand should be considered the last point at time 0
     assert!(vec4_is_last);
 }
 
@@ -121,7 +134,7 @@ fn parses_vector4_with_base_provider_modifier_op_mul() {
 
     let (value, is_last) = definition.interpolate(0.0, &context);
     assert_eq!(value, glam::Vec4::new(0.5, 0.125, 0.5, 1.0));
-    assert!(is_last);
+    assert_eq!(is_last, false);
 }
 
 #[test]
@@ -138,7 +151,7 @@ fn parses_float_from_smoothed_and_swizzled_base_provider() {
 
     let (value, is_last) = definition.interpolate(0.0, &context);
     assert!((value - 1.0).abs() < 1e-6);
-    assert!(is_last);
+    assert_eq!(is_last, true);
 }
 
 #[test]
@@ -161,7 +174,7 @@ fn parses_quaternion_from_smoothed_base_provider() {
     assert!((value.y - target_quat.y).abs() < eps);
     assert!((value.z - target_quat.z).abs() < eps);
     assert!((value.w - target_quat.w).abs() < eps);
-    assert!(is_last);
+    assert_eq!(is_last, true);
 }
 
 #[test]
@@ -185,7 +198,7 @@ fn parses_quaternion_from_smoothed_base_provider_s10() {
     assert!((value.y - target_quat.y).abs() < eps);
     assert!((value.z - target_quat.z).abs() < eps);
     assert!((value.w - target_quat.w).abs() < eps);
-    assert!(is_last);
+    assert_eq!(is_last, true);
 }
 
 #[test]
@@ -196,8 +209,7 @@ fn parses_vector3_from_smoothed_base_provider_s10() {
         BaseValue::from(glam::Vec3::new(10.0, 20.0, 30.0)),
     );
 
-    let definition =
-        Vector3PointDefinition::parse(json!([["baseHeadPosition.s10"]]), &mut context);
+    let definition = Vector3PointDefinition::parse(json!([["baseHeadPosition.s10"]]), &mut context);
     assert!(definition.has_base_provider());
 
     // With multiplier 10 and delta=1.0 this should advance fully to the target
@@ -205,7 +217,7 @@ fn parses_vector3_from_smoothed_base_provider_s10() {
 
     let (value, is_last) = definition.interpolate(0.0, &context);
     assert_eq!(value, glam::Vec3::new(10.0, 20.0, 30.0));
-    assert!(is_last);
+    assert_eq!(is_last, true);
 }
 
 #[test]
@@ -223,8 +235,6 @@ fn panics_when_vec3_modifier_receives_extra_scalar_from_base_head_s10() {
         json!([[0.0, 0.0, 0.0, ["baseHeadPosition.s10", 1.0, "opMul"]]]),
         &mut context,
     );
-
-    let _ = definition;
 }
 
 #[test]
@@ -245,7 +255,7 @@ fn parses_vec3_modifier_from_base_head_s10_without_panicking() {
 
     let (value, is_last) = definition.interpolate(0.0, &context);
     assert_eq!(value, glam::Vec3::new(10.0, 20.0, 30.0));
-    assert!(is_last);
+    assert_eq!(is_last, false);
 }
 
 #[test]
@@ -263,6 +273,4 @@ fn panics_when_float_modifier_receives_vec3_from_base_head_s10() {
         json!([[0.0, ["baseHeadPosition.s10", "opMul"]]]),
         &mut context,
     );
-
-    let _ = definition;
 }

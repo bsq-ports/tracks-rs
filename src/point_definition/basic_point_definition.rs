@@ -51,8 +51,7 @@ where
     ) -> BasicModifier<T> {
         let val: ModifierValues<T> = match values.as_slice() {
             // Single static value [T]
-            [ValueProvider::Static(static_val)] if static_val.values.len() == T::VALUE_COUNT =>
-            {
+            [ValueProvider::Static(static_val)] if static_val.values.len() == T::VALUE_COUNT => {
                 let values = &static_val.values;
                 ModifierValues::Static(T::from_slice(values))
             }
@@ -82,7 +81,9 @@ where
 
         let (value, time) = match &values[..] {
             // [x, ..., y]
-            [ValueProvider::Static(static_val)] if static_val.values.len() == T::VALUE_COUNT + 1 => {
+            [ValueProvider::Static(static_val)]
+                if static_val.values.len() == T::VALUE_COUNT + 1 =>
+            {
                 let values = &static_val.values;
                 let point = T::from_slice(&values[0..T::VALUE_COUNT]);
                 let time = values[T::VALUE_COUNT];
@@ -90,23 +91,14 @@ where
             }
 
             _ => {
-                // validate and get time by concatenating provider outputs sequentially
-                let mut collected = [0.0f32; T::VALUE_COUNT + 1];
-                let mut idx: usize = 0;
-                for vp in values.iter() {
-                    for v in vp.values(context) {
-                        if idx < T::VALUE_COUNT {
-                            collected[idx] = v;
-                            idx += 1;
-                        } else {
-                            // treat any extra value as time (the last extra value wins)
-                            // TODO: Can we optimize this by only collecting T+1 and exiting?
-                            collected[T::VALUE_COUNT] = v;
-                        }
-                    }
-                }
-
-                let time = collected[T::VALUE_COUNT];
+                // get time from last provider last value
+                // https://github.com/Aeroluna/Heck/blob/1dc9f470a7f8d3e64d0e3bc34e2f2279190eb8b8/Heck/Animation/PointDefinition/Vector3PointDefinition.cs#L80-L81
+                let time = values.last()
+                    .and_then(|vp| vp.values(context).last().copied())
+                    .expect(&format!(
+                        "Expected at least one value provider with at least {} values for point data, with the last one being time",
+                        T::VALUE_COUNT + 1
+                    ));
 
                 (ModifierValues::Dynamic(values), time)
             }
