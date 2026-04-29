@@ -83,6 +83,7 @@ mod tests {
     use crate::point_data::basic_point_data::BasicPointData;
     use crate::point_data::quaternion_point_data::QuaternionPointData;
     use crate::types::base_value::EulerVec3;
+    use crate::types::quaternion_utils::QuaternionUtilsExt;
     use crate::{base_provider_context::BaseProviderContext, modifiers::ModifierValues};
     use glam::{Quat, Vec3, Vec4};
 
@@ -255,15 +256,16 @@ mod tests {
         let q1 = Quat::from_array([0.0, 0.0, 0.0, 1.0]);
         let q2 = Quat::from_array([0.0, 0.0, 1.0, 0.0]);
 
+        // Use Euler representations derived from the provided quaternions
         let prev_q = QuaternionPointDefinition::new(vec![QuaternionPointData::new(
-            QuaternionValues::Static(EulerVec3::IDENTITY, q1),
+            QuaternionValues::Static(EulerVec3::from(q1), q1),
             0.0,
             vec![],
             Functions::EaseLinear,
         )]);
 
         let next_q = QuaternionPointDefinition::new(vec![QuaternionPointData::new(
-            QuaternionValues::Static(EulerVec3::IDENTITY, q2),
+            QuaternionValues::Static(EulerVec3::from(q2), q2),
             0.0,
             vec![],
             Functions::EaseLinear,
@@ -284,9 +286,27 @@ mod tests {
         let got = result_q.as_quat().unwrap();
 
         let expected = Quat::slerp(q1, q2, 0.25);
-        assert!((got.x - expected.x).abs() < 1e-6);
-        assert!((got.y - expected.y).abs() < 1e-6);
-        assert!((got.z - expected.z).abs() < 1e-6);
-        assert!((got.w - expected.w).abs() < 1e-6);
+
+        let expected_euler = expected.to_unity_euler_degrees();
+        let got_euler = got.to_unity_euler_degrees();
+
+        assert!(
+            (got_euler.x - expected_euler.x).abs() < 1e-3,
+            "x mismatch: got {}, expected {}",
+            got_euler.x,
+            expected_euler.x
+        );
+        assert!(
+            (got_euler.y - expected_euler.y).abs() < 1e-3,
+            "y mismatch: got {}, expected {}",
+            got_euler.y,
+            expected_euler.y
+        );
+        assert!(
+            (got_euler.z - expected_euler.z).abs() < 1e-3,
+            "z mismatch: got {}, expected {}",
+            got_euler.z,
+            expected_euler.z
+        );
     }
 }

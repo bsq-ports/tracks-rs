@@ -185,6 +185,13 @@ impl BaseValue {
         }
     }
 
+    pub fn as_euler_vec3(&self) -> Option<EulerVec3> {
+        match self {
+            BaseValue::Quaternion(v) => Some(*v),
+            _ => None,
+        }
+    }
+
     pub fn len(&self) -> usize {
         match self {
             BaseValue::Float(_) => 1,
