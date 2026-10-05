@@ -11,6 +11,7 @@ use crate::{
         PointDefinitionLike,
         base_point_definition::{self},
     },
+    time_types::SongTime,
 };
 
 use super::{
@@ -18,6 +19,44 @@ use super::{
     property::{PathProperty, ValueProperty},
 };
 
+/// Drives time-based track events (`AnimateTrack` and `AssignPathAnimation`).
+///
+/// # Coroutines
+/// A coroutine is a `CoroutineTask`: the state of one event that is still running.
+/// It holds the target track and property, the start time, the duration (beats converted to
+/// song time using the BPM), the easing, the repeat count and the point definition. Each poll
+/// moves it forward and returns [`CoroutineResult::Yield`] (keep running) or
+/// [`CoroutineResult::Break`] (finished; remove it). This mirrors the Unity coroutines
+/// used by the original C# implementation, but here the caller drives them with song time.
+///
+/// # Starting and overriding events
+/// [`Self::start_event_coroutine`] first cancels any running coroutine with the same track
+/// *and* event type. Each `(track, property)` pair has at most one active coroutine, so a
+/// new event takes over a property that is still animating. Events on other tracks, or on
+/// other properties of the same track, are unaffected.
+///
+/// The new event is then evaluated once at the current song time. It is not queued if:
+/// - it has no point data, so the target property is cleared (`set_null`),
+/// - it has zero duration or has already fully elapsed (repeats included), so the final value is applied,
+/// - it is a single static point with no base provider, so that value is applied once,
+/// - it already finished during that first evaluation.
+///
+/// # Animating properties (`AnimateTrack`)
+/// Each poll computes `elapsed / duration`, clamps it to `[0, 1]`, applies the easing,
+/// interpolates the point definition, and writes the result to the track's `ValueProperty`.
+/// When an iteration ends and `repeat > 0`, the start time moves forward by one duration and
+/// the animation runs again. A large time step can finish several iterations in one poll.
+/// Point definitions with base providers are never finished early, because their output
+/// can still change after the last point is reached.
+///
+/// # Animating path properties (`AssignPathAnimation`)
+/// When the event starts, the track's `PathProperty` keeps its current path as the previous
+/// path and takes the event's point definition as the new path. Objects sample the path at
+/// their own lifetime. The coroutine only advances the eased `interpolate_time`, which
+/// controls the blend from the previous path to the new path. When the duration ends, the
+/// path property is finished: the previous path is dropped and only the new path is used.
+///
+/// Call [`Self::poll_events`] once per frame with the current song time.
 #[derive(Clone)]
 pub struct CoroutineManager {
     coroutines: Vec<CoroutineTask>,
@@ -28,12 +67,12 @@ pub struct CoroutineManager {
 struct CoroutineTask {
     event_type: EventType,
     repeat: u32,
-    duration_song_time: f32,
+    duration_song_time: SongTime,
     /// Whether the point definition has a base provider, which affects whether we can skip interpolation when finished
     /// this is here to avoid repeatedly calling has_base_provider on the point definition during interpolation, which can be expensive for complex definitions with many modifiers
     has_base_provider: bool,
     easing: Functions,
-    start_song_time: f32,
+    start_song_time: SongTime,
     track_key: TrackKey,
     point_definition: Option<base_point_definition::BasePointDefinition>,
 }
@@ -79,12 +118,12 @@ impl CoroutineManager {
     pub fn start_event_coroutine(
         &mut self,
         bpm: f32,
-        song_time: f32,
+        song_time: SongTime,
         provider_context: &BaseProviderContext,
         tracks_holder: &mut TracksHolder,
         event_group_data: EventData,
     ) {
-        let duration_song_time = (60.0 * event_group_data.raw_duration) / bpm;
+        let duration_song_time = event_group_data.raw_duration.to_song_time(bpm as f64);
 
         // cancel any existing coroutines for the same event type
         // that are on the same track
@@ -133,8 +172,8 @@ impl CoroutineManager {
 
     /// Creates a new CoroutineTask for the given event data, if it has a valid duration and points.
     fn make_event_task(
-        current_song_time: f32,
-        duration_song_time: f32,
+        current_song_time: SongTime,
+        duration_song_time: SongTime,
         data: EventData,
         provider_context: &BaseProviderContext,
         tracks_holder: &mut TracksHolder,
@@ -142,8 +181,8 @@ impl CoroutineManager {
         let mut repeat = data.repeat;
         let mut has_base_provider = false;
 
-        let no_duration = duration_song_time == 0.0
-            || data.start_song_time + (duration_song_time * (repeat as f32 + 1.0))
+        let no_duration = duration_song_time == SongTime::ZERO
+            || data.start_song_time + duration_song_time * (repeat as f64 + 1.0)
                 < current_song_time;
         let mut property = data.property;
         let track_key = data.track_key;
@@ -232,7 +271,7 @@ impl CoroutineManager {
     /// Advances all active coroutines to `song_time`, removing any that have finished.
     pub fn poll_events(
         &mut self,
-        song_time: f32,
+        song_time: SongTime,
         context: &BaseProviderContext,
         tracks_holder: &mut TracksHolder,
     ) {
@@ -252,7 +291,7 @@ impl CoroutineManager {
 
     /// Polls a single coroutine task and updates the associated track property.
     fn poll_event(
-        song_time: f32,
+        song_time: SongTime,
         context: &BaseProviderContext,
         event_data: &mut CoroutineTask,
         tracks_holder: &mut TracksHolder,
@@ -277,7 +316,7 @@ impl CoroutineManager {
                     .get_by_handle_mut(value_property_handle)
                     .expect("Property not found");
 
-                let mut run_event = |start: f32| {
+                let mut run_event = |start: SongTime| {
                     animate_track(
                         point_def,
                         value_property,
@@ -326,9 +365,9 @@ impl CoroutineManager {
 fn animate_track(
     points: &base_point_definition::BasePointDefinition,
     property: &mut ValueProperty,
-    duration: f32,
-    start_song_time: f32,
-    current_song_time: f32,
+    duration: SongTime,
+    start_song_time: SongTime,
+    current_song_time: SongTime,
     easing: Functions,
     non_lazy: bool,
     context: &BaseProviderContext,
@@ -336,10 +375,10 @@ fn animate_track(
     let elapsed_time = current_song_time - start_song_time;
 
     // clamped normalized time
-    let normalized_time = if duration <= 0.0 {
+    let normalized_time = if duration <= SongTime::ZERO {
         1.0
     } else {
-        (elapsed_time / duration).clamp(0.0, 1.0)
+        (elapsed_time / duration).clamp(0.0, 1.0) as f32
     };
     let time = easing.interpolate(normalized_time);
     let on_last = set_property_value(points, property, time, context);
@@ -362,13 +401,13 @@ fn animate_track(
 /// Returns `Break` and finishes the path property once the duration has elapsed.
 fn assign_path_animation(
     interpolation: &mut PathProperty,
-    duration: f32,
-    start_time: f32,
+    duration: SongTime,
+    start_time: SongTime,
     easing: Functions,
-    song_time: f32,
+    song_time: SongTime,
 ) -> CoroutineResult {
     let elapsed_time = song_time - start_time;
-    let normalized_time = (elapsed_time / duration).min(1.0);
+    let normalized_time = (elapsed_time / duration).min(1.0) as f32;
     interpolation.interpolate_time = easing.interpolate(normalized_time);
 
     if elapsed_time < duration {
@@ -412,6 +451,7 @@ mod tests {
     use crate::point_definition::base_point_definition::BasePointDefinition;
     use crate::point_definition::basic_point_definition::BasicPointDefinition;
     use crate::point_definition::vector3_point_definition;
+    use crate::time_types::BpmTime;
     use glam::Vec3;
     use glam::Vec4;
 
@@ -480,20 +520,20 @@ mod tests {
         ]);
 
         let ev = EventData {
-            raw_duration: 1.0,
+            raw_duration: BpmTime::new(1.0),
             easing: Functions::EaseLinear,
             repeat: 0,
-            start_song_time: 0.0,
+            start_song_time: SongTime::new(0.0),
             property: EventType::AnimateTrack(ValuePropertyHandle::new("dissolve")),
             track_key: key,
             point_data: Some(BasePointDefinition::Float(pd)),
         };
 
         // bpm 60 => duration = 1.0 for raw_duration 1.0
-        cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev);
+        cm.start_event_coroutine(60.0, SongTime::new(0.0), &ctx, &mut holder, ev);
 
         // poll at halfway through duration (0.5) - should set dissolve ~5.0
-        cm.poll_events(0.5, &ctx, &mut holder);
+        cm.poll_events(SongTime::new(0.5), &ctx, &mut holder);
 
         let track = holder.get_track(key).unwrap();
         let val = track.properties.dissolve.get_value().expect("value set");
@@ -537,16 +577,16 @@ mod tests {
         ]);
 
         let ev_a1 = EventData {
-            raw_duration: 1.0,
+            raw_duration: BpmTime::new(1.0),
             easing: Functions::EaseLinear,
             repeat: 0,
-            start_song_time: 0.0,
+            start_song_time: SongTime::new(0.0),
             property: EventType::AnimateTrack(ValuePropertyHandle::new("dissolve")),
             track_key: key_a,
             point_data: Some(BasePointDefinition::Float(pd_a1)),
         };
 
-        cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev_a1);
+        cm.start_event_coroutine(60.0, SongTime::new(0.0), &ctx, &mut holder, ev_a1);
 
         // start a coroutine on track B same property - should NOT be cancelled by later A
         let pd_b = BasicPointDefinition::new(vec![
@@ -567,16 +607,16 @@ mod tests {
         ]);
 
         let ev_b = EventData {
-            raw_duration: 1.0,
+            raw_duration: BpmTime::new(1.0),
             easing: Functions::EaseLinear,
             repeat: 0,
-            start_song_time: 0.0,
+            start_song_time: SongTime::new(0.0),
             property: EventType::AnimateTrack(ValuePropertyHandle::new("dissolve")),
             track_key: key_b,
             point_data: Some(BasePointDefinition::Float(pd_b)),
         };
 
-        cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev_b);
+        cm.start_event_coroutine(60.0, SongTime::new(0.0), &ctx, &mut holder, ev_b);
 
         // start a different-property coroutine on track A - should NOT cancel dissolve on A
         // use color (vec4)
@@ -598,16 +638,16 @@ mod tests {
         ]);
 
         let ev_a_color = EventData {
-            raw_duration: 1.0,
+            raw_duration: BpmTime::new(1.0),
             easing: Functions::EaseLinear,
             repeat: 0,
-            start_song_time: 0.0,
+            start_song_time: SongTime::new(0.0),
             property: EventType::AnimateTrack(ValuePropertyHandle::new("color")),
             track_key: key_a,
             point_data: Some(BasePointDefinition::Vector4(pd_color)),
         };
 
-        cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev_a_color);
+        cm.start_event_coroutine(60.0, SongTime::new(0.0), &ctx, &mut holder, ev_a_color);
 
         // Now start a NEW coroutine on track A for same property (dissolve) which should cancel the first one
         let pd_a2 = BasicPointDefinition::new(vec![
@@ -628,19 +668,19 @@ mod tests {
         ]);
 
         let ev_a2 = EventData {
-            raw_duration: 1.0,
+            raw_duration: BpmTime::new(1.0),
             easing: Functions::EaseLinear,
             repeat: 0,
-            start_song_time: 0.0,
+            start_song_time: SongTime::new(0.0),
             property: EventType::AnimateTrack(ValuePropertyHandle::new("dissolve")),
             track_key: key_a,
             point_data: Some(BasePointDefinition::Float(pd_a2)),
         };
 
-        cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev_a2);
+        cm.start_event_coroutine(60.0, SongTime::new(0.0), &ctx, &mut holder, ev_a2);
 
         // poll halfway through (0.5)
-        cm.poll_events(0.5, &ctx, &mut holder);
+        cm.poll_events(SongTime::new(0.5), &ctx, &mut holder);
 
         // track A dissolve should reflect pd_a2 (0->20 => 10 at t=0.5)
         let ta = holder.get_track(key_a).unwrap();
@@ -710,16 +750,16 @@ mod tests {
 
         // raw_duration 0 -> duration calculation leads to 0 and should immediately set final value
         let ev = EventData {
-            raw_duration: 0.0,
+            raw_duration: BpmTime::new(0.0),
             easing: Functions::EaseLinear,
             repeat: 0,
-            start_song_time: 0.0,
+            start_song_time: SongTime::new(0.0),
             property: EventType::AnimateTrack(ValuePropertyHandle::new("dissolve")),
             track_key: key,
             point_data: Some(BasePointDefinition::Float(pd)),
         };
 
-        cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev);
+        cm.start_event_coroutine(60.0, SongTime::new(0.0), &ctx, &mut holder, ev);
 
         // 0-duration events should not leave coroutines enqueued
         assert!(
@@ -772,16 +812,16 @@ mod tests {
         ]);
 
         let ev = EventData {
-            raw_duration: 0.0,
+            raw_duration: BpmTime::new(0.0),
             easing: Functions::EaseLinear,
             repeat: 0,
-            start_song_time: 0.0,
+            start_song_time: SongTime::new(0.0),
             property: EventType::AssignPathAnimation(PathPropertyHandle::new("definitePosition")),
             track_key: key,
             point_data: Some(BasePointDefinition::Vector3(pd)),
         };
 
-        cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev);
+        cm.start_event_coroutine(60.0, SongTime::new(0.0), &ctx, &mut holder, ev);
 
         // 0-duration events should not leave coroutines enqueued
         assert!(
@@ -806,7 +846,7 @@ mod tests {
             assert_eq!(v, Vec3::new(0.0, 0.0, 0.0));
         }
 
-        cm.poll_events(20.0, &ctx, &mut holder);
+        cm.poll_events(SongTime::new(20.0), &ctx, &mut holder);
 
         {
             let track = holder.get_track(key).unwrap();
@@ -852,16 +892,16 @@ mod tests {
         ]);
 
         let ev = EventData {
-            raw_duration: 0.0,
+            raw_duration: BpmTime::new(0.0),
             easing: Functions::EaseLinear,
             repeat: 0,
-            start_song_time: 0.0,
+            start_song_time: SongTime::new(0.0),
             property: EventType::AssignPathAnimation(PathPropertyHandle::new("definitePosition")),
             track_key: key,
             point_data: Some(BasePointDefinition::Vector3(pd)),
         };
 
-        cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev);
+        cm.start_event_coroutine(60.0, SongTime::new(0.0), &ctx, &mut holder, ev);
 
         // zero-duration events should not leave coroutines enqueued
         assert!(
@@ -912,19 +952,19 @@ mod tests {
         ]);
 
         let ev = EventData {
-            raw_duration: 1.0,
+            raw_duration: BpmTime::new(1.0),
             easing: Functions::EaseLinear,
             repeat: 0,
-            start_song_time: 0.0,
+            start_song_time: SongTime::new(0.0),
             property: EventType::AssignPathAnimation(PathPropertyHandle::new("definitePosition")),
             track_key: key,
             point_data: Some(BasePointDefinition::Vector3(pd)),
         };
 
-        cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev);
+        cm.start_event_coroutine(60.0, SongTime::new(0.0), &ctx, &mut holder, ev);
 
         // halfway through duration (0.5) -> should be approximately halfway along the path
-        cm.poll_events(0.5, &ctx, &mut holder);
+        cm.poll_events(SongTime::new(0.5), &ctx, &mut holder);
         let track = holder.get_track(key).unwrap();
         let interp_time = track.path_properties.definite_position.interpolate_time;
         let res_mid = track
@@ -943,7 +983,7 @@ mod tests {
         );
 
         // after duration (slightly after 1.0) the animation should finish and value be final
-        cm.poll_events(1.1, &ctx, &mut holder);
+        cm.poll_events(SongTime::new(1.1), &ctx, &mut holder);
         let track = holder.get_track(key).unwrap();
         let res_final = track
             .path_properties
@@ -957,7 +997,7 @@ mod tests {
         assert_eq!(v_final, Vec3::new(3.0, 3.0, 3.0));
 
         // much later, value should persist
-        cm.poll_events(5.0, &ctx, &mut holder);
+        cm.poll_events(SongTime::new(5.0), &ctx, &mut holder);
         let track = holder.get_track(key).unwrap();
         let res_later = track
             .path_properties
@@ -998,19 +1038,19 @@ mod tests {
 
         // repeat = 2 -> should run 3 times total
         let ev = EventData {
-            raw_duration: 1.0,
+            raw_duration: BpmTime::new(1.0),
             easing: Functions::EaseLinear,
             repeat: 2,
-            start_song_time: 0.0,
+            start_song_time: SongTime::new(0.0),
             property: EventType::AnimateTrack(ValuePropertyHandle::new("dissolve")),
             track_key: key,
             point_data: Some(BasePointDefinition::Float(pd)),
         };
 
-        cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev);
+        cm.start_event_coroutine(60.0, SongTime::new(0.0), &ctx, &mut holder, ev);
 
         // midpoint of first iteration
-        cm.poll_events(0.5, &ctx, &mut holder);
+        cm.poll_events(SongTime::new(0.5), &ctx, &mut holder);
         let v1 = holder
             .get_track(key)
             .unwrap()
@@ -1027,9 +1067,9 @@ mod tests {
         );
 
         // ensure first iteration finishes and schedules restart
-        cm.poll_events(1.01, &ctx, &mut holder);
+        cm.poll_events(SongTime::new(1.01), &ctx, &mut holder);
         // midpoint of second iteration
-        cm.poll_events(1.5, &ctx, &mut holder);
+        cm.poll_events(SongTime::new(1.5), &ctx, &mut holder);
         let v2 = holder
             .get_track(key)
             .unwrap()
@@ -1046,7 +1086,7 @@ mod tests {
         );
 
         // midpoint of third iteration
-        cm.poll_events(2.5, &ctx, &mut holder);
+        cm.poll_events(SongTime::new(2.5), &ctx, &mut holder);
         let v3 = holder
             .get_track(key)
             .unwrap()
@@ -1063,7 +1103,7 @@ mod tests {
         );
 
         // after all repeats complete
-        cm.poll_events(3.1, &ctx, &mut holder);
+        cm.poll_events(SongTime::new(3.1), &ctx, &mut holder);
         let v_final = holder
             .get_track(key)
             .unwrap()
@@ -1111,19 +1151,19 @@ mod tests {
 
         // repeat = 2 -> should run 3 times total
         let ev = EventData {
-            raw_duration: 1.0,
+            raw_duration: BpmTime::new(1.0),
             easing: Functions::EaseLinear,
             repeat: 2,
-            start_song_time: 0.0,
+            start_song_time: SongTime::new(0.0),
             property: EventType::AssignPathAnimation(PathPropertyHandle::new("definitePosition")),
             track_key: key,
             point_data: Some(BasePointDefinition::Vector3(pd)),
         };
 
-        cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev);
+        cm.start_event_coroutine(60.0, SongTime::new(0.0), &ctx, &mut holder, ev);
 
         // midpoint first
-        cm.poll_events(0.5, &ctx, &mut holder);
+        cm.poll_events(SongTime::new(0.5), &ctx, &mut holder);
         let track = holder.get_track(key).unwrap();
         let res1 = track
             .path_properties
@@ -1135,7 +1175,7 @@ mod tests {
         assert!((res1.x - 1.5).abs() < 1e-3, "expected ~1.5 got {}", res1.x);
 
         // midpoint second
-        cm.poll_events(1.5, &ctx, &mut holder);
+        cm.poll_events(SongTime::new(1.5), &ctx, &mut holder);
         let track = holder.get_track(key).unwrap();
         let res2 = track
             .path_properties
@@ -1147,7 +1187,7 @@ mod tests {
         assert!((res2.x - 1.5).abs() < 1e-3, "expected ~1.5 got {}", res2.x);
 
         // midpoint third
-        cm.poll_events(2.5, &ctx, &mut holder);
+        cm.poll_events(SongTime::new(2.5), &ctx, &mut holder);
         let track = holder.get_track(key).unwrap();
         let res3 = track
             .path_properties
@@ -1159,7 +1199,7 @@ mod tests {
         assert!((res3.x - 1.5).abs() < 1e-3, "expected ~1.5 got {}", res3.x);
 
         // after completion final value
-        cm.poll_events(3.1, &ctx, &mut holder);
+        cm.poll_events(SongTime::new(3.1), &ctx, &mut holder);
         let track = holder.get_track(key).unwrap();
         let res_final = track
             .path_properties
@@ -1184,16 +1224,16 @@ mod tests {
 
         // Event with no point_data should call set_null and leave property None
         let ev = EventData {
-            raw_duration: 1.0,
+            raw_duration: BpmTime::new(1.0),
             easing: Functions::EaseLinear,
             repeat: 0,
-            start_song_time: 0.0,
+            start_song_time: SongTime::new(0.0),
             property: EventType::AnimateTrack(ValuePropertyHandle::new("dissolve")),
             track_key: key,
             point_data: None,
         };
 
-        cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev);
+        cm.start_event_coroutine(60.0, SongTime::new(0.0), &ctx, &mut holder, ev);
 
         let track = holder.get_track(key).unwrap();
         assert!(
@@ -1231,19 +1271,19 @@ mod tests {
         ]);
 
         let ev = EventData {
-            raw_duration: 1.0,
+            raw_duration: BpmTime::new(1.0),
             easing: Functions::EaseLinear,
             repeat: 1,
-            start_song_time: 0.0,
+            start_song_time: SongTime::new(0.0),
             property: EventType::AnimateTrack(ValuePropertyHandle::new("dissolve")),
             track_key: key,
             point_data: Some(BasePointDefinition::Float(pd)),
         };
 
-        cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev);
+        cm.start_event_coroutine(60.0, SongTime::new(0.0), &ctx, &mut holder, ev);
 
         // halfway through first iteration
-        cm.poll_events(0.5, &ctx, &mut holder);
+        cm.poll_events(SongTime::new(0.5), &ctx, &mut holder);
         let v1 = holder
             .get_track(key)
             .unwrap()
@@ -1260,10 +1300,10 @@ mod tests {
         );
 
         // after first completes (slightly after 1.0) it should restart for second iteration
-        cm.poll_events(1.01, &ctx, &mut holder);
+        cm.poll_events(SongTime::new(1.01), &ctx, &mut holder);
 
         // during second iteration at 1.5 (0.5 into second), value should again be ~5.0
-        cm.poll_events(1.5, &ctx, &mut holder);
+        cm.poll_events(SongTime::new(1.5), &ctx, &mut holder);
         let v2 = holder
             .get_track(key)
             .unwrap()
@@ -1310,20 +1350,20 @@ mod tests {
         ]);
 
         let ev = EventData {
-            raw_duration: 1.0,
+            raw_duration: BpmTime::new(1.0),
             easing: Functions::EaseLinear,
             repeat: 0,
-            start_song_time: 0.0,
+            start_song_time: SongTime::new(0.0),
             property: EventType::AnimateTrack(ValuePropertyHandle::new("dissolve")),
             track_key: key,
             point_data: Some(BasePointDefinition::Float(pd)),
         };
 
         // Start at song_time = 0.0
-        cm.start_event_coroutine(bpm, 0.0, &ctx, &mut holder, ev);
+        cm.start_event_coroutine(bpm, SongTime::new(0.0), &ctx, &mut holder, ev);
 
         // Half of duration (duration = 0.5) occurs at song_time = 0.25
-        cm.poll_events(0.25, &ctx, &mut holder);
+        cm.poll_events(SongTime::new(0.25), &ctx, &mut holder);
         let v_half = holder
             .get_track(key)
             .unwrap()
@@ -1337,7 +1377,7 @@ mod tests {
         assert!((v_half - 5.0).abs() < 1e-3, "expected ~5.0 got {}", v_half);
 
         // After duration (0.5), at song_time = 0.6 the coroutine should finish and value be final
-        cm.poll_events(0.6, &ctx, &mut holder);
+        cm.poll_events(SongTime::new(0.6), &ctx, &mut holder);
         let v_final = holder
             .get_track(key)
             .unwrap()
@@ -1357,7 +1397,7 @@ mod tests {
         assert!(cm.coroutines.is_empty(), "expected no coroutines left");
 
         // Poll much later and ensure value remains the same
-        cm.poll_events(2.0, &ctx, &mut holder);
+        cm.poll_events(SongTime::new(2.0), &ctx, &mut holder);
         let v_later = holder
             .get_track(key)
             .unwrap()
@@ -1413,17 +1453,17 @@ mod tests {
 
         // event definition (raw_duration 1.0 -> duration = 1.0 when bpm=60)
         let ev = EventData {
-            raw_duration: 1.0,
+            raw_duration: BpmTime::new(1.0),
             easing,
             repeat,
-            start_song_time: 0.0,
+            start_song_time: SongTime::new(0.0),
             property: EventType::AnimateTrack(ValuePropertyHandle::new("dissolve")),
             track_key: key,
             point_data: Some(BasePointDefinition::Float(pd.clone())),
         };
 
         // Start the coroutine (bpm=60 -> duration_song_time = 1.0)
-        cm.start_event_coroutine(60.0, 0.0, &ctx, &mut holder, ev);
+        cm.start_event_coroutine(60.0, SongTime::new(0.0), &ctx, &mut holder, ev);
 
         // C#-side simulation property
         let mut prop_csharp = ValueProperty::empty(WrapBaseValueType::Float);
@@ -1476,7 +1516,7 @@ mod tests {
             }
 
             // --- Rust step via CoroutineManager ---
-            cm.poll_events(song_time, &ctx, &mut holder);
+            cm.poll_events(SongTime::from(song_time), &ctx, &mut holder);
 
             // Read the property's value from the track
             let track = holder.get_track(key).unwrap();

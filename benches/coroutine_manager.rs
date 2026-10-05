@@ -22,10 +22,10 @@ fn make_event(
     start: f32,
 ) -> EventData {
     EventData {
-        raw_duration: duration,
+        raw_duration: duration.into(),
         easing: Functions::EaseLinear,
         repeat: 0,
-        start_song_time: start,
+        start_song_time: start.into(),
         property: EventType::AnimateTrack(ValuePropertyHandle::new(V2_POSITION)),
         track_key,
         point_data: Some(
@@ -48,10 +48,10 @@ fn make_event_vec3(
     start: f32,
 ) -> EventData {
     EventData {
-        raw_duration: duration,
+        raw_duration: duration.into(),
         easing: Functions::EaseLinear,
         repeat: 0,
-        start_song_time: start,
+        start_song_time: start.into(),
         property: EventType::AnimateTrack(ValuePropertyHandle::new(property)),
         track_key,
         point_data: Some(
@@ -74,10 +74,10 @@ fn make_event_vec4(
     start: f32,
 ) -> EventData {
     EventData {
-        raw_duration: duration,
+        raw_duration: duration.into(),
         easing: Functions::EaseLinear,
         repeat: 0,
-        start_song_time: start,
+        start_song_time: start.into(),
         property: EventType::AnimateTrack(ValuePropertyHandle::new(property)),
         track_key,
         point_data: Some(
@@ -100,10 +100,10 @@ fn make_event_quat(
     start: f32,
 ) -> EventData {
     EventData {
-        raw_duration: duration,
+        raw_duration: duration.into(),
         easing: Functions::EaseLinear,
         repeat: 0,
-        start_song_time: start,
+        start_song_time: start.into(),
         property: EventType::AnimateTrack(ValuePropertyHandle::new(property)),
         track_key,
         point_data: Some(
@@ -123,10 +123,10 @@ fn make_event_vec3_base_swizzle_ops_points(
     start: f32,
 ) -> EventData {
     EventData {
-        raw_duration: duration,
+        raw_duration: duration.into(),
         easing: Functions::EaseLinear,
         repeat: 0,
-        start_song_time: start,
+        start_song_time: start.into(),
         property: EventType::AnimateTrack(ValuePropertyHandle::new(V2_POSITION)),
         track_key,
         point_data: Some(
@@ -149,10 +149,10 @@ fn make_event_vec4_base_ops_points(
     start: f32,
 ) -> EventData {
     EventData {
-        raw_duration: duration,
+        raw_duration: duration.into(),
         easing: Functions::EaseLinear,
         repeat: 0,
-        start_song_time: start,
+        start_song_time: start.into(),
         property: EventType::AnimateTrack(ValuePropertyHandle::new(V2_COLOR)),
         track_key,
         point_data: Some(
@@ -194,7 +194,8 @@ fn bench_start_and_poll(c: &mut Criterion) {
                 let mut max_end = 0.0_f32;
                 for &key in &keys {
                     let ev = make_event(key, &mut ctx, 2.0, 0.0);
-                    max_end = max_end.max(ev.start_song_time + ev.raw_duration);
+                    max_end = max_end
+                        .max((ev.start_song_time.seconds() + ev.raw_duration.beats()) as f32);
                     events.push(ev);
                 }
 
@@ -205,7 +206,13 @@ fn bench_start_and_poll(c: &mut Criterion) {
                     || (manager.clone(), holder.clone(), events.clone()),
                     |(mut manager, mut holder, events)| {
                         for ev in events {
-                            manager.start_event_coroutine(bpm, song_time, &ctx, &mut holder, ev);
+                            manager.start_event_coroutine(
+                                bpm,
+                                song_time.into(),
+                                &ctx,
+                                &mut holder,
+                                ev,
+                            );
                         }
 
                         // poll repeatedly until song end
@@ -213,7 +220,7 @@ fn bench_start_and_poll(c: &mut Criterion) {
                         let steps = (max_end / step).ceil() as usize;
                         for i in 0..=steps {
                             let t = i as f32 * step;
-                            manager.poll_events(t, &ctx, &mut holder);
+                            manager.poll_events(t.into(), &ctx, &mut holder);
                         }
                     },
                     BatchSize::SmallInput,
@@ -262,9 +269,12 @@ fn bench_multi_props(c: &mut Criterion) {
                         make_event_vec3(key, &mut ctx, V2_POSITION, [1.0, 0.0, 1.0], 1.0, 1.0, 0.3);
                     let ev3 =
                         make_event_vec3(key, &mut ctx, V2_POSITION, [2.0, 0.0, 0.0], 2.0, 0.8, 0.8);
-                    max_end = max_end.max(ev1.start_song_time + ev1.raw_duration);
-                    max_end = max_end.max(ev2.start_song_time + ev2.raw_duration);
-                    max_end = max_end.max(ev3.start_song_time + ev3.raw_duration);
+                    max_end = max_end
+                        .max((ev1.start_song_time.seconds() + ev1.raw_duration.beats()) as f32);
+                    max_end = max_end
+                        .max((ev2.start_song_time.seconds() + ev2.raw_duration.beats()) as f32);
+                    max_end = max_end
+                        .max((ev3.start_song_time.seconds() + ev3.raw_duration.beats()) as f32);
                     events.push(ev1);
                     events.push(ev2);
                     events.push(ev3);
@@ -288,8 +298,10 @@ fn bench_multi_props(c: &mut Criterion) {
                         1.2,
                         0.5,
                     );
-                    max_end = max_end.max(r1.start_song_time + r1.raw_duration);
-                    max_end = max_end.max(r2.start_song_time + r2.raw_duration);
+                    max_end = max_end
+                        .max((r1.start_song_time.seconds() + r1.raw_duration.beats()) as f32);
+                    max_end = max_end
+                        .max((r2.start_song_time.seconds() + r2.raw_duration.beats()) as f32);
                     events.push(r1);
                     events.push(r2);
 
@@ -298,8 +310,10 @@ fn bench_multi_props(c: &mut Criterion) {
                         make_event_vec3(key, &mut ctx, V2_SCALE, [1.0, 1.0, 1.0], 0.0, 0.4, 0.0);
                     let s2 =
                         make_event_vec3(key, &mut ctx, V2_SCALE, [2.0, 2.0, 2.0], 0.8, 0.9, 0.6);
-                    max_end = max_end.max(s1.start_song_time + s1.raw_duration);
-                    max_end = max_end.max(s2.start_song_time + s2.raw_duration);
+                    max_end = max_end
+                        .max((s1.start_song_time.seconds() + s1.raw_duration.beats()) as f32);
+                    max_end = max_end
+                        .max((s2.start_song_time.seconds() + s2.raw_duration.beats()) as f32);
                     events.push(s1);
                     events.push(s2);
 
@@ -322,8 +336,10 @@ fn bench_multi_props(c: &mut Criterion) {
                         1.1,
                         0.4,
                     );
-                    max_end = max_end.max(c1.start_song_time + c1.raw_duration);
-                    max_end = max_end.max(c2.start_song_time + c2.raw_duration);
+                    max_end = max_end
+                        .max((c1.start_song_time.seconds() + c1.raw_duration.beats()) as f32);
+                    max_end = max_end
+                        .max((c2.start_song_time.seconds() + c2.raw_duration.beats()) as f32);
                     events.push(c1);
                     events.push(c2);
                 }
@@ -333,7 +349,13 @@ fn bench_multi_props(c: &mut Criterion) {
                     |(mut manager, mut holder, events)| {
                         // start all created events
                         for ev in events {
-                            manager.start_event_coroutine(bpm, song_time, &ctx, &mut holder, ev);
+                            manager.start_event_coroutine(
+                                bpm,
+                                song_time.into(),
+                                &ctx,
+                                &mut holder,
+                                ev,
+                            );
                         }
 
                         // simulate time progression with multiple polls until song end
@@ -341,7 +363,7 @@ fn bench_multi_props(c: &mut Criterion) {
                         let steps = (max_end / step).ceil() as usize;
                         for i in 0..=steps {
                             let t = i as f32 * step;
-                            manager.poll_events(t, &ctx, &mut holder);
+                            manager.poll_events(t.into(), &ctx, &mut holder);
                         }
                     },
                     BatchSize::SmallInput,
@@ -387,8 +409,10 @@ fn bench_base_swizzle_ops_points(c: &mut Criterion) {
                 for &key in &keys {
                     let pos = make_event_vec3_base_swizzle_ops_points(key, &mut ctx, 1.0, 0.0);
                     let col = make_event_vec4_base_ops_points(key, &mut ctx, 1.2, 0.2);
-                    max_end = max_end.max(pos.start_song_time + pos.raw_duration);
-                    max_end = max_end.max(col.start_song_time + col.raw_duration);
+                    max_end = max_end
+                        .max((pos.start_song_time.seconds() + pos.raw_duration.beats()) as f32);
+                    max_end = max_end
+                        .max((col.start_song_time.seconds() + col.raw_duration.beats()) as f32);
                     events.push(pos);
                     events.push(col);
                 }
@@ -400,7 +424,13 @@ fn bench_base_swizzle_ops_points(c: &mut Criterion) {
                     || (manager.clone(), holder.clone(), events.clone(), ctx.clone()),
                     |(mut manager, mut holder, events, ctx)| {
                         for ev in events {
-                            manager.start_event_coroutine(bpm, song_time, &ctx, &mut holder, ev);
+                            manager.start_event_coroutine(
+                                bpm,
+                                song_time.into(),
+                                &ctx,
+                                &mut holder,
+                                ev,
+                            );
                         }
 
                         let step = 0.05_f32;
@@ -408,7 +438,7 @@ fn bench_base_swizzle_ops_points(c: &mut Criterion) {
                         for i in 0..=steps {
                             ctx.update_providers(step);
                             let t = i as f32 * step;
-                            manager.poll_events(t, &ctx, &mut holder);
+                            manager.poll_events(t.into(), &ctx, &mut holder);
                         }
                     },
                     BatchSize::SmallInput,

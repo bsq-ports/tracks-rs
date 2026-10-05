@@ -131,6 +131,31 @@ impl BaseValue {
             BaseValue::Quaternion(_) => WrapBaseValueType::Quat,
         }
     }
+
+    /// Interpolates towards `other` (slerp for quaternions). Panics if the variants differ.
+    ///
+    /// Inherent rather than only on `ValueType` so callers don't need the trait: rust-analyzer
+    /// crashes resolving `ValueType` methods on `BaseValue` because of its `generic_const_exprs` bound.
+    #[inline]
+    pub fn lerp(self, other: BaseValue, t: f32) -> BaseValue {
+        match (self, other) {
+            (BaseValue::Float(v1), BaseValue::Float(v2)) => f32::lerp(v1, v2, t).into(),
+            (BaseValue::Vector3(v1), BaseValue::Vector3(v2)) => Vec3::lerp(v1, v2, t).into(),
+            (BaseValue::Vector4(v1), BaseValue::Vector4(v2)) => Vec4::lerp(v1, v2, t).into(),
+            (BaseValue::Quaternion(v1), BaseValue::Quaternion(v2)) => {
+                // lerp or slerp?
+
+                Quat::slerp(v1, v2, t).into()
+            }
+            _ => panic!("Invalid interpolation"),
+        }
+    }
+
+    /// [`Self::lerp`] with `t` clamped to `[0, 1]`.
+    #[inline(always)]
+    pub fn lerp_clamped(self, other: BaseValue, t: f32) -> BaseValue {
+        self.lerp(other, t.clamp(0.0, 1.0))
+    }
 }
 
 impl ValueType for BaseValue {
@@ -166,22 +191,12 @@ impl ValueType for BaseValue {
 
     #[inline]
     fn value_lerp(a: BaseValue, b: BaseValue, t: f32) -> BaseValue {
-        match (a, b) {
-            (BaseValue::Float(v1), BaseValue::Float(v2)) => f32::lerp(v1, v2, t).into(),
-            (BaseValue::Vector3(v1), BaseValue::Vector3(v2)) => Vec3::lerp(v1, v2, t).into(),
-            (BaseValue::Vector4(v1), BaseValue::Vector4(v2)) => Vec4::lerp(v1, v2, t).into(),
-            (BaseValue::Quaternion(v1), BaseValue::Quaternion(v2)) => {
-                // lerp or slerp?
-
-                Quat::slerp(v1, v2, t).into()
-            }
-            _ => panic!("Invalid interpolation"),
-        }
+        a.lerp(b, t)
     }
 
     #[inline(always)]
     fn value_lerp_clamped(a: BaseValue, b: BaseValue, t: f32) -> BaseValue {
-        Self::value_lerp(a, b, t.clamp(0.0, 1.0))
+        a.lerp_clamped(b, t)
     }
 }
 

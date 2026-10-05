@@ -10,6 +10,7 @@ use crate::{
         UpdateableValues, ValueProvider, base::BaseProviderValues, partial::PartialProviderValues,
         smooth::SmoothProvidersValues, smooth_rot::SmoothRotationProvidersValues,
     },
+    time_types::SongTime,
 };
 
 /// Context for base value providers
@@ -35,8 +36,8 @@ pub struct BaseProviderContext {
     relative_score: f32,
     multiplier: f32,
     energy: f32,
-    song_time: f32,
-    song_length: f32,
+    song_time: SongTime,
+    song_length: SongTime,
 
     //Colors
     environment_color_0: Vec4,
@@ -77,6 +78,24 @@ impl BaseProviderContext {
         Default::default()
     }
 
+    /// The current song time, exposed to point definitions as `baseSongTime`.
+    pub fn song_time(&self) -> SongTime {
+        self.song_time
+    }
+
+    pub fn set_song_time(&mut self, song_time: SongTime) {
+        self.song_time = song_time;
+    }
+
+    /// The length of the song, exposed to point definitions as `baseSongLength`.
+    pub fn song_length(&self) -> SongTime {
+        self.song_length
+    }
+
+    pub fn set_song_length(&mut self, song_length: SongTime) {
+        self.song_length = song_length;
+    }
+
     pub fn get_values(&self, base: &str) -> BaseValue {
         match base {
             "baseNoteJumpMovementSpeed" => self.note_jump_movement_speed.into(),
@@ -96,8 +115,8 @@ impl BaseProviderContext {
             "baseRelativeScore" => self.relative_score.into(),
             "baseMultiplier" => self.multiplier.into(),
             "baseEnergy" => self.energy.into(),
-            "baseSongTime" => self.song_time.into(),
-            "baseSongLength" => self.song_length.into(),
+            "baseSongTime" => f32::from(self.song_time).into(),
+            "baseSongLength" => f32::from(self.song_length).into(),
 
             "baseEnvironmentColor0" => self.environment_color_0.into(),
             "baseEnvironmentColor0Boost" => self.environment_color_0_boost.into(),
@@ -170,10 +189,10 @@ impl BaseProviderContext {
                 self.energy = values[0];
             }
             "baseSongTime" => {
-                self.song_time = values[0];
+                self.song_time = values[0].into();
             }
             "baseSongLength" => {
-                self.song_length = values[0];
+                self.song_length = values[0].into();
             }
             "baseEnvironmentColor0" => {
                 self.environment_color_0 = base_value.as_vec4().unwrap();

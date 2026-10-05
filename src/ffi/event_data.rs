@@ -10,10 +10,11 @@ use crate::point_definition::base_point_definition::BasePointDefinition;
 // Type-safe enum for event types
 #[repr(C)]
 pub struct CEventData {
+    /// duration in beats
     pub raw_duration: f32,
     pub easing: Functions,
     pub repeat: u32,
-    // song time or beatmap time?
+    /// start time on the song clock, in seconds
     pub start_time: f32,
 
     pub event_type: CEventType,
@@ -48,6 +49,43 @@ pub enum CEventPropertyIdType {
     PropertyName = 1,
 }
 
+/// Converts a `CEventType` into a Rust `EventType`.
+///
+/// # Safety
+/// - If `property_id_type` is `CString`, `property_id.property_str` must be a valid null-terminated pointer.
+pub(crate) unsafe fn c_event_type_to_rust(c_event_type: &CEventType) -> EventType {
+    unsafe {
+        match c_event_type.ty {
+            CEventTypeEnum::AnimateTrack => {
+                let value_property_handle = match c_event_type.property_id_type {
+                    CEventPropertyIdType::CString => {
+                        let property_cstr = CStr::from_ptr(c_event_type.property_id.property_str);
+                        ValuePropertyHandle::new(property_cstr.to_str().unwrap_or_default())
+                    }
+                    CEventPropertyIdType::PropertyName => {
+                        ValuePropertyHandle::ById(c_event_type.property_id.property_name)
+                    }
+                };
+
+                EventType::AnimateTrack(value_property_handle)
+            }
+            CEventTypeEnum::AssignPathAnimation => {
+                let path_property_handle = match c_event_type.property_id_type {
+                    CEventPropertyIdType::CString => {
+                        let property_cstr = CStr::from_ptr(c_event_type.property_id.property_str);
+                        PathPropertyHandle::new(property_cstr.to_str().unwrap_or_default())
+                    }
+                    CEventPropertyIdType::PropertyName => {
+                        PathPropertyHandle::ById(c_event_type.property_id.property_name)
+                    }
+                };
+
+                EventType::AssignPathAnimation(path_property_handle)
+            }
+        }
+    }
+}
+
 /// Converts a `CEventData` into a Rust `EventData`.
 /// Does not consume the input struct; returns an owned pointer to a newly allocated `EventData`.
 ///
@@ -63,47 +101,15 @@ pub unsafe extern "C" fn event_data_to_rust(c_event_data: *const CEventData) -> 
     unsafe {
         let c_event_data = &*c_event_data;
 
-        let event_type = match c_event_data.event_type.ty {
-            CEventTypeEnum::AnimateTrack => {
-                let value_property_handle: ValuePropertyHandle =
-                    match c_event_data.event_type.property_id_type {
-                        CEventPropertyIdType::CString => {
-                            let property_cstr =
-                                CStr::from_ptr(c_event_data.event_type.property_id.property_str);
-                            let property_str = property_cstr.to_str().unwrap_or_default();
-                            ValuePropertyHandle::new(property_str)
-                        }
-                        CEventPropertyIdType::PropertyName => ValuePropertyHandle::ById(
-                            c_event_data.event_type.property_id.property_name,
-                        ),
-                    };
-
-                EventType::AnimateTrack(value_property_handle)
-            }
-            CEventTypeEnum::AssignPathAnimation => {
-                let path_property_handle = match c_event_data.event_type.property_id_type {
-                    CEventPropertyIdType::CString => {
-                        let property_cstr =
-                            CStr::from_ptr(c_event_data.event_type.property_id.property_str);
-                        let property_str = property_cstr.to_str().unwrap_or_default();
-                        PathPropertyHandle::new(property_str)
-                    }
-                    CEventPropertyIdType::PropertyName => {
-                        PathPropertyHandle::ById(c_event_data.event_type.property_id.property_name)
-                    }
-                };
-
-                EventType::AssignPathAnimation(path_property_handle)
-            }
-        };
+        let event_type = c_event_type_to_rust(&c_event_data.event_type);
         let track_key = c_event_data.track_key;
         let point_data = c_event_data.point_data_ptr.as_ref().cloned();
 
         let event_data = EventData {
-            raw_duration: c_event_data.raw_duration,
+            raw_duration: c_event_data.raw_duration.into(),
             easing: c_event_data.easing,
             repeat: c_event_data.repeat,
-            start_song_time: c_event_data.start_time,
+            start_song_time: c_event_data.start_time.into(),
             track_key: track_key.into(),
             point_data,
             property: event_type,

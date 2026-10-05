@@ -44,6 +44,7 @@ pub mod providers;
 
 pub mod base_value;
 pub mod value_types;
+pub mod time_types;
 
 pub mod quaternion_utils;
 

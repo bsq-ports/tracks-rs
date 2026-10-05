@@ -53,7 +53,13 @@ pub unsafe extern "C" fn start_event_coroutine(
         let context = &*context;
         let event_data = (*event_data).clone();
 
-        manager.start_event_coroutine(bpm, song_time, context, &mut *tracks_holder, event_data);
+        manager.start_event_coroutine(
+            bpm,
+            song_time.into(),
+            context,
+            &mut *tracks_holder,
+            event_data,
+        );
     }
 }
 
@@ -78,6 +84,6 @@ pub unsafe extern "C" fn poll_events(
         let manager = &mut *manager;
         let context = &*context;
 
-        manager.poll_events(song_time, context, &mut *tracks_holder);
+        manager.poll_events(song_time.into(), context, &mut *tracks_holder);
     }
 }

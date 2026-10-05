@@ -5,6 +5,7 @@ pub mod event_data;
 pub mod json;
 pub mod point_def;
 pub mod property;
+pub mod replay_coroutine_manager;
 pub mod time;
 pub mod track;
 pub mod tracks_holder;

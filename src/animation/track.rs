@@ -46,13 +46,13 @@ pub const V2_FOG_OFFSET: &str = "_fogOffset";
 pub const V2_HEIGHT_FOG_START_Y: &str = "_heightFogStartY";
 pub const V2_HEIGHT_FOG_HEIGHT: &str = "_heightFogHeight";
 
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd)]
 pub enum ValuePropertyHandle {
     ByName(String),
     ById(PropertyNames),
 }
 
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd)]
 pub enum PathPropertyHandle {
     ByName(String),
     ById(PropertyNames),

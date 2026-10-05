@@ -141,6 +141,46 @@ typedef struct BasicPointDefinition_Vec4 BasicPointDefinition_Vec4;
 
 typedef struct BasicPointDefinition_f32 BasicPointDefinition_f32;
 
+/**
+ * Drives time-based track events (`AnimateTrack` and `AssignPathAnimation`).
+ *
+ * # Coroutines
+ * A coroutine is a `CoroutineTask`: the state of one event that is still running.
+ * It holds the target track and property, the start time, the duration (beats converted to
+ * song time using the BPM), the easing, the repeat count and the point definition. Each poll
+ * moves it forward and returns [`CoroutineResult::Yield`] (keep running) or
+ * [`CoroutineResult::Break`] (finished; remove it). This mirrors the Unity coroutines
+ * used by the original C# implementation, but here the caller drives them with song time.
+ *
+ * # Starting and overriding events
+ * [`Self::start_event_coroutine`] first cancels any running coroutine with the same track
+ * *and* event type. Each `(track, property)` pair has at most one active coroutine, so a
+ * new event takes over a property that is still animating. Events on other tracks, or on
+ * other properties of the same track, are unaffected.
+ *
+ * The new event is then evaluated once at the current song time. It is not queued if:
+ * - it has no point data, so the target property is cleared (`set_null`),
+ * - it has zero duration or has already fully elapsed (repeats included), so the final value is applied,
+ * - it is a single static point with no base provider, so that value is applied once,
+ * - it already finished during that first evaluation.
+ *
+ * # Animating properties (`AnimateTrack`)
+ * Each poll computes `elapsed / duration`, clamps it to `[0, 1]`, applies the easing,
+ * interpolates the point definition, and writes the result to the track's `ValueProperty`.
+ * When an iteration ends and `repeat > 0`, the start time moves forward by one duration and
+ * the animation runs again. A large time step can finish several iterations in one poll.
+ * Point definitions with base providers are never finished early, because their output
+ * can still change after the last point is reached.
+ *
+ * # Animating path properties (`AssignPathAnimation`)
+ * When the event starts, the track's `PathProperty` keeps its current path as the previous
+ * path and takes the event's point definition as the new path. Objects sample the path at
+ * their own lifetime. The coroutine only advances the eased `interpolate_time`, which
+ * controls the blend from the previous path to the new path. When the duration ends, the
+ * path property is finished: the previous path is dropped and only the new path is used.
+ *
+ * Call [`Self::poll_events`] once per frame with the current song time.
+ */
 typedef struct CoroutineManager CoroutineManager;
 
 typedef struct EventData EventData;
@@ -151,6 +191,26 @@ typedef struct EventData EventData;
 typedef struct PointDefinitionInterpolation PointDefinitionInterpolation;
 
 typedef struct QuaternionPointDefinition QuaternionPointDefinition;
+
+/**
+ * Evaluates track events at any song time, instead of stepping forward like [`super::coroutine_manager::CoroutineManager`].
+ *
+ * All events are registered up front. They are grouped into one timeline per
+ * `(track, EventType)` and sorted by start time. Starting an event overrides the previous
+ * one on the same property, so the state at song time `x` depends only on the **last event
+ * with `start <= x`**. A path property also needs the event before it, because that is the
+ * path it blends from. Nothing has to be replayed, so you can seek forwards or backwards.
+ *
+ * - [`Self::value_at`] and [`Self::path_at`] are read-only queries.
+ * - [`Self::apply`] writes the snapshot at `x` into a [`TracksHolder`]. Properties with no
+ *   active event at `x` are reset to `None`.
+ *
+ * The evaluation rules match `CoroutineManager`:
+ * - `AnimateTrack` repeats `repeat + 1` times and then holds the final value.
+ * - `AssignPathAnimation` blends from the previous path to the new one over the duration, then finishes.
+ * - Events with no point data clear the property.
+ */
+typedef struct ReplayBasedCoroutineManager ReplayBasedCoroutineManager;
 
 /**
  * A Track represents a collection of properties and path properties associated with game objects.
@@ -219,9 +279,15 @@ typedef struct TrackKeyFFI {
 } TrackKeyFFI;
 
 typedef struct CEventData {
+  /**
+   * duration in beats
+   */
   float raw_duration;
   enum Functions easing;
   uint32_t repeat;
+  /**
+   * start time on the song clock, in seconds
+   */
   float start_time;
   struct CEventType event_type;
   struct TrackKeyFFI track_key;
@@ -816,6 +882,78 @@ struct CValueProperty property_get_value(const struct ValueProperty *ptr);
  * - `ptr` may be null; if non-null it must point to a valid `ValueProperty`.
  */
 struct CTimeUnit property_get_last_updated(const struct ValueProperty *ptr);
+
+/**
+ * Creates a new ReplayBasedCoroutineManager instance and returns a raw pointer to it.
+ * The caller is responsible for freeing the memory using destroy_replay_coroutine_manager.
+ */
+struct ReplayBasedCoroutineManager *create_replay_coroutine_manager(void);
+
+/**
+ * Destroys a `ReplayBasedCoroutineManager` instance, freeing its memory.
+ *
+ * # Safety
+ * - `manager` must be a pointer previously returned by `create_replay_coroutine_manager` and not already freed.
+ * - Passing a null pointer is a no-op.
+ */
+void destroy_replay_coroutine_manager(struct ReplayBasedCoroutineManager *manager);
+
+/**
+ * Adds an event to the manager's timeline.
+ *
+ * # Safety
+ * - `manager` must be a valid pointer to a `ReplayBasedCoroutineManager`.
+ * - `event_data` must be a pointer returned by `event_data_to_rust`. The data is cloned, so the caller retains ownership.
+ */
+void replay_coroutine_manager_add_event(struct ReplayBasedCoroutineManager *manager,
+                                        float bpm,
+                                        const struct EventData *event_data);
+
+/**
+ * Writes the state of every animated property and path property at `song_time` into the tracks.
+ * `song_time` may move in any direction.
+ *
+ * # Safety
+ * - `manager` must be a valid pointer to a `ReplayBasedCoroutineManager`.
+ * - `context` must be a valid pointer to a `BaseProviderContext`.
+ * - `tracks_holder` must be a valid pointer to a `TracksHolder`.
+ */
+void replay_coroutine_manager_apply(struct ReplayBasedCoroutineManager *manager,
+                                    float song_time,
+                                    const struct BaseProviderContext *context,
+                                    struct TracksHolder *tracks_holder);
+
+/**
+ * Returns the value of an `AnimateTrack` property at `song_time` without modifying any track.
+ * Has no value if no event is active, or if `property` is not an `AnimateTrack` event type.
+ *
+ * # Safety
+ * - `manager` must be a valid pointer to a `ReplayBasedCoroutineManager`.
+ * - `context` must be a valid pointer to a `BaseProviderContext`.
+ * - `property` must be a valid pointer to a `CEventType`; C strings inside it must be null-terminated.
+ */
+struct CValueNullable replay_coroutine_manager_value_at(const struct ReplayBasedCoroutineManager *manager,
+                                                        float song_time,
+                                                        const struct BaseProviderContext *context,
+                                                        struct TrackKeyFFI track_key,
+                                                        const struct CEventType *property);
+
+/**
+ * Samples an `AssignPathAnimation` path property at `path_time` (an object's lifetime) as it is at `song_time`,
+ * without modifying any track.
+ * Has no value if the path has no points, or if `property` is not an `AssignPathAnimation` event type.
+ *
+ * # Safety
+ * - `manager` must be a valid pointer to a `ReplayBasedCoroutineManager`.
+ * - `context` must be a valid pointer to a `BaseProviderContext`.
+ * - `property` must be a valid pointer to a `CEventType`; C strings inside it must be null-terminated.
+ */
+struct CValueNullable replay_coroutine_manager_path_value_at(const struct ReplayBasedCoroutineManager *manager,
+                                                             float song_time,
+                                                             float path_time,
+                                                             const struct BaseProviderContext *context,
+                                                             struct TrackKeyFFI track_key,
+                                                             const struct CEventType *property);
 
 struct CTimeUnit get_time(void);
 
