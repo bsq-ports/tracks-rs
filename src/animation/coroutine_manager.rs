@@ -53,6 +53,7 @@ impl Default for CoroutineManager {
 }
 
 impl EventType {
+    /// Clears the track property or path property targeted by this event type.
     pub(crate) fn set_null(&self, track: &mut Track) {
         match self {
             EventType::AnimateTrack(property_handle) => {
@@ -74,6 +75,7 @@ impl EventType {
 }
 
 impl CoroutineManager {
+    /// Starts a new event coroutine, cancelling any existing coroutines for the same event type on the same track.
     pub fn start_event_coroutine(
         &mut self,
         bpm: f32,
@@ -129,6 +131,7 @@ impl CoroutineManager {
         // self.coroutines.extend(event_tasks);
     }
 
+    /// Creates a new CoroutineTask for the given event data, if it has a valid duration and points.
     fn make_event_task(
         current_song_time: f32,
         duration_song_time: f32,
@@ -226,6 +229,7 @@ impl CoroutineManager {
         })
     }
 
+    /// Advances all active coroutines to `song_time`, removing any that have finished.
     pub fn poll_events(
         &mut self,
         song_time: f32,
@@ -246,6 +250,7 @@ impl CoroutineManager {
         }
     }
 
+    /// Polls a single coroutine task and updates the associated track property.
     fn poll_event(
         song_time: f32,
         context: &BaseProviderContext,
@@ -315,6 +320,8 @@ impl CoroutineManager {
     }
 }
 
+/// Interpolates `points` at the eased progress of the event and writes the result to `property`.
+/// Returns `Break` once the duration has elapsed (or early if the last point is reached and not `non_lazy`).
 #[allow(clippy::too_many_arguments)]
 fn animate_track(
     points: &base_point_definition::BasePointDefinition,
@@ -351,6 +358,8 @@ fn animate_track(
     CoroutineResult::Break
 }
 
+/// Updates the path property's eased interpolation time for the current song time.
+/// Returns `Break` and finishes the path property once the duration has elapsed.
 fn assign_path_animation(
     interpolation: &mut PathProperty,
     duration: f32,
