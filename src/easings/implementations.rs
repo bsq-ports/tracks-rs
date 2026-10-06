@@ -1,3 +1,10 @@
+/// What `sqrt` is clamped to in the circ easings, so rounding past the end can never produce NaN.
+/// The same value as Unity's `Mathf.Epsilon`, the smallest positive `f32`.
+const SQRT_FLOOR: f32 = f32::from_bits(1);
+
+// The easing functions are based on the ones in the original PR by Owen
+// https://github.com/Aeroluna/Heck/pull/183/changes
+
 pub const fn ease_linear(p: f32) -> f32 {
     p
 }
@@ -6,8 +13,9 @@ pub fn ease_step(p: f32) -> f32 {
     p.floor()
 }
 
+/// Modeled after the parabola y = 2x - x^2
 pub const fn ease_out_quad(p: f32) -> f32 {
-    -(p * (p - 2.0))
+    (2.0 - p) * p
 }
 
 pub const fn ease_in_quad(p: f32) -> f32 {
@@ -15,11 +23,9 @@ pub const fn ease_in_quad(p: f32) -> f32 {
 }
 
 pub const fn ease_in_out_quad(p: f32) -> f32 {
-    if p < 0.5 {
-        2.0 * p * p
-    } else {
-        (-2.0 * p * p) + (4.0 * p) - 1.0
-    }
+    // a slightly faster smoothstep
+    let x = p - 0.5;
+    (x - x * x.abs()) * 2.0 + 0.5
 }
 
 pub const fn ease_in_cubic(p: f32) -> f32 {
@@ -27,17 +33,14 @@ pub const fn ease_in_cubic(p: f32) -> f32 {
 }
 
 pub const fn ease_out_cubic(p: f32) -> f32 {
-    let f = p - 1.0;
-    (f * f * f) + 1.0
+    let f = 1.0 - p;
+    1.0 - (f * f * f)
 }
 
 pub const fn ease_in_out_cubic(p: f32) -> f32 {
-    if p < 0.5 {
-        4.0 * p * p * p
-    } else {
-        let f = (2.0 * p) - 2.0;
-        (0.5 * f * f * f) + 1.0
-    }
+    let f = p - 0.5;
+    let x = f.abs();
+    ((4.0 * x - 6.0) * x + 3.0) * f + 0.5
 }
 
 pub const fn ease_in_quart(p: f32) -> f32 {
@@ -45,17 +48,17 @@ pub const fn ease_in_quart(p: f32) -> f32 {
 }
 
 pub const fn ease_out_quart(p: f32) -> f32 {
-    let f = p - 1.0;
-    (f * f * f * (1.0 - p)) + 1.0
+    let f = 1.0 - p;
+    1.0 - (f * f * f * f)
 }
 
 pub const fn ease_in_out_quart(p: f32) -> f32 {
-    if p < 0.5 {
-        8.0 * p * p * p * p
-    } else {
-        let f = p - 1.0;
-        (-8.0 * f * f * f * f) + 1.0
-    }
+    let f = p - 0.5;
+    let x = f.abs();
+    let mut t = x * -8.0 + 16.0;
+    t = t * x - 12.0;
+    t = t * x + 4.0;
+    t * f + 0.5
 }
 
 pub const fn ease_in_quint(p: f32) -> f32 {
@@ -63,21 +66,22 @@ pub const fn ease_in_quint(p: f32) -> f32 {
 }
 
 pub const fn ease_out_quint(p: f32) -> f32 {
-    let f = p - 1.0;
-    (f * f * f * f * f) + 1.0
+    let f = 1.0 - p;
+    1.0 - (f * f * f * f * f)
 }
 
 pub const fn ease_in_out_quint(p: f32) -> f32 {
-    if p < 0.5 {
-        16.0 * p * p * p * p * p
-    } else {
-        let f = (2.0 * p) - 2.0;
-        (0.5 * f * f * f * f * f) + 1.0
-    }
+    let f = p - 0.5;
+    let x = f.abs();
+    let mut t = x * 16.0 - 40.0;
+    t = t * x + 40.0;
+    t = t * x - 20.0;
+    t = t * x + 5.0;
+    t * f + 0.5
 }
 
 pub fn ease_in_sine(p: f32) -> f32 {
-    ((p - 1.0) * std::f32::consts::FRAC_PI_2).sin() + 1.0
+    1.0 - (std::f32::consts::FRAC_PI_2 * p).cos()
 }
 
 pub fn ease_out_sine(p: f32) -> f32 {
@@ -85,48 +89,60 @@ pub fn ease_out_sine(p: f32) -> f32 {
 }
 
 pub fn ease_in_out_sine(p: f32) -> f32 {
-    0.5 * (1.0 - (p * std::f32::consts::PI).cos())
+    let f = (std::f32::consts::FRAC_PI_2 * p).sin();
+    f * f
 }
 
 pub fn ease_in_circ(p: f32) -> f32 {
-    1.0 - (1.0 - (p * p)).sqrt()
+    1.0 - (1.0 - p * p).max(SQRT_FLOOR).sqrt()
 }
 
 pub fn ease_out_circ(p: f32) -> f32 {
-    ((2.0 - p) * p).sqrt()
+    ((2.0 - p) * p).max(SQRT_FLOOR).sqrt()
 }
 
 pub fn ease_in_out_circ(p: f32) -> f32 {
     if p < 0.5 {
-        0.5 * (1.0 - (4.0 * p * p).sqrt())
+        0.5 - (0.25 - p * p).max(SQRT_FLOOR).sqrt()
     } else {
-        0.5 * ((-((2.0 * p) - 3.0) * ((2.0 * p) - 1.0)).sqrt() + 1.0)
+        let q = p - 1.0;
+        0.5 + (0.25 - q * q).max(SQRT_FLOOR).sqrt()
     }
 }
 
 pub fn ease_in_expo(p: f32) -> f32 {
-    if p == 0.0 {
+    // rescaled so that f(0) = 0 and f(1) = 1, with no snapping at the start
+    const S: f32 = 1.0 / 1023.0;
+    if p <= 0.0 {
         p
     } else {
-        2.0f32.powf(10.0 * (p - 1.0))
+        2.0f32.powf(10.0 * p) * S - S
     }
 }
 
 pub fn ease_out_expo(p: f32) -> f32 {
-    if p == 1.0 {
+    const S: f32 = 1024.0 / 1023.0;
+    if p > 1.0 {
         p
     } else {
-        1.0 - 2.0f32.powf(-10.0 * p)
+        S - S * 2.0f32.powf(-10.0 * p)
     }
 }
 
 pub fn ease_in_out_expo(p: f32) -> f32 {
-    if p == 0.0 || p == 1.0 {
-        p
-    } else if p < 0.5 {
-        0.5 * 2.0f32.powf((20.0 * p) - 10.0)
+    if p > 1.0 {
+        return p;
+    }
+
+    let x = p * 20.0 - 10.0;
+    const S: f32 = 512.0 / 1023.0;
+
+    if x < 0.0 {
+        // left half
+        0.5 - (S - S * 2.0f32.powf(x))
     } else {
-        (-0.5 * 2.0f32.powf((-20.0 * p) + 10.0)) + 1.0
+        // right half
+        0.5 + (S - S * 2.0f32.powf(-x))
     }
 }
 
@@ -168,16 +184,23 @@ pub fn ease_in_out_back(p: f32) -> f32 {
     }
 }
 
+/// Bouncing from 0 up to 1. Collision points: 4/11, 8/11, 9/11, 1.0
 pub const fn ease_out_bounce(p: f32) -> f32 {
-    if p < 4.0 / 11.0 {
-        (121.0 * p * p) / 16.0
-    } else if p < 8.0 / 11.0 {
-        (363.0 / 40.0 * p * p) - (99.0 / 10.0 * p) + (17.0 / 5.0)
-    } else if p < 9.0 / 10.0 {
-        (4356.0 / 361.0 * p * p) - (35442.0 / 1805.0 * p) + (16061.0 / 1805.0)
-    } else {
-        (54.0 / 5.0 * p * p) - (513.0 / 25.0 * p) + (268.0 / 25.0)
-    }
+    // the minimum of four parabolas, one per bounce
+    let a = (121.0 / 16.0) * p * p;
+    let mut x = a;
+
+    let q1 = p - (6.0 / 11.0);
+    let b = (363.0 / 40.0) * q1 * q1 + (7.0 / 10.0);
+    x = if b < x { b } else { x };
+
+    let q2 = p - (179.0 / 220.0);
+    let c = (4356.0 / 361.0) * q2 * q2 + (91.0 / 100.0);
+    x = if c < x { c } else { x };
+
+    let q3 = p - (19.0 / 20.0);
+    let d = (54.0 / 5.0) * q3 * q3 + (973.0 / 1000.0);
+    if d < x { d } else { x }
 }
 
 pub const fn ease_in_bounce(p: f32) -> f32 {
