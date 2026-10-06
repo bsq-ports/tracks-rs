@@ -346,7 +346,12 @@ fn assign_path_animation(
     song_time: SongTime,
 ) -> ControlFlow<()> {
     let elapsed_time = song_time - start_time;
-    let normalized_time = (elapsed_time / duration).min(1.0) as f32;
+    // clamped normalized time, a zero duration is already complete
+    let normalized_time = if duration <= SongTime::ZERO {
+        1.0
+    } else {
+        (elapsed_time / duration).clamp(0.0, 1.0) as f32
+    };
     interpolation.interpolate_time = easing.interpolate(normalized_time);
 
     if elapsed_time < duration {
