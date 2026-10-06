@@ -169,9 +169,9 @@ impl PointDefinitionLike<Vec3> for Vector3PointDefinition {
         if r.smooth {
             let point_a_a = PointDataLike::get_point(l, context);
             let point_b_a = PointDataLike::get_point(r, context);
-            let l_sub_1 = self
-                .points
-                .get(l_index - 1)
+            let l_sub_1 = l_index
+                .checked_sub(1)
+                .and_then(|i| self.points.get(i))
                 .map(|p| p.get_point(context))
                 .map(Vec3A::from);
             let r_add_1 = self
