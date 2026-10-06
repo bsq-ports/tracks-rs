@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::{
     animation::{
         event_timing::EventTiming,
@@ -796,7 +794,7 @@ mod tests {
         let (mut holder, a, b) = holder_with_tracks();
         let mut replay = TimelineCoroutineManager::new();
         let ids: Vec<_> = [0.0, 1.0, 2.0, 3.0]
-            .map(|t| replay.add_event(60.0, event(a, dissolve(), t, 0.0, 0, Some(float_points(0.0, t as f32)))))
+            .map(|t| replay.add_event(60.0, event(a, dissolve(), t, 0.0, 0, Some(float_points(0.0, t)))))
             .into();
         replay.add_event(60.0, event(b, dissolve(), 1.0, 0.0, 0, Some(float_points(0.0, 9.0))));
 

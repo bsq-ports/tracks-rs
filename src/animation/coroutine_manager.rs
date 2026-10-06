@@ -1165,11 +1165,14 @@ mod tests {
 
     #[test]
     fn late_start_mid_repeat_runs_the_current_iteration() {
+        use crate::animation::timeline_coroutine_manager::TimelineCoroutineManager;
+
         let ctx = BaseProviderContext::new();
         let mut holder = TracksHolder::new();
         let mut track = Track::default();
         track.name = "late".to_string();
         let key = holder.add_track(track);
+        let handle = ValuePropertyHandle::new("dissolve");
 
         // runs 0..1, 1..2 and 2..3, but is only started at 1.5, halfway through the second iteration
         let event = EventData {
@@ -1177,7 +1180,7 @@ mod tests {
             easing: Functions::EaseLinear,
             repeat: 2,
             start_song_time: SongTime::new(0.0),
-            property: EventType::AnimateTrack(ValuePropertyHandle::new("dissolve")),
+            property: EventType::AnimateTrack(handle.clone()),
             track_key: key,
             point_data: Some(BasePointDefinition::Float(BasicPointDefinition::new(vec![
                 BasicPointData::new(
@@ -1196,6 +1199,7 @@ mod tests {
                 ),
             ]))),
         };
+        let timeline = TimelineCoroutineManager::from_events(60.0, [event.clone()]);
 
         let mut cm = CoroutineManager::default();
         cm.start_event_coroutine(60.0, SongTime::new(1.5), &ctx, &mut holder, event);
@@ -1211,17 +1215,24 @@ mod tests {
                 .as_float()
                 .unwrap()
         };
+        let expected = |t: f64| {
+            timeline
+                .value_at(SongTime::new(t), key, &handle, &ctx)
+                .unwrap()
+                .as_float()
+                .unwrap()
+        };
 
         assert!(
             (dissolve(&holder) - 5.0).abs() < 1e-4,
             "got {}",
             dissolve(&holder)
         );
+        assert!((dissolve(&holder) - expected(1.5)).abs() < 1e-4);
 
-        // a quarter into the third iteration
         cm.poll_events(SongTime::new(2.25), &ctx, &mut holder);
         assert!(
-            (dissolve(&holder) - 2.5).abs() < 1e-4,
+            (dissolve(&holder) - expected(2.25)).abs() < 1e-4,
             "got {}",
             dissolve(&holder)
         );
