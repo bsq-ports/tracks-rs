@@ -21,6 +21,8 @@ use super::PointDefinitionLike;
 /// Point definitions are used to describe what happens over the course of an animation,
 /// they are used slightly differently for different properties.
 /// They consist of a collection of points over time.
+/// 
+/// Cloning is cheap because the underlying data is reference counted, so you can clone a point definition to use it in multiple places without copying the underlying data.
 #[derive(Debug, Clone)]
 pub enum BasePointDefinition {
     Float(BasicPointDefinition<f32>),

@@ -136,6 +136,8 @@ typedef struct BaseFFIProviderValues BaseFFIProviderValues;
  * Point definitions are used to describe what happens over the course of an animation,
  * they are used slightly differently for different properties.
  * They consist of a collection of points over time.
+ *
+ * Cloning is cheap because the underlying data is reference counted, so you can clone a point definition to use it in multiple places without copying the underlying data.
  */
 typedef struct BasePointDefinition BasePointDefinition;
 
@@ -205,6 +207,34 @@ typedef struct EventData EventData;
 typedef struct PointDefinitionInterpolation PointDefinitionInterpolation;
 
 typedef struct QuaternionPointDefinition QuaternionPointDefinition;
+
+/**
+ * Evaluates track events at any song time, instead of stepping forward like [`super::coroutine_manager::CoroutineManager`].
+ *
+ * All events are registered up front. They are grouped into one timeline per
+ * `(track, property)` and sorted by start time. Starting an event overrides the previous
+ * one on the same property, so the state at song time `x` depends only on the **last event
+ * with `start <= x`**. A path property also needs the event before it, because that is the
+ * path it blends from. Nothing has to be replayed, so you can seek forwards or backwards.
+ *
+ * - [`Self::value_at`] and [`Self::path_at`] are read-only queries.
+ * - [`Self::apply`] writes the snapshot at `x` into a [`TracksHolder`]. Properties with no
+ *   active event at `x` are reset to `None`.
+ *
+ * The evaluation rules match `CoroutineManager`:
+ * - `AnimateTrack` repeats `repeat + 1` times and then holds the final value.
+ * - `AssignPathAnimation` blends from the previous path to the new one over the duration, then finishes.
+ * - Events with no point data clear the property.
+ *
+ * # Adding and removing events
+ * Events can be added and removed at any time, in any order. [`Self::add_event`] returns an
+ * [`EventId`] that [`Self::remove_event`] takes back. [`Self::remove_events_between`] removes every
+ * event of a track, on any property, that starts in a time range, and [`Self::clear`] removes everything.
+ * Removing an event makes the previous one on that property active again, once [`Self::apply`]
+ * runs again. A property whose events were all removed individually is reset to `None` by that
+ * `apply`, but [`Self::clear`] forgets the properties, so `apply` no longer touches them.
+ */
+typedef struct TimelineCoroutineManager TimelineCoroutineManager;
 
 /**
  * A Track represents a collection of properties and path properties associated with game objects.
@@ -347,6 +377,36 @@ typedef struct CValueProperty {
   struct CValueNullable value;
   struct CTimeUnit last_updated;
 } CValueProperty;
+
+/**
+ * Identifies an event added with `timeline_add_event`.
+ */
+typedef struct CEventId {
+  struct TrackKeyFFI track_key;
+  uint64_t id;
+} CEventId;
+
+/**
+ * The blend state of a path property at a song time. See `timeline_path_blend`.
+ */
+typedef struct CPathBlend {
+  /**
+   * Whether any event ever targets this path property. The other fields are only meaningful if true.
+   */
+  bool exists;
+  /**
+   * Whether a previous path is still being blended from.
+   */
+  bool has_prev_point;
+  /**
+   * Whether there is an active path. False before the first event or after a null event.
+   */
+  bool has_point;
+  /**
+   * Eased blend from the previous path to the active one.
+   */
+  float interpolate_time;
+} CPathBlend;
 
 typedef struct GameObject {
   const void *ptr;
@@ -986,6 +1046,124 @@ struct CValueProperty property_get_value(const struct ValueProperty *ptr);
 struct CTimeUnit property_get_last_updated(const struct ValueProperty *ptr);
 
 struct CTimeUnit get_time(void);
+
+/**
+ * Creates a new, empty `TimelineCoroutineManager` and returns a raw pointer to it.
+ * The caller is responsible for freeing the memory using `destroy_timeline_coroutine_manager`.
+ */
+struct TimelineCoroutineManager *create_timeline_coroutine_manager(void);
+
+/**
+ * Destroys a `TimelineCoroutineManager` instance, freeing its memory.
+ *
+ * # Safety
+ * - `manager` must be a pointer previously returned by `create_timeline_coroutine_manager` and not already freed.
+ * - Passing a null pointer is a no-op.
+ */
+void destroy_timeline_coroutine_manager(struct TimelineCoroutineManager *manager);
+
+/**
+ * Adds an event to the timeline and returns its id, to remove it with `timeline_remove_event`.
+ * Events can be added in any order, at any time.
+ * When two events on the same property start at the same time, the one added later wins.
+ * Returns an invalid id (null track key, `id == UINT64_MAX`) if a pointer is null.
+ *
+ * # Safety
+ * - `manager` must be a valid pointer to a `TimelineCoroutineManager`.
+ * - `event_data` must be a pointer returned by `event_data_to_rust`. The data is cloned, so the caller retains ownership.
+ */
+struct CEventId timeline_add_event(struct TimelineCoroutineManager *manager,
+                                   float bpm,
+                                   const struct EventData *event_data);
+
+/**
+ * Removes the event with `id`, as returned by `timeline_add_event`.
+ * Returns false if it was already removed or never existed.
+ *
+ * # Safety
+ * - `manager` must be a valid pointer to a `TimelineCoroutineManager`.
+ */
+bool timeline_remove_event(struct TimelineCoroutineManager *manager, struct CEventId id);
+
+/**
+ * Removes every event on every property of `track_key` that starts in `start_song_time..=end_song_time`.
+ * Returns how many events were removed.
+ *
+ * # Safety
+ * - `manager` must be a valid pointer to a `TimelineCoroutineManager`.
+ */
+uint32_t timeline_remove_events_between(struct TimelineCoroutineManager *manager,
+                                        struct TrackKeyFFI track_key,
+                                        float start_song_time,
+                                        float end_song_time);
+
+/**
+ * Removes every event. Properties stay as they are until something else writes them.
+ *
+ * # Safety
+ * - `manager` must be a valid pointer to a `TimelineCoroutineManager`.
+ */
+void timeline_clear(struct TimelineCoroutineManager *manager);
+
+/**
+ * Writes the state at `song_time` into every property that has events.
+ * Can be called with any time, in any order, so it can be used to seek backwards.
+ *
+ * # Safety
+ * - `manager` must be a valid pointer to a `TimelineCoroutineManager`.
+ * - `context` must be a valid pointer to a `BaseProviderContext`.
+ * - `tracks_holder` must be a valid pointer to a `TracksHolder` containing every track used by the events.
+ */
+void timeline_apply(const struct TimelineCoroutineManager *manager,
+                    float song_time,
+                    const struct BaseProviderContext *context,
+                    struct TracksHolder *tracks_holder);
+
+/**
+ * Value of an animated property at `song_time`, without writing to any track.
+ * Returns a value with `has_value == false` if no event is active, the active event has no
+ * point data, `property` is not an `AnimateTrack` event type, or a pointer is null.
+ *
+ * # Safety
+ * - `manager` must be a valid pointer to a `TimelineCoroutineManager`.
+ * - `property` must be a valid pointer to a `CEventType` with a valid property id (see `c_event_type_to_rust`).
+ * - `context` must be a valid pointer to a `BaseProviderContext`.
+ */
+struct CValueNullable timeline_value_at(const struct TimelineCoroutineManager *manager,
+                                        float song_time,
+                                        struct TrackKeyFFI track_key,
+                                        const struct CEventType *property,
+                                        const struct BaseProviderContext *context);
+
+/**
+ * Samples a path property at `song_time` (the state of the blend) at the object's lifetime `path_time`.
+ * Works the same as `path_property_interpolate`. Returns a value with `has_value == false` if there is
+ * no active path, `property` is not an `AssignPathAnimation` event type, or a pointer is null.
+ *
+ * # Safety
+ * - `manager` must be a valid pointer to a `TimelineCoroutineManager`.
+ * - `property` must be a valid pointer to a `CEventType` with a valid property id (see `c_event_type_to_rust`).
+ * - `context` must be a valid pointer to a `BaseProviderContext`.
+ */
+struct CValueNullable timeline_path_interpolate(const struct TimelineCoroutineManager *manager,
+                                                float song_time,
+                                                struct TrackKeyFFI track_key,
+                                                const struct CEventType *property,
+                                                float path_time,
+                                                const struct BaseProviderContext *context);
+
+/**
+ * Blend state of a path property at `song_time`. `exists` is false if no event ever targets
+ * the property, `property` is not an `AssignPathAnimation` event type, or a pointer is null.
+ *
+ * # Safety
+ * - `manager` must be a valid pointer to a `TimelineCoroutineManager`.
+ * - `property` must be a valid pointer to a `CEventType` with a valid property id (see `c_event_type_to_rust`).
+ */
+struct CPathBlend timeline_path_blend(const struct TimelineCoroutineManager *manager,
+                                      float song_time,
+                                      struct TrackKeyFFI track_key,
+                                      const struct CEventType *property);
 
 /**
  * Create a new `Track` and return a raw pointer to it.

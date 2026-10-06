@@ -32,10 +32,23 @@ use crate::{
 /// - `AnimateTrack` repeats `repeat + 1` times and then holds the final value.
 /// - `AssignPathAnimation` blends from the previous path to the new one over the duration, then finishes.
 /// - Events with no point data clear the property.
+///
+/// # Adding and removing events
+/// Events can be added and removed at any time, in any order. [`Self::add_event`] returns an
+/// [`EventId`] that [`Self::remove_event`] takes back. [`Self::remove_events_between`] removes every
+/// event of a track, on any property, that starts in a time range, and [`Self::clear`] removes everything.
+/// Removing an event makes the previous one on that property active again, once [`Self::apply`]
+/// runs again. A property whose events were all removed individually is reset to `None` by that
+/// `apply`, but [`Self::clear`] forgets the properties, so `apply` no longer touches them.
 #[derive(Clone, Default)]
 pub struct TimelineCoroutineManager {
     tracks: HashMap<TrackKey, TrackTimelines>,
+    next_id: u64,
 }
+
+/// Identifies an event added to a [`TimelineCoroutineManager`]. Ids are never reused.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct EventId(pub TrackKey, pub u64);
 
 /// The timelines of one track. Value and path properties behave differently, so they have
 /// separate event types and maps
@@ -47,6 +60,7 @@ struct TrackTimelines {
 
 /// An event that can be placed on a [`Timeline`].
 trait TimedEvent {
+    fn id(&self) -> EventId;
     fn start_song_time(&self) -> SongTime;
 }
 
@@ -65,6 +79,7 @@ impl<E: TimedEvent> Default for Timeline<E> {
 /// An `AnimateTrack` event.
 #[derive(Clone)]
 struct ValueEvent {
+    id: EventId,
     start_song_time: SongTime,
     duration_song_time: SongTime,
     repeat: u32,
@@ -75,6 +90,7 @@ struct ValueEvent {
 /// An `AssignPathAnimation` event. It has no `repeat`: path animations finish after one iteration.
 #[derive(Clone)]
 struct PathEvent {
+    id: EventId,
     start_song_time: SongTime,
     duration_song_time: SongTime,
     easing: Functions,
@@ -82,12 +98,20 @@ struct PathEvent {
 }
 
 impl TimedEvent for ValueEvent {
+    fn id(&self) -> EventId {
+        self.id
+    }
+
     fn start_song_time(&self) -> SongTime {
         self.start_song_time
     }
 }
 
 impl TimedEvent for PathEvent {
+    fn id(&self) -> EventId {
+        self.id
+    }
+
     fn start_song_time(&self) -> SongTime {
         self.start_song_time
     }
@@ -113,21 +137,26 @@ impl PathSnapshot<'_> {
 impl ValueEvent {
     /// Eased progress through the current repeat iteration.
     /// Holds at the end once every iteration has elapsed.
-    fn animate_time(&self, song_time: SongTime) -> f32 {
+    fn interpolate_progress(&self, song_time: SongTime) -> f32 {
         let duration = self.duration_song_time;
         if duration <= SongTime::ZERO {
             return 1.0;
         }
 
+        let end = duration * (self.repeat as f64 + 1.0);
+
         let elapsed = song_time - self.start_song_time;
-        if elapsed >= duration * (self.repeat as f64 + 1.0) {
+        if elapsed >= end {
             return 1.0;
         }
-
+        
+        let iteration = (elapsed / duration).floor();
         // each repeat restarts at the iteration boundary
-        let local = elapsed - duration * (elapsed / duration).floor();
+        // this is faster than using a modulus and avoids floating point issues with very small durations
+        let local = elapsed - (duration * iteration);
+        let progress = local / duration;
         self.easing
-            .interpolate((local / duration).clamp(0.0, 1.0) as f32)
+            .interpolate(progress.clamp(0.0, 1.0) as f32)
     }
 }
 
@@ -139,8 +168,9 @@ impl PathEvent {
         if duration <= SongTime::ZERO || elapsed >= duration {
             return None;
         }
+        let progress = elapsed / duration;
 
-        Some(self.easing.interpolate((elapsed / duration) as f32))
+        Some(self.easing.interpolate(progress.clamp(0.0, 1.0) as f32))
     }
 }
 
@@ -154,6 +184,27 @@ impl<E: TimedEvent> Timeline<E> {
             .events
             .partition_point(|e| e.start_song_time() <= start);
         self.events.insert(position, event);
+    }
+
+    /// Removes the event with `id`. Returns whether it was found.
+    fn remove(&mut self, id: EventId) -> bool {
+        match self.events.iter().position(|e| e.id() == id) {
+            Some(index) => {
+                self.events.remove(index);
+                true
+            }
+            None => false,
+        }
+    }
+
+    /// Removes every event starting in `start..=end`. Returns how many were removed.
+    fn remove_between(&mut self, start: SongTime, end: SongTime) -> usize {
+        let first = self.events.partition_point(|e| e.start_song_time() < start);
+        let last = self.events.partition_point(|e| e.start_song_time() <= end);
+        if first >= last {
+            return 0;
+        }
+        self.events.drain(first..last).count()
     }
 
     /// Index of the last event with `start <= song_time`.
@@ -170,13 +221,14 @@ impl Timeline<ValueEvent> {
     fn value_at(&self, song_time: SongTime, context: &BaseProviderContext) -> Option<BaseValue> {
         let event = &self.events[self.active_index(song_time)?];
         let points = event.point_data.as_ref()?;
-        Some(points.interpolate(event.animate_time(song_time), context).0)
+        Some(points.interpolate(event.interpolate_progress(song_time), context).0)
     }
 }
 
 impl Timeline<PathEvent> {
     /// A path property also needs the event before the active one: that is the path it blends from.
     fn path_at(&self, song_time: SongTime) -> PathSnapshot<'_> {
+        // null if no event has started yet, or if the active event has no point data
         let Some(index) = self.active_index(song_time) else {
             return PathSnapshot {
                 prev_point: None,
@@ -215,6 +267,27 @@ impl Timeline<PathEvent> {
 }
 
 impl TrackTimelines {
+    /// Removes the event with `id` from whichever of this track's timelines holds it.
+    fn remove(&mut self, id: EventId) -> bool {
+        self.properties.values_mut().any(|t| t.remove(id))
+            || self.path_properties.values_mut().any(|t| t.remove(id))
+    }
+
+    /// Removes every event of every property starting in `start..=end`. Returns how many were removed.
+    fn remove_between(&mut self, start: SongTime, end: SongTime) -> usize {
+        let values: usize = self
+            .properties
+            .values_mut()
+            .map(|t| t.remove_between(start, end))
+            .sum();
+        let paths: usize = self
+            .path_properties
+            .values_mut()
+            .map(|t| t.remove_between(start, end))
+            .sum();
+        values + paths
+    }
+
     /// Writes the state at `song_time` into every property of `track` that has events.
     fn apply(&self, song_time: SongTime, context: &BaseProviderContext, track: &mut Track) {
         for (handle, timeline) in &self.properties {
@@ -232,8 +305,6 @@ impl TrackTimelines {
                 .expect("Path property not found");
 
             let snapshot = timeline.path_at(song_time);
-            // clones up to two point definitions per call. if this shows up in profiles,
-            // storing them as `Rc<BasePointDefinition>` in `PathProperty` would make this a refcount bump
             path_property.prev_point = snapshot.prev_point.cloned();
             path_property.point = snapshot.point.cloned();
             path_property.interpolate_time = snapshot.interpolate_time;
@@ -255,16 +326,21 @@ impl TimelineCoroutineManager {
         manager
     }
 
-    /// Adds an event to its `(track, property)` timeline, keeping the timeline sorted by start time.
+    /// Adds an event to its `(track, property)` timeline, keeping the timeline sorted by start time,
+    /// and returns an id to remove it with later.
     /// When two events start at the same time, the one added later wins.
-    pub fn add_event(&mut self, bpm: f32, event: EventData) {
-        let track = self.tracks.entry(event.track_key).or_default();
+    pub fn add_event(&mut self, bpm: f32, event: EventData) -> EventId {
+        let id = EventId(event.track_key, self.next_id);
+        self.next_id += 1;
+
         let start_song_time = event.start_song_time;
         let duration_song_time = event.raw_duration.to_song_time(bpm as f64);
 
+        let track = self.tracks.entry(event.track_key).or_default();
         match event.property {
             EventType::AnimateTrack(handle) => {
                 track.properties.entry(handle).or_default().insert(ValueEvent {
+                    id,
                     start_song_time,
                     duration_song_time,
                     repeat: event.repeat,
@@ -277,12 +353,42 @@ impl TimelineCoroutineManager {
                 .entry(handle)
                 .or_default()
                 .insert(PathEvent {
+                    id,
                     start_song_time,
                     duration_song_time,
                     easing: event.easing,
                     point_data: event.point_data,
                 }),
         }
+
+        id
+    }
+
+    /// Removes the event with `id`. Returns `false` if it was already removed or never existed.
+    pub fn remove_event(&mut self, id: EventId) -> bool {
+        self.tracks
+            .get_mut(&id.0)
+            .is_some_and(|track| track.remove(id))
+    }
+
+    /// Removes every event on every property of `track_key` that starts in `start..=end`.
+    /// Returns how many were removed.
+    pub fn remove_events_between(
+        &mut self,
+        track_key: TrackKey,
+        start: SongTime,
+        end: SongTime,
+    ) -> usize {
+        let Some(track) = self.tracks.get_mut(&track_key) else {
+            return 0;
+        };
+
+        track.remove_between(start, end)
+    }
+
+    /// Removes every event. Properties stay as they are until something else writes them.
+    pub fn clear(&mut self) {
+        self.tracks.clear();
     }
 
     /// Value of an animated property at `song_time`.
@@ -690,5 +796,84 @@ mod tests {
             &ctx,
         );
         assert_eq!(float_of(value), Some(2.0));
+    }
+
+    #[test]
+    fn remove_event_restores_previous_event() {
+        let ctx = BaseProviderContext::new();
+        let (_, a, _) = holder_with_tracks();
+        let handle = ValuePropertyHandle::new("dissolve");
+        let mut replay = TimelineCoroutineManager::new();
+        let first = replay.add_event(60.0, event(a, dissolve(), 0.0, 0.0, 0, Some(float_points(0.0, 1.0))));
+        let second = replay.add_event(60.0, event(a, dissolve(), 1.0, 0.0, 0, Some(float_points(0.0, 2.0))));
+        let at = |replay: &TimelineCoroutineManager, t| {
+            float_of(replay.value_at(SongTime::new(t), a, &handle, &ctx))
+        };
+
+        assert_eq!(at(&replay, 1.5), Some(2.0));
+        assert!(replay.remove_event(second));
+        assert_eq!(at(&replay, 1.5), Some(1.0));
+        // already removed
+        assert!(!replay.remove_event(second));
+        assert!(replay.remove_event(first));
+        assert_eq!(at(&replay, 1.5), None);
+    }
+
+    #[test]
+    fn remove_event_among_equal_start_times() {
+        let ctx = BaseProviderContext::new();
+        let (_, a, _) = holder_with_tracks();
+        let handle = ValuePropertyHandle::new("dissolve");
+        let mut replay = TimelineCoroutineManager::new();
+        let first = replay.add_event(60.0, event(a, dissolve(), 1.0, 0.0, 0, Some(float_points(0.0, 1.0))));
+        let second = replay.add_event(60.0, event(a, dissolve(), 1.0, 0.0, 0, Some(float_points(0.0, 2.0))));
+
+        // the earlier one is removed, the later one stays active
+        assert!(replay.remove_event(first));
+        assert_eq!(float_of(replay.value_at(SongTime::new(1.0), a, &handle, &ctx)), Some(2.0));
+        assert!(replay.remove_event(second));
+    }
+
+    #[test]
+    fn remove_events_between_and_clear() {
+        let ctx = BaseProviderContext::new();
+        let (mut holder, a, b) = holder_with_tracks();
+        let mut replay = TimelineCoroutineManager::new();
+        let ids: Vec<_> = [0.0, 1.0, 2.0, 3.0]
+            .map(|t| replay.add_event(60.0, event(a, dissolve(), t, 0.0, 0, Some(float_points(0.0, t as f32)))))
+            .into();
+        replay.add_event(60.0, event(b, dissolve(), 1.0, 0.0, 0, Some(float_points(0.0, 9.0))));
+
+        // a color event inside the range goes too, and track b is untouched
+        replay.add_event(60.0, event(a, color(), 1.5, 0.0, 0, Some(color_points(0.0, 1.0))));
+        // inclusive range, every property of one track
+        assert_eq!(replay.remove_events_between(a, SongTime::new(1.0), SongTime::new(2.0)), 3);
+        assert!(!replay.remove_event(ids[1]));
+        assert!(!replay.remove_event(ids[2]));
+        assert_eq!(replay.remove_events_between(a, SongTime::new(1.0), SongTime::new(2.0)), 0);
+
+        replay.apply(SongTime::new(2.5), &ctx, &mut holder);
+        let value = |key| float_of(holder.get_track(key).unwrap().properties.dissolve.get_value());
+        assert_eq!(value(a), Some(0.0));
+        assert_eq!(value(b), Some(9.0));
+
+        replay.clear();
+        assert!(!replay.remove_event(ids[0]));
+        assert_eq!(replay.value_at(SongTime::new(2.5), b, &ValuePropertyHandle::new("dissolve"), &ctx), None);
+    }
+
+    #[test]
+    fn removing_all_events_resets_property_on_apply() {
+        let ctx = BaseProviderContext::new();
+        let (mut holder, a, _) = holder_with_tracks();
+        let mut replay = TimelineCoroutineManager::new();
+        let id = replay.add_event(60.0, event(a, dissolve(), 0.0, 0.0, 0, Some(float_points(0.0, 4.0))));
+
+        replay.apply(SongTime::new(1.0), &ctx, &mut holder);
+        assert!(holder.get_track(a).unwrap().properties.dissolve.get_value().is_some());
+
+        replay.remove_event(id);
+        replay.apply(SongTime::new(1.0), &ctx, &mut holder);
+        assert!(holder.get_track(a).unwrap().properties.dissolve.get_value().is_none());
     }
 }
