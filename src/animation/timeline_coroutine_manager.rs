@@ -42,7 +42,7 @@ use crate::{
 /// `apply`, but [`Self::clear`] forgets the properties, so `apply` no longer touches them.
 #[derive(Clone, Default)]
 pub struct TimelineCoroutineManager {
-    tracks: HashMap<TrackKey, TrackTimelines>,
+    tracks: ahash::AHashMap<TrackKey, TrackTimelines>,
     next_id: u64,
 }
 
@@ -54,8 +54,8 @@ pub struct EventId(pub TrackKey, pub u64);
 /// separate event types and maps
 #[derive(Clone, Default)]
 struct TrackTimelines {
-    properties: HashMap<ValuePropertyHandle, Timeline<ValueEvent>>,
-    path_properties: HashMap<PathPropertyHandle, Timeline<PathEvent>>,
+    properties: ahash::AHashMap<ValuePropertyHandle, Timeline<ValueEvent>>,
+    path_properties: ahash::AHashMap<PathPropertyHandle, Timeline<PathEvent>>,
 }
 
 /// An event that can be placed on a [`Timeline`].
