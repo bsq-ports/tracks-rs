@@ -2,6 +2,9 @@ use glam::{Vec3, Vec4};
 
 use crate::base_value::WrapBaseValueType;
 
+/// The most components any [`ValueType`] has (`Vec4`). Sizes fixed scratch buffers.
+pub(crate) const MAX_COMPONENTS: usize = 4;
+
 /// Represents a type that can be used as a value in the system, such as a float, vector, or quaternion.
 /// This trait defines the necessary operations and conversions for these types, allowing them to be used
 /// interchangeably in the animation system.
@@ -17,16 +20,11 @@ pub trait ValueType:
     + std::ops::Div<Output = Self>
     + std::ops::Mul<f32, Output = Self>
 {
-    type Array
-        = [f32; Self::VALUE_COUNT]
-    where
-        [(); Self::VALUE_COUNT]:;
     const VALUE_COUNT: usize;
 
     fn base_type() -> WrapBaseValueType;
 
     fn from_translate_slice(values: &[f32]) -> Self;
-    fn from_translate_array(values: [f32; Self::VALUE_COUNT]) -> Self;
 
     fn from_slice(values: &[f32]) -> Self;
 
@@ -57,15 +55,6 @@ impl ValueType for f32 {
         values[0]
     }
 
-    fn from_translate_array(values: [f32; Self::VALUE_COUNT]) -> Self {
-        values[0]
-    }
-
-    type Array
-        = [f32; Self::VALUE_COUNT]
-    where
-        [(); Self::VALUE_COUNT]:;
-
     fn base_type() -> WrapBaseValueType {
         WrapBaseValueType::Float
     }
@@ -82,15 +71,6 @@ impl ValueType for Vec3 {
         Vec3::from_slice(values)
     }
 
-    fn from_translate_array(values: [f32; Self::VALUE_COUNT]) -> Self {
-        Vec3::from_array(values)
-    }
-
-    type Array
-        = [f32; Self::VALUE_COUNT]
-    where
-        [(); Self::VALUE_COUNT]:;
-
     fn base_type() -> WrapBaseValueType {
         unreachable!("Vec3 is not a valid base type for BaseValue")
     }
@@ -106,15 +86,6 @@ impl ValueType for Vec4 {
     fn from_translate_slice(values: &[f32]) -> Self {
         Vec4::from_slice(values)
     }
-
-    fn from_translate_array(values: [f32; Self::VALUE_COUNT]) -> Self {
-        Vec4::from_array(values)
-    }
-
-    type Array
-        = [f32; Self::VALUE_COUNT]
-    where
-        [(); Self::VALUE_COUNT]:;
 
     fn base_type() -> WrapBaseValueType {
         WrapBaseValueType::Vec4

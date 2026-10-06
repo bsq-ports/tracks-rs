@@ -37,6 +37,22 @@ impl QuaternionModifier {
         modifiers: Vec<QuaternionModifier>,
         operation: Operation,
     ) -> Self {
+        // fold fully static nested modifiers into the point, so evaluating it skips the euler conversion.
+        // nested modifiers were folded when they were built, so a static subtree is already flat
+        let (point, modifiers) = match point {
+            QuaternionValues::Static(vector, _)
+                if !modifiers.is_empty() && modifiers.iter().all(Self::is_flat_static) =>
+            {
+                let folded = modifiers.iter().fold(vector, |acc, m| match m.values {
+                    QuaternionValues::Static(v, _) => m.operation.apply(acc, v),
+                    QuaternionValues::Dynamic(_) => unreachable!("checked by is_flat_static"),
+                });
+                let quat = Quat::from_unity_euler_degrees(folded);
+                (QuaternionValues::Static(folded, quat), Vec::new())
+            }
+            point => (point, modifiers),
+        };
+
         let has_base_provider =
             shared_has_base_provider(matches!(point, QuaternionValues::Dynamic(_)), &modifiers);
         Self {
@@ -45,6 +61,11 @@ impl QuaternionModifier {
             modifiers,
             operation,
         }
+    }
+
+    /// A static value with no nested modifiers.
+    fn is_flat_static(&self) -> bool {
+        matches!(self.values, QuaternionValues::Static(_, _)) && self.modifiers.is_empty()
     }
 
     fn translate_euler(values: &[ValueProvider], context: &BaseProviderContext) -> Vec3 {
@@ -78,13 +99,7 @@ impl QuaternionModifier {
         let mut acc_a = Vec3A::from(original_point);
         for quat_point in &self.modifiers {
             let v_a = Vec3A::from(quat_point.get_vector_point(context));
-            acc_a = match quat_point.get_operation() {
-                Operation::Add => acc_a + v_a,
-                Operation::Sub => acc_a - v_a,
-                Operation::Mul => acc_a * v_a,
-                Operation::Div => acc_a / v_a,
-                Operation::None => v_a,
-            };
+            acc_a = quat_point.get_operation().apply(acc_a, v_a);
         }
 
         Vec3::from(acc_a)
@@ -117,5 +132,47 @@ impl ModifierLike<Quat> for QuaternionModifier {
 
     fn has_base_provider(&self) -> bool {
         self.has_base_provider
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn tree(
+        make: fn(QuaternionValues, Vec<QuaternionModifier>, Operation) -> QuaternionModifier,
+    ) -> QuaternionModifier {
+        let euler = |v: Vec3| QuaternionValues::Static(v, Quat::from_unity_euler_degrees(v));
+        make(
+            euler(Vec3::new(10.0, 20.0, 30.0)),
+            vec![
+                make(euler(Vec3::new(5.0, 0.0, -5.0)), vec![], Operation::Add),
+                make(
+                    euler(Vec3::splat(2.0)),
+                    vec![make(euler(Vec3::splat(0.5)), vec![], Operation::Mul)],
+                    Operation::Mul,
+                ),
+            ],
+            Operation::None,
+        )
+    }
+
+    #[test]
+    fn static_modifiers_fold_to_the_same_rotation() {
+        let ctx = BaseProviderContext::new();
+        let folded = tree(QuaternionModifier::new);
+        let expected = tree(|values, modifiers, operation| QuaternionModifier {
+            values,
+            has_base_provider: false,
+            modifiers,
+            operation,
+        });
+
+        assert!(folded.modifiers.is_empty(), "static tree should fold");
+        assert!(
+            folded
+                .get_modified_point(&ctx)
+                .abs_diff_eq(expected.get_modified_point(&ctx), 1e-6)
+        );
     }
 }

@@ -73,6 +73,29 @@ impl PointDefinitionInterpolation {
             _ => None,
         }
     }
+
+    /// Samples the path at every time in `times` into the matching slot of `out`.
+    /// Returns `false` and leaves `out` untouched if there is no path.
+    ///
+    /// # Panics
+    /// If `times` and `out` have different lengths.
+    pub fn interpolate_batch(
+        &self,
+        times: &[f32],
+        out: &mut [BaseValue],
+        context: &BaseProviderContext,
+    ) -> bool {
+        assert_eq!(times.len(), out.len(), "times and out must be the same length");
+        if self.point.is_none() {
+            return false;
+        }
+        for (slot, &time) in out.iter_mut().zip(times) {
+            if let Some(value) = self.interpolate(time, context) {
+                *slot = value;
+            }
+        }
+        true
+    }
 }
 
 #[cfg(test)]

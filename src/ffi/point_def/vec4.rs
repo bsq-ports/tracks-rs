@@ -74,3 +74,21 @@ pub unsafe extern "C" fn tracks_vector4_has_base_provider(
     let point_definition = unsafe { &*point_definition };
     point_definition.has_base_provider()
 }
+
+/// Interpolates a Vector4 point definition at each of `len` times, writing the values to `out`.
+/// Per-element `is_last` flags are not reported. Null pointers or `len == 0` are a no-op.
+///
+/// # Safety
+/// - `point_definition` must be a valid pointer to a `Vector4PointDefinition`.
+/// - `context` must be a valid pointer to a `BaseProviderContext`.
+/// - `times` must point to `len` readable floats, and `out` to `len` writable `WrapVec4`s.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn tracks_interpolate_vector4_batch(
+    point_definition: *const Vector4PointDefinition,
+    times: *const f32,
+    out: *mut WrapVec4,
+    len: usize,
+    context: *const BaseProviderContext,
+) {
+    unsafe { super::interpolate_batch(point_definition, times, out, len, context) }
+}

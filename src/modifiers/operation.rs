@@ -1,3 +1,5 @@
+use std::ops::{Add, Div, Mul, Sub};
+
 /// Component-wise operation applied by modifiers.
 ///
 /// `Operation` describes how a nested modifier's result should combine with
@@ -26,6 +28,23 @@ impl std::str::FromStr for Operation {
             "opMul" => Ok(Self::Mul),
             "opDiv" => Ok(Self::Div),
             _ => Ok(Self::None),
+        }
+    }
+}
+
+impl Operation {
+    /// Combines the accumulated value with a nested modifier's value.
+    #[inline]
+    pub fn apply<T>(self, acc: T, value: T) -> T
+    where
+        T: Add<Output = T> + Sub<Output = T> + Mul<Output = T> + Div<Output = T>,
+    {
+        match self {
+            Operation::Add => acc + value,
+            Operation::Sub => acc - value,
+            Operation::Mul => acc * value,
+            Operation::Div => acc / value,
+            Operation::None => value,
         }
     }
 }

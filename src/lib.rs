@@ -22,11 +22,6 @@
 //! during modifier evaluation → final values are applied by the consumer.
 //!
 //! See `benches/` and unit tests in `src/point_definition/` for minimal examples of usage.
-#![feature(trait_alias)]
-#![feature(unboxed_closures)]
-#![feature(generic_const_exprs)]
-#![feature(generic_const_items)]
-#![feature(associated_type_defaults)]
 
 #[cfg(feature = "ffi")]
 pub mod ffi;

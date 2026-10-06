@@ -17,10 +17,7 @@ pub struct BasicPointData<T: ValueType> {
     time: f32,
 }
 
-impl<T: ValueType> BasicPointData<T>
-where
-    [(); T::VALUE_COUNT]:,
-{
+impl<T: ValueType> BasicPointData<T> {
     pub fn new(
         point: ModifierValues<T>,
         time: f32,
@@ -61,10 +58,7 @@ where
 //     }
 // }
 
-impl<T: ValueType> PointDataLike<T> for BasicPointData<T>
-where
-    [(); T::VALUE_COUNT]:,
-{
+impl<T: ValueType> PointDataLike<T> for BasicPointData<T> {
     fn get_easing(&self) -> Functions {
         self.easing
     }

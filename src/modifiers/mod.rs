@@ -8,7 +8,7 @@ use smallvec::SmallVec;
 
 use crate::base_provider_context::BaseProviderContext;
 use crate::modifiers::operation::Operation;
-use crate::providers::{AbstractValueProvider, ValueProvider};
+use crate::providers::ValueProvider;
 
 /// Representation of modifier input values.
 ///
@@ -66,28 +66,6 @@ pub trait ModifierLike<T> {
 
     /// The component-wise operation that composes this modifier (add, mul, ...).
     fn get_operation(&self) -> Operation;
-
-    /// Helper to translate a slice of `ValueProvider`s into a fixed-size array of
-    /// `f32` components used by modifiers. Providers are evaluated in order and
-    /// fill the returned array up to `VALUE_COUNT`.
-    fn apply(
-        &self,
-        ivals: &[ValueProvider],
-        context: &BaseProviderContext,
-    ) -> [f32; Self::VALUE_COUNT] {
-        let mut values = [0.0; Self::VALUE_COUNT];
-        let mut i = 0;
-        for value in ivals {
-            for v in value.values(context) {
-                if i >= Self::VALUE_COUNT {
-                    break;
-                }
-                values[i] = v;
-                i += 1;
-            }
-        }
-        values
-    }
 }
 
 /// Shared helper used while parsing to determine if any modifier depends on a

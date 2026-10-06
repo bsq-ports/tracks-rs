@@ -19,10 +19,7 @@ pub struct BasicPointDefinition<T: ValueType> {
     points: Rc<[BasicPointData<T>]>,
 }
 
-impl<T: ValueType> PointDefinitionLike<T> for BasicPointDefinition<T>
-where
-    [f32; T::VALUE_COUNT + 1]: smallvec::Array,
-{
+impl<T: ValueType> PointDefinitionLike<T> for BasicPointDefinition<T> {
     type Modifier = BasicModifier<T>;
     type PointData = BasicPointData<T>;
 

@@ -44,6 +44,38 @@ pub struct WrapBaseValue {
     pub(crate) value: WrapBaseValueUnion,
 }
 
+impl From<Vec3> for WrapVec3 {
+    fn from(v: Vec3) -> Self {
+        Self {
+            x: v.x,
+            y: v.y,
+            z: v.z,
+        }
+    }
+}
+
+impl From<Vec4> for WrapVec4 {
+    fn from(v: Vec4) -> Self {
+        Self {
+            x: v.x,
+            y: v.y,
+            z: v.z,
+            w: v.w,
+        }
+    }
+}
+
+impl From<Quat> for WrapQuat {
+    fn from(q: Quat) -> Self {
+        Self {
+            x: q.x,
+            y: q.y,
+            z: q.z,
+            w: q.w,
+        }
+    }
+}
+
 impl From<BaseValue> for WrapBaseValue {
     fn from(value: BaseValue) -> Self {
         match value {

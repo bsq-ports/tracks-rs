@@ -170,20 +170,10 @@ impl ValueType for BaseValue {
             _ => panic!("Invalid number of values for BaseValue: {}", values.len()),
         }
     }
-    fn from_translate_array(_values: [f32; Self::VALUE_COUNT]) -> Self {
-        unreachable!(
-            "from_translate_array should not be called for BaseValue, as it does not have a fixed number of components"
-        );
-    }
 
     fn from_translate_slice(values: &[f32]) -> Self {
         BaseValue::Vector4(Vec4::new(values[0], values[1], values[2], values[3]))
     }
-
-    type Array
-        = [f32; Self::VALUE_COUNT]
-    where
-        [(); Self::VALUE_COUNT]:;
 
     fn base_type() -> WrapBaseValueType {
         WrapBaseValueType::Unknown

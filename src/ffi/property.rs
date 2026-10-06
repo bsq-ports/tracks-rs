@@ -162,6 +162,40 @@ pub unsafe extern "C" fn path_property_interpolate(
         inner.interpolate(time, context).into()
     }
 }
+/// Samples a path property at each of `len` times (objects' lifetimes), writing the values to `out`.
+/// Returns `false` and writes nothing if the path has no points, or if any pointer is null.
+///
+/// # Safety
+/// - `ptr` must be a valid pointer to a `PathProperty`.
+/// - `context` must be a valid pointer to a `BaseProviderContext`.
+/// - `times` must point to `len` readable floats, and `out` to `len` writable `WrapBaseValue`s.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn path_property_interpolate_batch(
+    ptr: *const PathProperty,
+    times: *const f32,
+    out: *mut WrapBaseValue,
+    len: usize,
+    context: *const BaseProviderContext,
+) -> bool {
+    if ptr.is_null() || times.is_null() || out.is_null() || context.is_null() {
+        return false;
+    }
+
+    let (path, context) = unsafe { (&*ptr, &*context) };
+    if path.point.is_none() {
+        return false;
+    }
+
+    let times = unsafe { std::slice::from_raw_parts(times, len) };
+    for (i, &time) in times.iter().enumerate() {
+        if let Some(value) = path.interpolate(time, context) {
+            // write instead of assigning through a slice, since `out` may be uninitialised
+            unsafe { out.add(i).write(value.into()) };
+        }
+    }
+    true
+}
+
 /// # Safety
 /// - `ptr` must be a valid pointer to a `PathProperty`.
 /// - `context` must be a valid pointer to a `BaseProviderContext` for the duration of the call.

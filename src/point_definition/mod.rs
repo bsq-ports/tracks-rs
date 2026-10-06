@@ -218,6 +218,18 @@ where
         Self::new(points)
     }
 
+    /// Interpolates every time in `times` into the matching slot of `out`, for sampling many objects at once.
+    /// Unlike [`Self::interpolate`], it doesn't report whether each time is past the last point.
+    ///
+    /// # Panics
+    /// If `times` and `out` have different lengths.
+    fn interpolate_batch(&self, times: &[f32], out: &mut [T], context: &BaseProviderContext) {
+        assert_eq!(times.len(), out.len(), "times and out must be the same length");
+        for (slot, &time) in out.iter_mut().zip(times) {
+            *slot = self.interpolate(time, context).0;
+        }
+    }
+
     /// Interpolates the point definition at a given time, returning the interpolated value and a boolean indicating if it's the last point.
     /// The boolean is true if the time is at or beyond the last point, and false otherwise.
     fn interpolate(&self, interpolate_time: f32, context: &BaseProviderContext) -> (T, bool) {
@@ -239,7 +251,9 @@ where
             return (first_point.get_point(context), false);
         }
 
-        let (l, r) = search_index(points, interpolate_time);
+        // first point at or after the time; the guards above keep it within 1..len
+        let r = points.partition_point(|p| p.get_time() < interpolate_time);
+        let l = r - 1;
         let point_l = &points[l];
         let point_r = &points[r];
 
@@ -256,24 +270,6 @@ where
             false,
         )
     }
-}
-
-// Binary search algorithm to find the relevant interval
-fn search_index<P: PointDataLike<T>, T>(points: &[P], time: f32) -> (usize, usize) {
-    let mut l = 0;
-    let mut r = points.len();
-
-    while l < r - 1 {
-        let m = (l + r) / 2;
-        let point_time = points[m].get_time();
-        if point_time < time {
-            l = m;
-        } else {
-            r = m;
-        }
-    }
-
-    (l, r)
 }
 
 // Helper method to group values from a JSON value.

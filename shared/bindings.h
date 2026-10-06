@@ -11,9 +11,9 @@ namespace ffi {
 #endif  // __cplusplus
 
 enum WrapBaseValueType
-#ifdef __cplusplus
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
   : uint8_t
-#endif // __cplusplus
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
  {
   Unknown = UINT8_MAX,
   Vec3 = 0,
@@ -22,7 +22,11 @@ enum WrapBaseValueType
   Float = 3,
 };
 #ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum WrapBaseValueType WrapBaseValueType;
+#else
 typedef uint8_t WrapBaseValueType;
+#endif // __STDC_VERSION__ >= 202311L
 #endif // __cplusplus
 
 typedef enum Functions {
@@ -61,24 +65,28 @@ typedef enum Functions {
 } Functions;
 
 enum CEventTypeEnum
-#ifdef __cplusplus
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
   : uint32_t
-#endif // __cplusplus
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
  {
   AnimateTrack = 0,
   AssignPathAnimation = 1,
 };
 #ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum CEventTypeEnum CEventTypeEnum;
+#else
 typedef uint32_t CEventTypeEnum;
+#endif // __STDC_VERSION__ >= 202311L
 #endif // __cplusplus
 
 /**
  * An enumeration of common property names used in Tracks.
  */
 enum PropertyNames
-#ifdef __cplusplus
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
   : uint32_t
-#endif // __cplusplus
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
  {
   Position,
   OffsetPosition,
@@ -100,7 +108,11 @@ enum PropertyNames
   UnknownPropertyName,
 };
 #ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum PropertyNames PropertyNames;
+#else
 typedef uint32_t PropertyNames;
+#endif // __STDC_VERSION__ >= 202311L
 #endif // __cplusplus
 
 typedef enum CEventPropertyIdType {
@@ -696,6 +708,21 @@ uintptr_t tracks_float_count(const FloatPointDefinition *point_definition);
 bool tracks_float_has_base_provider(const FloatPointDefinition *point_definition);
 
 /**
+ * Interpolates a float point definition at each of `len` times, writing the values to `out`.
+ * Per-element `is_last` flags are not reported. Null pointers or `len == 0` are a no-op.
+ *
+ * # Safety
+ * - `point_definition` must be a valid pointer to a `FloatPointDefinition`.
+ * - `context` must be a valid pointer to a `BaseProviderContext`.
+ * - `times` must point to `len` readable floats, and `out` to `len` writable `f32`s.
+ */
+void tracks_interpolate_float_batch(const FloatPointDefinition *point_definition,
+                                    const float *times,
+                                    float *out,
+                                    uintptr_t len,
+                                    const struct BaseProviderContext *context);
+
+/**
  * QUATERNION POINT DEFINITION
  *
  * # Safety
@@ -727,6 +754,21 @@ uintptr_t tracks_quat_count(const struct QuaternionPointDefinition *point_defini
  * - `point_definition` must be a valid pointer to a `QuaternionPointDefinition`.
  */
 bool tracks_quat_has_base_provider(const struct QuaternionPointDefinition *point_definition);
+
+/**
+ * Interpolates a Quaternion point definition at each of `len` times, writing the values to `out`.
+ * Per-element `is_last` flags are not reported. Null pointers or `len == 0` are a no-op.
+ *
+ * # Safety
+ * - `point_definition` must be a valid pointer to a `QuaternionPointDefinition`.
+ * - `context` must be a valid pointer to a `BaseProviderContext`.
+ * - `times` must point to `len` readable floats, and `out` to `len` writable `WrapQuat`s.
+ */
+void tracks_interpolate_quat_batch(const struct QuaternionPointDefinition *point_definition,
+                                   const float *times,
+                                   struct WrapQuat *out,
+                                   uintptr_t len,
+                                   const struct BaseProviderContext *context);
 
 /**
  * VECTOR3 POINT DEFINITION
@@ -762,6 +804,21 @@ uintptr_t tracks_vector3_count(const struct Vector3PointDefinition *point_defini
 bool tracks_vector3_has_base_provider(const struct Vector3PointDefinition *point_definition);
 
 /**
+ * Interpolates a Vector3 point definition at each of `len` times, writing the values to `out`.
+ * Per-element `is_last` flags are not reported. Null pointers or `len == 0` are a no-op.
+ *
+ * # Safety
+ * - `point_definition` must be a valid pointer to a `Vector3PointDefinition`.
+ * - `context` must be a valid pointer to a `BaseProviderContext`.
+ * - `times` must point to `len` readable floats, and `out` to `len` writable `WrapVec3`s.
+ */
+void tracks_interpolate_vector3_batch(const struct Vector3PointDefinition *point_definition,
+                                      const float *times,
+                                      struct WrapVec3 *out,
+                                      uintptr_t len,
+                                      const struct BaseProviderContext *context);
+
+/**
  * VECTOR4 POINT DEFINITION
  *
  * # Safety
@@ -793,6 +850,21 @@ uintptr_t tracks_vector4_count(const Vector4PointDefinition *point_definition);
  * - `point_definition` must be a valid pointer to a `Vector4PointDefinition`.
  */
 bool tracks_vector4_has_base_provider(const Vector4PointDefinition *point_definition);
+
+/**
+ * Interpolates a Vector4 point definition at each of `len` times, writing the values to `out`.
+ * Per-element `is_last` flags are not reported. Null pointers or `len == 0` are a no-op.
+ *
+ * # Safety
+ * - `point_definition` must be a valid pointer to a `Vector4PointDefinition`.
+ * - `context` must be a valid pointer to a `BaseProviderContext`.
+ * - `times` must point to `len` readable floats, and `out` to `len` writable `WrapVec4`s.
+ */
+void tracks_interpolate_vector4_batch(const Vector4PointDefinition *point_definition,
+                                      const float *times,
+                                      struct WrapVec4 *out,
+                                      uintptr_t len,
+                                      const struct BaseProviderContext *context);
 
 PathProperty *path_property_create(void);
 
@@ -837,6 +909,21 @@ void path_property_set_time(PathProperty *ptr, float time);
 struct CValueNullable path_property_interpolate(PathProperty *ptr,
                                                 float time,
                                                 const struct BaseProviderContext *context);
+
+/**
+ * Samples a path property at each of `len` times (objects' lifetimes), writing the values to `out`.
+ * Returns `false` and writes nothing if the path has no points, or if any pointer is null.
+ *
+ * # Safety
+ * - `ptr` must be a valid pointer to a `PathProperty`.
+ * - `context` must be a valid pointer to a `BaseProviderContext`.
+ * - `times` must point to `len` readable floats, and `out` to `len` writable `WrapBaseValue`s.
+ */
+bool path_property_interpolate_batch(const PathProperty *ptr,
+                                     const float *times,
+                                     struct WrapBaseValue *out,
+                                     uintptr_t len,
+                                     const struct BaseProviderContext *context);
 
 /**
  * # Safety

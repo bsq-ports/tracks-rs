@@ -3,7 +3,7 @@ use std::hint::black_box;
 use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
 use serde_json::json;
 use tracks_rs::base_provider_context::BaseProviderContext;
-use tracks_rs::base_value::WrapBaseValueType;
+use tracks_rs::base_value::{BaseValue, WrapBaseValueType};
 use tracks_rs::point_definition::base_point_definition::BasePointDefinition;
 use tracks_rs::point_definition::point_definition_interpolation::PointDefinitionInterpolation;
 use tracks_rs::test_helpers::{
@@ -77,6 +77,34 @@ fn bench_path_interpolation(c: &mut Criterion) {
 
         b.iter(|| {
             black_box(interp.interpolate(0.0, &ctx));
+        });
+    });
+
+    // 1000 objects sampling the same path, one call each vs one batch call
+    let times: Vec<f32> = (0..1000).map(|i| i as f32 / 1000.0).collect();
+
+    group.bench_function("vec3_interpolate_1000_single", |b| {
+        let (prev, next) = make_vec3_pair(&mut parse_ctx);
+        let mut interp = PointDefinitionInterpolation::new(Some(next), WrapBaseValueType::Vec3);
+        interp.prev_point = Some(prev);
+        interp.interpolate_time = 0.5;
+
+        b.iter(|| {
+            for &time in &times {
+                black_box(interp.interpolate(black_box(time), &ctx));
+            }
+        });
+    });
+
+    group.bench_function("vec3_interpolate_1000_batch", |b| {
+        let (prev, next) = make_vec3_pair(&mut parse_ctx);
+        let mut interp = PointDefinitionInterpolation::new(Some(next), WrapBaseValueType::Vec3);
+        interp.prev_point = Some(prev);
+        interp.interpolate_time = 0.5;
+        let mut out = vec![BaseValue::default(); times.len()];
+
+        b.iter(|| {
+            black_box(interp.interpolate_batch(black_box(&times), &mut out, &ctx));
         });
     });
 

@@ -154,7 +154,10 @@ pub struct PropertiesMap {
 
 /// A GameObjectCallback is a function that gets called when a game object is added or removed from a Track.
 /// bool is true if added, false if removed.
-pub trait GameObjectCallback = Fn(GameObject, bool);
+pub trait GameObjectCallback: Fn(GameObject, bool) {}
+// TODO: Use trait aliases when they are stabilized in Rust. For now, we can implement the trait for any function that matches the signature.
+
+impl<F: Fn(GameObject, bool)> GameObjectCallback for F {}
 
 /// A Track represents a collection of properties and path properties associated with game objects.
 /// It allows registering, retrieving, and managing properties and game objects.
