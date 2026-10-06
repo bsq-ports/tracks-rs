@@ -4,11 +4,11 @@ use log::debug;
 
 use crate::{
     animation::{
+        event_timing::EventTiming,
         track::Track,
         tracks_holder::{TrackKey, TracksHolder},
     },
     base_provider_context::BaseProviderContext,
-    easings::functions::Functions,
     point_definition::{
         PointDefinitionLike,
         base_point_definition::{self},
@@ -71,12 +71,10 @@ pub struct CoroutineManager {
 struct CoroutineTask {
     event_type: EventType,
     repeat: u32,
-    duration_song_time: SongTime,
     /// Whether the point definition has a base provider, which affects whether we can skip interpolation when finished
     /// this is here to avoid repeatedly calling has_base_provider on the point definition during interpolation, which can be expensive for complex definitions with many modifiers
     has_base_provider: bool,
-    easing: Functions,
-    start_song_time: SongTime,
+    timing: EventTiming,
     track_key: TrackKey,
     /// The `AnimateTrack` points. `None` for path events, whose points live in the path property.
     point_definition: Option<base_point_definition::BasePointDefinition>,
@@ -166,6 +164,11 @@ impl CoroutineManager {
         provider_context: &BaseProviderContext,
         tracks_holder: &mut TracksHolder,
     ) -> Option<CoroutineTask> {
+        let timing = EventTiming {
+            start_song_time: data.start_song_time,
+            duration_song_time,
+            easing: data.easing,
+        };
         let already_elapsed = duration_song_time == SongTime::ZERO
             || data.start_song_time + duration_song_time * (data.repeat as f64 + 1.0)
                 < current_song_time;
@@ -210,10 +213,8 @@ impl CoroutineManager {
         Some(CoroutineTask {
             event_type: data.property,
             repeat: data.repeat,
-            duration_song_time,
             has_base_provider,
-            easing: data.easing,
-            start_song_time: data.start_song_time,
+            timing,
             track_key: data.track_key,
             point_definition,
         })
@@ -247,7 +248,6 @@ impl CoroutineManager {
         context: &BaseProviderContext,
         tracks_holder: &mut TracksHolder,
     ) -> ControlFlow<()> {
-        let duration = task.duration_song_time;
         let track = tracks_holder
             .get_track_mut(task.track_key)
             .expect("Track not found for CoroutineTask");
@@ -263,26 +263,24 @@ impl CoroutineManager {
                     .get_by_handle_mut(value_property_handle)
                     .expect("Property not found");
 
-                let mut run = |start: SongTime| {
+                let mut run = |timing: &EventTiming| {
                     animate_track(
                         point_def,
                         value_property,
-                        duration,
-                        start,
+                        timing,
                         song_time,
-                        task.easing,
                         task.has_base_provider,
                         context,
                     )
                 };
 
-                let mut flow = run(task.start_song_time);
+                let mut flow = run(&task.timing);
 
                 // each repeat restarts the iteration one duration later
                 while flow.is_break() && task.repeat > 0 {
                     task.repeat -= 1;
-                    task.start_song_time += duration;
-                    flow = run(task.start_song_time);
+                    task.timing.start_song_time += task.timing.duration_song_time;
+                    flow = run(&task.timing);
                 }
 
                 flow
@@ -293,13 +291,7 @@ impl CoroutineManager {
                     .get_by_handle_mut(path_property_handle)
                     .expect("Path property not found");
 
-                assign_path_animation(
-                    path_property,
-                    duration,
-                    task.start_song_time,
-                    task.easing,
-                    song_time,
-                )
+                assign_path_animation(path_property, &task.timing, song_time)
             }
         }
     }
@@ -307,30 +299,23 @@ impl CoroutineManager {
 
 /// Interpolates `points` at the eased progress of the event and writes the result to `property`.
 /// Returns `Break` once the duration has elapsed (or early if the last point is reached and not `non_lazy`).
-#[allow(clippy::too_many_arguments)]
 fn animate_track(
     points: &base_point_definition::BasePointDefinition,
     property: &mut ValueProperty,
-    duration: SongTime,
-    start_song_time: SongTime,
+    timing: &EventTiming,
     current_song_time: SongTime,
-    easing: Functions,
     non_lazy: bool,
     context: &BaseProviderContext,
 ) -> ControlFlow<()> {
-    let elapsed_time = current_song_time - start_song_time;
-
-    // clamped normalized time
-    let normalized_time = if duration <= SongTime::ZERO {
-        1.0
-    } else {
-        (elapsed_time / duration).clamp(0.0, 1.0) as f32
-    };
-    let time = easing.interpolate(normalized_time);
-    let on_last = set_property_value(points, property, time, context);
+    let on_last = set_property_value(
+        points,
+        property,
+        timing.progress(current_song_time),
+        context,
+    );
     let reached_end = !non_lazy && on_last;
 
-    if elapsed_time >= duration || reached_end {
+    if timing.has_finished(current_song_time) || reached_end {
         return ControlFlow::Break(());
     }
     ControlFlow::Continue(())
@@ -340,27 +325,19 @@ fn animate_track(
 /// Returns `Break` and finishes the path property once the duration has elapsed.
 fn assign_path_animation(
     interpolation: &mut PathProperty,
-    duration: SongTime,
-    start_time: SongTime,
-    easing: Functions,
+    timing: &EventTiming,
     song_time: SongTime,
 ) -> ControlFlow<()> {
-    let elapsed_time = song_time - start_time;
-    // clamped normalized time, a zero duration is already complete
-    let normalized_time = if duration <= SongTime::ZERO {
-        1.0
-    } else {
-        (elapsed_time / duration).clamp(0.0, 1.0) as f32
-    };
-    interpolation.interpolate_time = easing.interpolate(normalized_time);
+    interpolation.interpolate_time = timing.progress(song_time);
 
-    if elapsed_time < duration {
+    if !timing.has_finished(song_time) {
         return ControlFlow::Continue(());
     }
 
     interpolation.finish();
     ControlFlow::Break(())
 }
+
 /// Sets the value of a property based on the points defined in the BasePointDefinition.
 /// Returns true if the property was set to the last point's value. aka finished
 fn set_property_value(

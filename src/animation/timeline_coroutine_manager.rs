@@ -2,13 +2,13 @@ use std::collections::HashMap;
 
 use crate::{
     animation::{
+        event_timing::EventTiming,
         events::{EventData, EventType},
         track::{PathPropertyHandle, Track, ValuePropertyHandle},
         tracks_holder::{TrackKey, TracksHolder},
     },
     base_provider_context::BaseProviderContext,
     base_value::BaseValue,
-    easings::functions::Functions,
     point_definition::{
         PointDefinitionLike, base_point_definition::BasePointDefinition,
         point_definition_interpolation::interpolate_paths,
@@ -80,10 +80,8 @@ impl<E: TimedEvent> Default for Timeline<E> {
 #[derive(Clone)]
 struct ValueEvent {
     id: EventId,
-    start_song_time: SongTime,
-    duration_song_time: SongTime,
+    timing: EventTiming,
     repeat: u32,
-    easing: Functions,
     point_data: Option<BasePointDefinition>,
 }
 
@@ -91,9 +89,7 @@ struct ValueEvent {
 #[derive(Clone)]
 struct PathEvent {
     id: EventId,
-    start_song_time: SongTime,
-    duration_song_time: SongTime,
-    easing: Functions,
+    timing: EventTiming,
     point_data: Option<BasePointDefinition>,
 }
 
@@ -103,7 +99,7 @@ impl TimedEvent for ValueEvent {
     }
 
     fn start_song_time(&self) -> SongTime {
-        self.start_song_time
+        self.timing.start_song_time
     }
 }
 
@@ -113,7 +109,7 @@ impl TimedEvent for PathEvent {
     }
 
     fn start_song_time(&self) -> SongTime {
-        self.start_song_time
+        self.timing.start_song_time
     }
 }
 
@@ -131,46 +127,6 @@ impl PathSnapshot<'_> {
     /// Samples the path at `time` (an object's lifetime). Works the same as `PathProperty::interpolate`.
     pub fn interpolate(&self, time: f32, context: &BaseProviderContext) -> Option<BaseValue> {
         interpolate_paths(self.prev_point, self.point, self.interpolate_time, time, context)
-    }
-}
-
-impl ValueEvent {
-    /// Eased progress through the current repeat iteration.
-    /// Holds at the end once every iteration has elapsed.
-    fn interpolate_progress(&self, song_time: SongTime) -> f32 {
-        let duration = self.duration_song_time;
-        if duration <= SongTime::ZERO {
-            return 1.0;
-        }
-
-        let end = duration * (self.repeat as f64 + 1.0);
-
-        let elapsed = song_time - self.start_song_time;
-        if elapsed >= end {
-            return 1.0;
-        }
-        
-        let iteration = (elapsed / duration).floor();
-        // each repeat restarts at the iteration boundary
-        // this is faster than using a modulus and avoids floating point issues with very small durations
-        let local = elapsed - (duration * iteration);
-        let progress = local / duration;
-        self.easing
-            .interpolate(progress.clamp(0.0, 1.0) as f32)
-    }
-}
-
-impl PathEvent {
-    /// Eased blend time, or `None` once the animation has finished.
-    fn blend_time(&self, song_time: SongTime) -> Option<f32> {
-        let duration = self.duration_song_time;
-        let elapsed = song_time - self.start_song_time;
-        if duration <= SongTime::ZERO || elapsed >= duration {
-            return None;
-        }
-        let progress = elapsed / duration;
-
-        Some(self.easing.interpolate(progress.clamp(0.0, 1.0) as f32))
     }
 }
 
@@ -221,7 +177,7 @@ impl Timeline<ValueEvent> {
     fn value_at(&self, song_time: SongTime, context: &BaseProviderContext) -> Option<BaseValue> {
         let event = &self.events[self.active_index(song_time)?];
         let points = event.point_data.as_ref()?;
-        Some(points.interpolate(event.interpolate_progress(song_time), context).0)
+        Some(points.interpolate(event.timing.repeated_progress(event.repeat, song_time), context).0)
     }
 }
 
@@ -251,7 +207,7 @@ impl Timeline<PathEvent> {
             };
         };
 
-        match event.blend_time(song_time) {
+        match event.timing.path_blend(song_time) {
             Some(interpolate_time) => PathSnapshot {
                 prev_point,
                 point: Some(point),
@@ -333,18 +289,19 @@ impl TimelineCoroutineManager {
         let id = EventId(event.track_key, self.next_id);
         self.next_id += 1;
 
-        let start_song_time = event.start_song_time;
-        let duration_song_time = event.raw_duration.to_song_time(bpm as f64);
+        let timing = EventTiming {
+            start_song_time: event.start_song_time,
+            duration_song_time: event.raw_duration.to_song_time(bpm as f64),
+            easing: event.easing,
+        };
 
         let track = self.tracks.entry(event.track_key).or_default();
         match event.property {
             EventType::AnimateTrack(handle) => {
                 track.properties.entry(handle).or_default().insert(ValueEvent {
                     id,
-                    start_song_time,
-                    duration_song_time,
+                    timing,
                     repeat: event.repeat,
-                    easing: event.easing,
                     point_data: event.point_data,
                 })
             }
@@ -354,9 +311,7 @@ impl TimelineCoroutineManager {
                 .or_default()
                 .insert(PathEvent {
                     id,
-                    start_song_time,
-                    duration_song_time,
-                    easing: event.easing,
+                    timing,
                     point_data: event.point_data,
                 }),
         }
@@ -444,6 +399,7 @@ mod tests {
 
     use super::*;
     use crate::animation::coroutine_manager::CoroutineManager;
+    use crate::easings::functions::Functions;
     use crate::animation::track::{PathPropertyHandle, Track, ValuePropertyHandle};
     use crate::modifiers::ModifierValues;
     use crate::point_data::basic_point_data::BasicPointData;
