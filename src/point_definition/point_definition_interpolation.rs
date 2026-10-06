@@ -65,7 +65,7 @@ impl PointDefinitionInterpolation {
                 let a = prev_point_data.interpolate(time, context).0;
                 let b = point_data.interpolate(time, context).0;
 
-                let result = BaseValue::value_lerp_clamped(a, b, self.interpolate_time);
+                let result = BaseValue::value_lerp(a, b, self.interpolate_time);
 
                 Some(result)
             }

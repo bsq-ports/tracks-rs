@@ -106,3 +106,19 @@ fn base_combo_updates_with_smoothing_and_operator_for_f32() {
     let expected_final = |v: f32| v + added;
     assert!((v_final - expected_final(new_base) * 0.5).abs() <= eps);
 }
+
+/// https://github.com/bsq-ports/Tracks/issues/29
+/// Easings that overshoot (back, elastic) must not be clamped to the start and end values.
+#[test]
+fn overshooting_point_easing_is_not_clamped() {
+    let mut ctx = BaseProviderContext::new();
+    type FloatPointDefinition = BasicPointDefinition<f32>;
+
+    let back = FloatPointDefinition::parse(json!([[0.0, 0.0], [1.0, 1.0, "easeOutBack"]]), &mut ctx);
+    let (v, _) = back.interpolate(0.5, &ctx);
+    assert!(v > 1.0, "easeOutBack should overshoot the end value, got {v}");
+
+    let in_back = FloatPointDefinition::parse(json!([[0.0, 0.0], [1.0, 1.0, "easeInBack"]]), &mut ctx);
+    let (v, _) = in_back.interpolate(0.2, &ctx);
+    assert!(v < 0.0, "easeInBack should undershoot the start value, got {v}");
+}
