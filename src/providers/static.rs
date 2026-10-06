@@ -14,7 +14,7 @@ impl StaticValues {
     pub fn new(values: impl Into<SmallVec<[f32; 4]>>, is_rotation: bool) -> Self {
         Self {
             values: values.into(),
-            is_rotation: is_rotation,
+            is_rotation,
         }
     }
 }

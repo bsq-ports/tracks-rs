@@ -1,7 +1,6 @@
-use glam::FloatExt;
-use glam::{Quat, Vec3, Vec4};
+use glam::{Vec3, Vec4};
 
-use crate::base_value::{BaseValue, WrapBaseValueType};
+use crate::base_value::WrapBaseValueType;
 
 /// Represents a type that can be used as a value in the system, such as a float, vector, or quaternion.
 /// This trait defines the necessary operations and conversions for these types, allowing them to be used
