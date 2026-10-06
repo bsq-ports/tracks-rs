@@ -1,4 +1,4 @@
-pub mod replay_based_coroutine_manager;
+pub mod timeline_coroutine_manager;
 pub mod coroutine_manager;
 pub mod events;
 pub mod game_object;

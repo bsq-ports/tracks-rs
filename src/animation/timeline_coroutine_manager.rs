@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{
     animation::{
         events::{EventData, EventType},
-        track::{PathPropertyHandle, ValuePropertyHandle},
+        track::{PathPropertyHandle, Track, ValuePropertyHandle},
         tracks_holder::{TrackKey, TracksHolder},
     },
     base_provider_context::BaseProviderContext,
@@ -16,7 +16,7 @@ use crate::{
 /// Evaluates track events at any song time, instead of stepping forward like [`super::coroutine_manager::CoroutineManager`].
 ///
 /// All events are registered up front. They are grouped into one timeline per
-/// `(track, EventType)` and sorted by start time. Starting an event overrides the previous
+/// `(track, property)` and sorted by start time. Starting an event overrides the previous
 /// one on the same property, so the state at song time `x` depends only on the **last event
 /// with `start <= x`**. A path property also needs the event before it, because that is the
 /// path it blends from. Nothing has to be replayed, so you can seek forwards or backwards.
@@ -30,30 +30,65 @@ use crate::{
 /// - `AssignPathAnimation` blends from the previous path to the new one over the duration, then finishes.
 /// - Events with no point data clear the property.
 #[derive(Clone, Default)]
-pub struct ReplayBasedCoroutineManager {
-    timelines: Vec<Timeline>,
-    lookup: HashMap<(TrackKey, EventType), usize>,
+pub struct TimelineCoroutineManager {
+    tracks: HashMap<TrackKey, TrackTimelines>,
+}
+
+/// The timelines of one track. Value and path properties behave differently, so they have
+/// separate event types and maps, and lookups can borrow the handle instead of cloning it
+/// (custom property handles own a `String`).
+#[derive(Clone, Default)]
+struct TrackTimelines {
+    properties: HashMap<ValuePropertyHandle, Timeline<ValueEvent>>,
+    path_properties: HashMap<PathPropertyHandle, Timeline<PathEvent>>,
+}
+
+/// An event that can be placed on a [`Timeline`].
+trait TimedEvent {
+    fn start_song_time(&self) -> SongTime;
 }
 
 /// The events that target one property on one track, sorted by start time.
 #[derive(Clone)]
-struct Timeline {
-    track_key: TrackKey,
-    event_type: EventType,
-    events: Vec<TimelineEvent>,
+struct Timeline<E: TimedEvent> {
+    events: Vec<E>,
 }
 
-/// A single event in a timeline, with its start time, duration, easing, and point data.
-///
-/// Can be either `AnimateTrack` or `AssignPathAnimation`.
-/// The `repeat` field is ignored for path animations, as they always finish after one iteration.
+impl<E: TimedEvent> Default for Timeline<E> {
+    fn default() -> Self {
+        Self { events: Vec::new() }
+    }
+}
+
+/// An `AnimateTrack` event.
 #[derive(Clone)]
-struct TimelineEvent {
+struct ValueEvent {
     start_song_time: SongTime,
     duration_song_time: SongTime,
     repeat: u32,
     easing: Functions,
     point_data: Option<BasePointDefinition>,
+}
+
+/// An `AssignPathAnimation` event. It has no `repeat`: path animations finish after one iteration.
+#[derive(Clone)]
+struct PathEvent {
+    start_song_time: SongTime,
+    duration_song_time: SongTime,
+    easing: Functions,
+    point_data: Option<BasePointDefinition>,
+}
+
+impl TimedEvent for ValueEvent {
+    fn start_song_time(&self) -> SongTime {
+        self.start_song_time
+    }
+}
+
+impl TimedEvent for PathEvent {
+    fn start_song_time(&self) -> SongTime {
+        self.start_song_time
+    }
 }
 
 /// The state of a path property at a given song time.
@@ -80,7 +115,7 @@ impl PathSnapshot<'_> {
     }
 }
 
-impl TimelineEvent {
+impl ValueEvent {
     /// Eased progress through the current repeat iteration.
     /// Holds at the end once every iteration has elapsed.
     fn animate_time(&self, song_time: SongTime) -> f32 {
@@ -99,10 +134,11 @@ impl TimelineEvent {
         self.easing
             .interpolate((local / duration).clamp(0.0, 1.0) as f32)
     }
+}
 
-    /// Eased blend time of a path animation, or `None` once it has finished.
-    /// Repeat is ignored, the same as in `CoroutineManager`.
-    fn path_blend_time(&self, song_time: SongTime) -> Option<f32> {
+impl PathEvent {
+    /// Eased blend time, or `None` once the animation has finished.
+    fn blend_time(&self, song_time: SongTime) -> Option<f32> {
         let duration = self.duration_song_time;
         let elapsed = song_time - self.start_song_time;
         if duration <= SongTime::ZERO || elapsed >= duration {
@@ -113,23 +149,38 @@ impl TimelineEvent {
     }
 }
 
-impl Timeline {
-    /// Index of the last event with `start <= song_time`.
-    fn active_index(&self, song_time: SongTime) -> Option<usize> {
-        // this should binary search so should be fine
-        self.events
-            .partition_point(|e| e.start_song_time <= song_time)
-            .checked_sub(1)
+impl<E: TimedEvent> Timeline<E> {
+    /// Inserts `event` keeping the timeline sorted by start time.
+    /// Inserting after equal start times keeps the later-added event active,
+    /// and is cheap when events arrive already sorted.
+    fn insert(&mut self, event: E) {
+        let start = event.start_song_time();
+        let position = self
+            .events
+            .partition_point(|e| e.start_song_time() <= start);
+        self.events.insert(position, event);
     }
 
+    /// Index of the last event with `start <= song_time`.
+    fn active_index(&self, song_time: SongTime) -> Option<usize> {
+        // binary search
+        self.events
+            .partition_point(|e| e.start_song_time() <= song_time)
+            .checked_sub(1)
+    }
+}
+
+impl Timeline<ValueEvent> {
     /// Value of the active event at `song_time`, or `None` if no event is active or it has no point data.
     fn value_at(&self, song_time: SongTime, context: &BaseProviderContext) -> Option<BaseValue> {
-        let active_index = self.active_index(song_time)?;
-        let event = &self.events[active_index];
+        let event = &self.events[self.active_index(song_time)?];
         let points = event.point_data.as_ref()?;
         Some(points.interpolate(event.animate_time(song_time), context).0)
     }
+}
 
+impl Timeline<PathEvent> {
+    /// A path property also needs the event before the active one: that is the path it blends from.
     fn path_at(&self, song_time: SongTime) -> PathSnapshot<'_> {
         let Some(index) = self.active_index(song_time) else {
             return PathSnapshot {
@@ -153,7 +204,7 @@ impl Timeline {
             };
         };
 
-        match event.path_blend_time(song_time) {
+        match event.blend_time(song_time) {
             Some(interpolate_time) => PathSnapshot {
                 prev_point,
                 point: Some(point),
@@ -168,7 +219,34 @@ impl Timeline {
     }
 }
 
-impl ReplayBasedCoroutineManager {
+impl TrackTimelines {
+    /// Writes the state at `song_time` into every property of `track` that has events.
+    fn apply(&self, song_time: SongTime, context: &BaseProviderContext, track: &mut Track) {
+        for (handle, timeline) in &self.properties {
+            track
+                .properties
+                .get_by_handle_mut(handle)
+                .expect("Property not found")
+                .set_value(timeline.value_at(song_time, context));
+        }
+
+        for (handle, timeline) in &self.path_properties {
+            let path_property = track
+                .path_properties
+                .get_by_handle_mut(handle)
+                .expect("Path property not found");
+
+            let snapshot = timeline.path_at(song_time);
+            // clones up to two point definitions per call. if this shows up in profiles,
+            // storing them as `Rc<BasePointDefinition>` in `PathProperty` would make this a refcount bump
+            path_property.prev_point = snapshot.prev_point.cloned();
+            path_property.point = snapshot.point.cloned();
+            path_property.interpolate_time = snapshot.interpolate_time;
+        }
+    }
+}
+
+impl TimelineCoroutineManager {
     pub fn new() -> Self {
         Self::default()
     }
@@ -185,39 +263,31 @@ impl ReplayBasedCoroutineManager {
     /// Adds an event to its `(track, property)` timeline, keeping the timeline sorted by start time.
     /// When two events start at the same time, the one added later wins.
     pub fn add_event(&mut self, bpm: f32, event: EventData) {
-        let key = (event.track_key, event.property);
-        let index = *self.lookup.entry(key.clone()).or_insert_with(|| {
-            self.timelines.push(Timeline {
-                track_key: key.0,
-                event_type: key.1,
-                events: Vec::new(),
-            });
-            self.timelines.len() - 1
-        });
-
-        let timeline = &mut self.timelines[index];
+        let track = self.tracks.entry(event.track_key).or_default();
         let start_song_time = event.start_song_time;
-        // inserting after equal start times keeps the later-added event active,
-        // and is cheap when events arrive already sorted
-        let position = timeline
-            .events
-            .partition_point(|e| e.start_song_time <= start_song_time);
-        timeline.events.insert(
-            position,
-            TimelineEvent {
-                start_song_time,
-                duration_song_time: event.raw_duration.to_song_time(bpm as f64),
-                repeat: event.repeat,
-                easing: event.easing,
-                point_data: event.point_data,
-            },
-        );
-    }
+        let duration_song_time = event.raw_duration.to_song_time(bpm as f64);
 
-    fn timeline(&self, track_key: TrackKey, event_type: EventType) -> Option<&Timeline> {
-        self.lookup
-            .get(&(track_key, event_type))
-            .map(|&i| &self.timelines[i])
+        match event.property {
+            EventType::AnimateTrack(handle) => {
+                track.properties.entry(handle).or_default().insert(ValueEvent {
+                    start_song_time,
+                    duration_song_time,
+                    repeat: event.repeat,
+                    easing: event.easing,
+                    point_data: event.point_data,
+                })
+            }
+            EventType::AssignPathAnimation(handle) => track
+                .path_properties
+                .entry(handle)
+                .or_default()
+                .insert(PathEvent {
+                    start_song_time,
+                    duration_song_time,
+                    easing: event.easing,
+                    point_data: event.point_data,
+                }),
+        }
     }
 
     /// Value of an animated property at `song_time`.
@@ -229,7 +299,10 @@ impl ReplayBasedCoroutineManager {
         handle: &ValuePropertyHandle,
         context: &BaseProviderContext,
     ) -> Option<BaseValue> {
-        self.timeline(track_key, EventType::AnimateTrack(handle.clone()))?
+        self.tracks
+            .get(&track_key)?
+            .properties
+            .get(handle)?
             .value_at(song_time, context)
     }
 
@@ -240,46 +313,26 @@ impl ReplayBasedCoroutineManager {
         track_key: TrackKey,
         handle: &PathPropertyHandle,
     ) -> Option<PathSnapshot<'_>> {
-        self.timeline(track_key, EventType::AssignPathAnimation(handle.clone()))
+        self.tracks
+            .get(&track_key)?
+            .path_properties
+            .get(handle)
             .map(|timeline| timeline.path_at(song_time))
     }
 
     /// Writes the snapshot at `song_time` into every property that has events.
     /// Can be called with any time, in any order.
     pub fn apply(
-        &mut self,
+        &self,
         song_time: SongTime,
         context: &BaseProviderContext,
         tracks_holder: &mut TracksHolder,
     ) {
-        for timeline in &mut self.timelines {
+        for (track_key, timelines) in &self.tracks {
             let track = tracks_holder
-                .get_track_mut(timeline.track_key)
+                .get_track_mut(*track_key)
                 .expect("Track not found for replay timeline");
-
-            match &timeline.event_type {
-                EventType::AnimateTrack(handle) => {
-                    let value = timeline.value_at(song_time, context);
-                    track
-                        .properties
-                        .get_by_handle_mut(handle)
-                        .expect("Property not found")
-                        .set_value(value);
-                }
-                EventType::AssignPathAnimation(handle) => {
-                    let path_property = track
-                        .path_properties
-                        .get_by_handle_mut(handle)
-                        .expect("Path property not found");
-
-                    let snapshot = timeline.path_at(song_time);
-                    // clones up to two point definitions per call. if this shows up in profiles,
-                    // storing them as `Rc<BasePointDefinition>` in `PathProperty` would make this a refcount bump
-                    path_property.prev_point = snapshot.prev_point.cloned();
-                    path_property.point = snapshot.point.cloned();
-                    path_property.interpolate_time = snapshot.interpolate_time;
-                }
-            }
+            timelines.apply(song_time, context, track);
         }
     }
 }
@@ -466,7 +519,7 @@ mod tests {
         let mut replay_holder = live_holder.clone();
 
         let events = scenario(a, b);
-        let mut replay = ReplayBasedCoroutineManager::from_events(60.0, events.clone());
+        let replay = TimelineCoroutineManager::from_events(60.0, events.clone());
         let mut live = CoroutineManager::default();
         let mut pending = events.into_iter().peekable();
 
@@ -540,14 +593,14 @@ mod tests {
     fn seeking_matches_fresh_evaluation() {
         let ctx = BaseProviderContext::new();
         let (holder, a, b) = holder_with_tracks();
-        let mut replay = ReplayBasedCoroutineManager::from_events(60.0, scenario(a, b));
+        let replay = TimelineCoroutineManager::from_events(60.0, scenario(a, b));
         let mut seek_holder = holder.clone();
 
         for t in [2.5, 0.5, 1.75, 0.1, 3.4, 2.5].map(SongTime::new) {
             replay.apply(t, &ctx, &mut seek_holder);
 
             let mut fresh_holder = holder.clone();
-            ReplayBasedCoroutineManager::from_events(60.0, scenario(a, b)).apply(
+            TimelineCoroutineManager::from_events(60.0, scenario(a, b)).apply(
                 t,
                 &ctx,
                 &mut fresh_holder,
@@ -588,7 +641,7 @@ mod tests {
     fn before_first_event_is_none_and_final_value_persists() {
         let ctx = BaseProviderContext::new();
         let (_, a, _) = holder_with_tracks();
-        let replay = ReplayBasedCoroutineManager::from_events(
+        let replay = TimelineCoroutineManager::from_events(
             60.0,
             [event(
                 a,
@@ -628,7 +681,7 @@ mod tests {
     fn later_added_event_wins_ties() {
         let ctx = BaseProviderContext::new();
         let (_, a, _) = holder_with_tracks();
-        let replay = ReplayBasedCoroutineManager::from_events(
+        let replay = TimelineCoroutineManager::from_events(
             60.0,
             [
                 event(a, dissolve(), 1.0, 0.0, 0, Some(float_points(0.0, 1.0))),
