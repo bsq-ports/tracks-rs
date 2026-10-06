@@ -99,10 +99,11 @@ fn quaternion_point_definition_parse_from_smoothed_provider_s14() {
     let (value, is_last) = def.interpolate(0.0, &ctx);
 
     let eps = 1e-4_f32;
-    assert!((value.x - q.x).abs() <= eps, "x mismatch");
-    assert!((value.y - q.y).abs() <= eps, "y mismatch");
-    assert!((value.z - q.z).abs() <= eps, "z mismatch");
-    assert!((value.w - q.w).abs() <= eps, "w mismatch");
+    // q and -q are the same rotation
+    assert!(
+        value.dot(q).abs() > 1.0 - eps,
+        "value: {value:?}, target: {q:?}"
+    );
     assert!(
         is_last,
         "parsed quaternion from smoothed provider should be last after full update"
@@ -184,7 +185,6 @@ fn base_provider_updates_reflect_in_quaternion_definition_no_smoothing() {
     let (q_after, _last2) = def.interpolate(0.5, &ctx);
 
     // it should be 0.5 interpolation between identity and the new base quaternion, not the original one, since there is no smoothing
-    let q_after = q_after;
     quat_approx_assert(q_after, initial_quat.slerp(head_rot, 0.5), 1e-3);
 }
 

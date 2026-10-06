@@ -176,7 +176,7 @@ fn bench_start_and_poll(c: &mut Criterion) {
             BenchmarkId::new("start_and_poll", n_tracks),
             &n_tracks,
             |b, &n| {
-                let mut manager = CoroutineManager::default();
+                let manager = CoroutineManager::default();
                 let mut holder = TracksHolder::new();
 
                 // create N tracks
@@ -241,7 +241,7 @@ fn bench_multi_props(c: &mut Criterion) {
             BenchmarkId::new("multi_props_start_and_poll", n_tracks),
             &n_tracks,
             |b, &n| {
-                let mut manager = CoroutineManager::default();
+                let manager = CoroutineManager::default();
                 let mut holder = TracksHolder::new();
 
                 // create N tracks

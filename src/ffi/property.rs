@@ -63,6 +63,8 @@ pub extern "C" fn path_property_create() -> *mut PathProperty {
     Box::into_raw(Box::new(PathProperty::default()))
 }
 
+/// # Safety
+/// - `ptr` must be null or a valid pointer to a `PathProperty`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn path_property_finish(ptr: *mut PathProperty) {
     if !ptr.is_null() {
@@ -73,6 +75,8 @@ pub unsafe extern "C" fn path_property_finish(ptr: *mut PathProperty) {
     }
 }
 
+/// # Safety
+/// - `ptr` must be null or a valid, null-terminated C string.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn string_to_property_name(ptr: *const c_char) -> PropertyNames {
     if ptr.is_null() {

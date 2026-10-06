@@ -1,3 +1,5 @@
+use std::ops::ControlFlow;
+
 use log::debug;
 
 use crate::{
@@ -25,8 +27,8 @@ use super::{
 /// A coroutine is a `CoroutineTask`: the state of one event that is still running.
 /// It holds the target track and property, the start time, the duration (beats converted to
 /// song time using the BPM), the easing, the repeat count and the point definition. Each poll
-/// moves it forward and returns [`CoroutineResult::Yield`] (keep running) or
-/// [`CoroutineResult::Break`] (finished; remove it). This mirrors the Unity coroutines
+/// runs one step, which returns [`ControlFlow::Continue`] (keep running) or
+/// [`ControlFlow::Break`] (finished; remove it). This mirrors the Unity coroutines
 /// used by the original C# implementation, but here the caller drives them with song time.
 ///
 /// # Starting and overriding events
@@ -35,11 +37,13 @@ use super::{
 /// new event takes over a property that is still animating. Events on other tracks, or on
 /// other properties of the same track, are unaffected.
 ///
-/// The new event is then evaluated once at the current song time. It is not queued if:
+/// The new event is not queued if:
 /// - it has no point data, so the target property is cleared (`set_null`),
 /// - it has zero duration or has already fully elapsed (repeats included), so the final value is applied,
-/// - it is a single static point with no base provider, so that value is applied once,
-/// - it already finished during that first evaluation.
+/// - it is a single static point with no base provider, so that value is applied once.
+///
+/// Otherwise its first frame runs straight away, through the same step as every later poll,
+/// and it is queued unless that step already finished it.
 ///
 /// # Animating properties (`AnimateTrack`)
 /// Each poll computes `elapsed / duration`, clamps it to `[0, 1]`, applies the easing,
@@ -74,13 +78,8 @@ struct CoroutineTask {
     easing: Functions,
     start_song_time: SongTime,
     track_key: TrackKey,
+    /// The `AnimateTrack` points. `None` for path events, whose points live in the path property.
     point_definition: Option<base_point_definition::BasePointDefinition>,
-}
-
-#[derive(PartialEq, PartialOrd, Clone, Copy)]
-pub enum CoroutineResult {
-    Yield,
-    Break,
 }
 
 impl Default for CoroutineManager {
@@ -137,134 +136,86 @@ impl CoroutineManager {
             self.coroutines.swap_remove(pos);
         }
 
-        // iterate entire list and remove all matching (in case of repeats)
-        // should not be necessary due to above, but just in case
-        // self.coroutines.retain(|c| {
-        //     c.track_key != event_group_data.track_key || c.event_type != event_group_data.property
-        // });
-
-        let value = Self::make_event_task(
+        let Some(mut task) = Self::start_task(
             song_time,
             duration_song_time,
             event_group_data,
             provider_context,
             tracks_holder,
-        );
-        let Some(value) = value else {
+        ) else {
             debug!("CoroutineTask has 0 duration or no points, skipping");
             return;
         };
 
-        self.coroutines.push(value);
-
-        // let event_tasks = event_group_data
-        //     .coroutine_infos
-        //     .into_iter()
-        //     .filter_map(|data| {
-        //         Self::enqueue_event(
-        //             song_time, duration, start_time, easing, repeat, data, context,
-        //         )
-        //     })
-        //     .collect_vec();
-
-        // self.coroutines.extend(event_tasks);
+        // the first frame runs exactly like every later poll
+        if Self::step(&mut task, song_time, provider_context, tracks_holder).is_continue() {
+            self.coroutines.push(task);
+        }
     }
 
-    /// Creates a new CoroutineTask for the given event data, if it has a valid duration and points.
-    fn make_event_task(
+    /// Applies the parts of an event that happen immediately, and returns the task to run if it still needs to.
+    ///
+    /// Returns `None` when there is nothing left to animate:
+    /// - no point data: the property is cleared,
+    /// - zero duration or already fully elapsed (repeats included): the final value is applied, or the path is finished,
+    /// - a single static point: its value is applied once.
+    fn start_task(
         current_song_time: SongTime,
         duration_song_time: SongTime,
         data: EventData,
         provider_context: &BaseProviderContext,
         tracks_holder: &mut TracksHolder,
     ) -> Option<CoroutineTask> {
-        let mut repeat = data.repeat;
-        let mut has_base_provider = false;
-
-        let no_duration = duration_song_time == SongTime::ZERO
-            || data.start_song_time + duration_song_time * (repeat as f64 + 1.0)
+        let already_elapsed = duration_song_time == SongTime::ZERO
+            || data.start_song_time + duration_song_time * (data.repeat as f64 + 1.0)
                 < current_song_time;
-        let mut property = data.property;
-        let track_key = data.track_key;
 
-        // use an optional point data to move it into the coroutine task
-        let mut point_data = data.point_data;
         let track = tracks_holder
-            .get_track_mut(track_key)
+            .get_track_mut(data.track_key)
             .expect("Track not found for CoroutineTask");
-        if point_data.is_none() {
-            property.set_null(track);
+        let Some(point_data) = data.point_data else {
+            data.property.set_null(track);
             return None;
         };
 
-        match &mut property {
+        // only `AnimateTrack` steps read this, and it walks every point
+        let mut has_base_provider = false;
+        let point_definition = match &data.property {
             EventType::AnimateTrack(property_handle) => {
-                let property = track
-                    .properties
-                    .get_by_handle_mut(property_handle)
-                    .expect("Property not found");
-
-                let point_data = point_data.as_ref().unwrap();
-
                 has_base_provider = point_data.has_base_provider();
-                if no_duration || (point_data.get_count() <= 1 && !has_base_provider) {
-                    set_property_value(point_data, property, 1.0, provider_context);
+                if already_elapsed || (point_data.get_count() <= 1 && !has_base_provider) {
+                    let property = track
+                        .properties
+                        .get_by_handle_mut(property_handle)
+                        .expect("Property not found");
+                    set_property_value(&point_data, property, 1.0, provider_context);
                     return None;
                 }
-
-                let result = animate_track(
-                    point_data,
-                    property,
-                    duration_song_time,
-                    data.start_song_time,
-                    current_song_time,
-                    data.easing,
-                    has_base_provider,
-                    provider_context,
-                );
-                if result == CoroutineResult::Break {
-                    repeat = repeat.saturating_sub(1);
-                }
-
-                if repeat == 0 && result == CoroutineResult::Break {
-                    return None;
-                }
+                Some(point_data)
             }
             EventType::AssignPathAnimation(path_property_handle) => {
                 let path_property = track
                     .path_properties
                     .get_by_handle_mut(path_property_handle)
                     .expect("Path property not found");
-
-                path_property.init(point_data.take());
-
-                if no_duration {
+                path_property.init(Some(point_data));
+                if already_elapsed {
                     path_property.finish();
                     return None;
                 }
-                let res = assign_path_animation(
-                    path_property,
-                    duration_song_time,
-                    data.start_song_time,
-                    data.easing,
-                    current_song_time,
-                );
-                if res == CoroutineResult::Break {
-                    return None;
-                }
+                None
             }
         };
+
         Some(CoroutineTask {
-            easing: data.easing,
-            track_key,
-            event_type: property,
-            has_base_provider,
-
-            point_definition: point_data,
-
-            repeat,
+            event_type: data.property,
+            repeat: data.repeat,
             duration_song_time,
+            has_base_provider,
+            easing: data.easing,
             start_song_time: data.start_song_time,
+            track_key: data.track_key,
+            point_definition,
         })
     }
 
@@ -279,9 +230,8 @@ impl CoroutineManager {
         // compaction costs from retain_mut when many entries complete each frame.
         let mut i = 0;
         while i < self.coroutines.len() {
-            let result =
-                Self::poll_event(song_time, context, &mut self.coroutines[i], tracks_holder);
-            if result == CoroutineResult::Yield {
+            if Self::step(&mut self.coroutines[i], song_time, context, tracks_holder).is_continue()
+            {
                 i += 1;
             } else {
                 self.coroutines.swap_remove(i);
@@ -289,57 +239,53 @@ impl CoroutineManager {
         }
     }
 
-    /// Polls a single coroutine task and updates the associated track property.
-    fn poll_event(
+    /// Runs one frame of a coroutine: updates its property, and moves on to the next repeat when an iteration ends.
+    /// Returns `Break` when the task is done and can be dropped.
+    fn step(
+        task: &mut CoroutineTask,
         song_time: SongTime,
         context: &BaseProviderContext,
-        event_data: &mut CoroutineTask,
         tracks_holder: &mut TracksHolder,
-    ) -> CoroutineResult {
-        let duration = event_data.duration_song_time;
+    ) -> ControlFlow<()> {
+        let duration = task.duration_song_time;
         let track = tracks_holder
-            .get_track_mut(event_data.track_key)
+            .get_track_mut(task.track_key)
             .expect("Track not found for CoroutineTask");
 
-        match &mut event_data.event_type {
+        match &task.event_type {
             EventType::AnimateTrack(value_property_handle) => {
-                let point_def = match &event_data.point_definition {
-                    Some(def) => def,
-                    None => {
-                        debug!("No point definition for AnimateTrack event, skipping");
-                        return CoroutineResult::Break;
-                    }
+                let Some(point_def) = &task.point_definition else {
+                    debug!("No point definition for AnimateTrack event, skipping");
+                    return ControlFlow::Break(());
                 };
-                let has_base = event_data.has_base_provider;
                 let value_property = track
                     .properties
                     .get_by_handle_mut(value_property_handle)
                     .expect("Property not found");
 
-                let mut run_event = |start: SongTime| {
+                let mut run = |start: SongTime| {
                     animate_track(
                         point_def,
                         value_property,
                         duration,
                         start,
                         song_time,
-                        event_data.easing,
-                        has_base,
+                        task.easing,
+                        task.has_base_provider,
                         context,
                     )
                 };
 
-                let mut result = run_event(event_data.start_song_time);
+                let mut flow = run(task.start_song_time);
 
-                // when we repeat, we restart state
-                while result == CoroutineResult::Break && event_data.repeat > 0 {
-                    event_data.repeat = event_data.repeat.saturating_sub(1);
-                    event_data.start_song_time += duration;
-
-                    result = run_event(event_data.start_song_time);
+                // each repeat restarts the iteration one duration later
+                while flow.is_break() && task.repeat > 0 {
+                    task.repeat -= 1;
+                    task.start_song_time += duration;
+                    flow = run(task.start_song_time);
                 }
 
-                result
+                flow
             }
             EventType::AssignPathAnimation(path_property_handle) => {
                 let path_property = track
@@ -350,8 +296,8 @@ impl CoroutineManager {
                 assign_path_animation(
                     path_property,
                     duration,
-                    event_data.start_song_time,
-                    event_data.easing,
+                    task.start_song_time,
+                    task.easing,
                     song_time,
                 )
             }
@@ -371,7 +317,7 @@ fn animate_track(
     easing: Functions,
     non_lazy: bool,
     context: &BaseProviderContext,
-) -> CoroutineResult {
+) -> ControlFlow<()> {
     let elapsed_time = current_song_time - start_song_time;
 
     // clamped normalized time
@@ -382,19 +328,12 @@ fn animate_track(
     };
     let time = easing.interpolate(normalized_time);
     let on_last = set_property_value(points, property, time, context);
-    let skip = !non_lazy && on_last;
+    let reached_end = !non_lazy && on_last;
 
-    // if elapsed time is less than duration, yield
-    if elapsed_time < duration {
-        // we only break if we've reached the end
-        if skip {
-            return CoroutineResult::Break;
-        }
-
-        return CoroutineResult::Yield;
+    if elapsed_time >= duration || reached_end {
+        return ControlFlow::Break(());
     }
-
-    CoroutineResult::Break
+    ControlFlow::Continue(())
 }
 
 /// Updates the path property's eased interpolation time for the current song time.
@@ -405,17 +344,17 @@ fn assign_path_animation(
     start_time: SongTime,
     easing: Functions,
     song_time: SongTime,
-) -> CoroutineResult {
+) -> ControlFlow<()> {
     let elapsed_time = song_time - start_time;
     let normalized_time = (elapsed_time / duration).min(1.0) as f32;
     interpolation.interpolate_time = easing.interpolate(normalized_time);
 
     if elapsed_time < duration {
-        return CoroutineResult::Yield;
+        return ControlFlow::Continue(());
     }
 
     interpolation.finish();
-    CoroutineResult::Break
+    ControlFlow::Break(())
 }
 /// Sets the value of a property based on the points defined in the BasePointDefinition.
 /// Returns true if the property was set to the last point's value. aka finished
@@ -1240,6 +1179,74 @@ mod tests {
             track.properties.dissolve.get_value().is_none(),
             "dissolve should be None"
         );
+    }
+
+    #[test]
+    fn late_start_mid_repeat_runs_the_current_iteration() {
+        let ctx = BaseProviderContext::new();
+        let mut holder = TracksHolder::new();
+        let mut track = Track::default();
+        track.name = "late".to_string();
+        let key = holder.add_track(track);
+
+        // runs 0..1, 1..2 and 2..3, but is only started at 1.5, halfway through the second iteration
+        let event = EventData {
+            raw_duration: BpmTime::new(1.0),
+            easing: Functions::EaseLinear,
+            repeat: 2,
+            start_song_time: SongTime::new(0.0),
+            property: EventType::AnimateTrack(ValuePropertyHandle::new("dissolve")),
+            track_key: key,
+            point_data: Some(BasePointDefinition::Float(BasicPointDefinition::new(vec![
+                BasicPointData::new(
+                    ModifierValues::Static(0.0),
+                    0.0,
+                    false,
+                    vec![],
+                    Functions::EaseLinear,
+                ),
+                BasicPointData::new(
+                    ModifierValues::Static(10.0),
+                    1.0,
+                    false,
+                    vec![],
+                    Functions::EaseLinear,
+                ),
+            ]))),
+        };
+
+        let mut cm = CoroutineManager::default();
+        cm.start_event_coroutine(60.0, SongTime::new(1.5), &ctx, &mut holder, event);
+
+        let dissolve = |holder: &TracksHolder| {
+            holder
+                .get_track(key)
+                .unwrap()
+                .properties
+                .dissolve
+                .get_value()
+                .unwrap()
+                .as_float()
+                .unwrap()
+        };
+
+        assert!(
+            (dissolve(&holder) - 5.0).abs() < 1e-4,
+            "got {}",
+            dissolve(&holder)
+        );
+
+        // a quarter into the third iteration
+        cm.poll_events(SongTime::new(2.25), &ctx, &mut holder);
+        assert!(
+            (dissolve(&holder) - 2.5).abs() < 1e-4,
+            "got {}",
+            dissolve(&holder)
+        );
+
+        cm.poll_events(SongTime::new(3.5), &ctx, &mut holder);
+        assert_eq!(dissolve(&holder), 10.0);
+        assert!(cm.coroutines.is_empty(), "all repeats should have finished");
     }
 
     #[test]

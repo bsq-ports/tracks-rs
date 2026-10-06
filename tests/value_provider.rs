@@ -2,7 +2,6 @@ use glam::{Quat, Vec3, Vec4};
 use tracks_rs::base_provider_context::BaseProviderContext;
 use tracks_rs::base_value::BaseValue;
 use tracks_rs::prelude::AbstractValueProvider;
-use tracks_rs::providers::ValueProvider;
 
 // Helper to check is_rotation for a provider string
 fn check_is_rotation(expr: &str, expected: bool) {
@@ -56,9 +55,10 @@ fn is_rotation_smoothed_rotation_true() {
 }
 
 #[test]
-fn is_rotation_swizzle_then_smooth_rotation_true() {
+fn is_rotation_swizzle_then_smooth_is_linear() {
     // combined swizzle and smoothing on rotation
-    check_is_rotation("baseHeadRotation.xyz.s1", true);
+    // like Heck, a swizzled rotation is plain euler numbers, so smoothing it is linear
+    check_is_rotation("baseHeadRotation.xyz.s1", false);
 }
 
 #[test]

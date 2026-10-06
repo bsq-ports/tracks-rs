@@ -160,8 +160,8 @@ typedef struct BasicPointDefinition_f32 BasicPointDefinition_f32;
  * A coroutine is a `CoroutineTask`: the state of one event that is still running.
  * It holds the target track and property, the start time, the duration (beats converted to
  * song time using the BPM), the easing, the repeat count and the point definition. Each poll
- * moves it forward and returns [`CoroutineResult::Yield`] (keep running) or
- * [`CoroutineResult::Break`] (finished; remove it). This mirrors the Unity coroutines
+ * runs one step, which returns [`ControlFlow::Continue`] (keep running) or
+ * [`ControlFlow::Break`] (finished; remove it). This mirrors the Unity coroutines
  * used by the original C# implementation, but here the caller drives them with song time.
  *
  * # Starting and overriding events
@@ -170,11 +170,13 @@ typedef struct BasicPointDefinition_f32 BasicPointDefinition_f32;
  * new event takes over a property that is still animating. Events on other tracks, or on
  * other properties of the same track, are unaffected.
  *
- * The new event is then evaluated once at the current song time. It is not queued if:
+ * The new event is not queued if:
  * - it has no point data, so the target property is cleared (`set_null`),
  * - it has zero duration or has already fully elapsed (repeats included), so the final value is applied,
- * - it is a single static point with no base provider, so that value is applied once,
- * - it already finished during that first evaluation.
+ * - it is a single static point with no base provider, so that value is applied once.
+ *
+ * Otherwise its first frame runs straight away, through the same step as every later poll,
+ * and it is queued unless that step already finished it.
  *
  * # Animating properties (`AnimateTrack`)
  * Each poll computes `elapsed / duration`, clamps it to `[0, 1]`, applies the easing,
@@ -453,6 +455,10 @@ struct BaseProviderContext *base_provider_context_create(void);
 
 /**
  * Destroy a `BaseProviderContext` previously returned by `base_provider_context_create`.
+ *
+ * # Safety
+ * - `ctx` must be null or a pointer returned by `base_provider_context_create` that has not been destroyed yet.
+ * - `ctx` must not be used after this call.
  */
 void base_provider_context_destroy(struct BaseProviderContext *ctx);
 
@@ -468,6 +474,10 @@ struct BaseFFIProviderValues *tracks_make_base_ffi_provider(const BaseFFIProvide
 
 /**
  * Set a base provider value by name. `value` is a `WrapBaseValue` (C layout) converted into `BaseValue`.
+ *
+ * # Safety
+ * - `ctx` must be null or a valid pointer to a `BaseProviderContext`.
+ * - `base` must be null or a valid, null-terminated C string.
  */
 void base_provider_context_set_value(struct BaseProviderContext *ctx,
                                      const char *base,
@@ -476,24 +486,41 @@ void base_provider_context_set_value(struct BaseProviderContext *ctx,
 /**
  * Get a base provider value by name as a `WrapBaseValue`.
  * The returned `WrapBaseValue` points into data owned by `ctx` (via slice pointer), callers must not free it.
+ *
+ * # Safety
+ * - `ctx` must be null or a valid pointer to a `BaseProviderContext`.
+ * - `base` must be null or a valid, null-terminated C string.
  */
 struct WrapBaseValue base_provider_context_get_value(const struct BaseProviderContext *ctx,
                                                      const char *base);
 
 /**
  * Get base provider values as a pointer+length pair. The returned `WrappedValues` borrows data from `ctx`.
+ *
+ * # Safety
+ * - `ctx` must be null or a valid pointer to a `BaseProviderContext`.
+ * - `base` must be null or a valid, null-terminated C string.
+ * - The returned pointer is only valid until `ctx` is next mutated or destroyed.
  */
 struct WrappedValues base_provider_context_get_values_array(const struct BaseProviderContext *ctx,
                                                             const char *base);
 
 /**
  * Get the type of the base provider value for `base` (Vec3/Quat/Vec4/Float)
+ *
+ * # Safety
+ * - `ctx` must be null or a valid pointer to a `BaseProviderContext`.
+ * - `base` must be null or a valid, null-terminated C string.
  */
 WrapBaseValueType base_provider_context_get_type(const struct BaseProviderContext *ctx,
                                                  const char *base);
 
 /**
  * Call `update_providers` on the `BaseProviderContext` with a delta time.
+ *
+ * # Safety
+ * - `ctx` must be null or a valid pointer to a `BaseProviderContext`.
+ * - No other reference to `ctx` may be in use during the call.
  */
 void base_provider_context_update(struct BaseProviderContext *ctx, float delta);
 
@@ -654,7 +681,7 @@ struct WrapBaseValue tracks_interpolate_base_point_definition(const struct BaseP
 /**
  * Return number of points in the point definition.
  *
- * Safety:
+ * # Safety
  * - `point_definition` must be a valid, non-null pointer to a `BasePointDefinition`.
  */
 uintptr_t tracks_base_point_definition_count(const struct BasePointDefinition *point_definition);
@@ -662,14 +689,14 @@ uintptr_t tracks_base_point_definition_count(const struct BasePointDefinition *p
 /**
  * Check whether the point definition references a base provider.
  *
- * Safety:
+ * # Safety
  * - `point_definition` must be a valid, non-null pointer to a `BasePointDefinition`.
  */
 bool tracks_base_point_definition_has_base_provider(const struct BasePointDefinition *point_definition);
 
 /**
  * Get the `WrapBaseValueType` of the point definition.
- * Safety:
+ * # Safety
  * - `point_definition` must be a valid, non-null pointer to a `BasePointDefinition`.
  */
 WrapBaseValueType tracks_base_point_definition_get_type(const struct BasePointDefinition *point_definition);
@@ -868,8 +895,16 @@ void tracks_interpolate_vector4_batch(const Vector4PointDefinition *point_defini
 
 PathProperty *path_property_create(void);
 
+/**
+ * # Safety
+ * - `ptr` must be null or a valid pointer to a `PathProperty`.
+ */
 void path_property_finish(PathProperty *ptr);
 
+/**
+ * # Safety
+ * - `ptr` must be null or a valid, null-terminated C string.
+ */
 PropertyNames string_to_property_name(const char *ptr);
 
 /**
@@ -1102,7 +1137,7 @@ PathProperty *track_get_path_property(struct Track *track, const char *id);
 /**
  * Return a `CPropertiesMap` with pointers into the track's registered properties.
  *
- * Safety:
+ * # Safety
  * - `track` must be a valid, non-null pointer to a `Track`.
  * - The returned pointers are valid only while the `Track` is alive and not mutated in a way that moves or removes the properties.
  * - Do not retain these pointers across calls that might mutate the track.
@@ -1112,7 +1147,7 @@ struct CPropertiesMap track_get_properties_map(struct Track *track);
 /**
  * Return a `CPathPropertiesMap` with pointers into the track's path properties.
  *
- * Safety:
+ * # Safety
  * - `track` must be a valid, non-null pointer to a `Track`.
  * - Returned pointers are valid only while the track's path properties remain in-place.
  */
@@ -1120,7 +1155,7 @@ struct CPathPropertiesMap track_get_path_properties_map(struct Track *track);
 
 /**
  * Return a `CPropertiesValues` with the current values of the track's properties.
- * Safety:
+ * # Safety
  * - `track` must be a valid, non-null pointer to a `Track
  * - The returned struct contains copies of the current property values.
  */
@@ -1128,7 +1163,7 @@ struct CPropertiesValues track_get_properties_values(struct Track *track);
 
 /**
  * Return a `CPathPropertiesValues` with the interpolated values of the track's path properties at the given time.
- * Safety:
+ * # Safety
  * - `track` must be a valid, non-null pointer to a `Track`.
  * - `ctx` must be a valid, non-null pointer to a `BaseProviderContext`.
  *
@@ -1142,7 +1177,7 @@ struct CPathPropertiesValues track_get_path_properties_values(struct Track *trac
 /**
  * Register a C callback to be invoked when a game object is added/removed.
  *
- * Safety:
+ * # Safety
  * - `track` must be a valid pointer to a `Track`.
  * - `callback` and `user_data` must remain valid for as long as the callback may be invoked.
  * - The returned pointer is an opaque handle to the stored Rust closure; it must be removed with `track_remove_game_object_callback`.
@@ -1157,7 +1192,7 @@ void (**track_register_game_object_callback(struct Track *track,
 /**
  * Remove a previously registered game object callback.
  *
- * Safety:
+ * # Safety
  * - `track` must be a valid pointer to a `Track`.
  * - `callback` must be a pointer previously returned by `track_register_game_object_callback`.
  * - After calling this function the `callback` pointer must not be used again.
@@ -1172,39 +1207,68 @@ struct TracksHolder *tracks_holder_create(void);
 
 /**
  * Destroy a `TracksHolder` previously returned by `tracks_holder_create`.
+ *
+ * # Safety
+ * - `holder` must be null or a pointer returned by `tracks_holder_create` that has not been destroyed yet.
+ * - `holder` and any track pointers obtained from it must not be used after this call.
  */
 void tracks_holder_destroy(struct TracksHolder *holder);
 
 /**
  * Add a `Track` to the holder. Takes ownership of the `Track` pointer passed in.
  * Returns a `TrackKeyFFI` identifying the inserted track, or null-equivalent on error.
+ *
+ * # Safety
+ * - `holder` must be null or a valid pointer to a `TracksHolder`.
+ * - `track` must be null or a pointer returned by `track_create_named` (or `track_create`); ownership moves to the holder, so it must not be used or freed afterwards.
  */
-struct TrackKeyFFI tracks_holder_add_track(struct TracksHolder *holder, struct Track *track);
+struct TrackKeyFFI tracks_holder_add_track(struct TracksHolder *holder,
+                                           struct Track *track);
 
 /**
  * Get an immutable pointer to a `Track` by `TrackKeyFFI`.
+ *
+ * # Safety
+ * - `holder` must be null or a valid pointer to a `TracksHolder`.
+ * - The returned pointer is only valid until the holder is next mutated or destroyed.
  */
 const struct Track *tracks_holder_get_track(const struct TracksHolder *holder,
                                             struct TrackKeyFFI key);
 
 /**
  * Get a mutable pointer to a `Track` by `TrackKeyFFI`.
+ *
+ * # Safety
+ * - `holder` must be null or a valid pointer to a `TracksHolder`.
+ * - The returned pointer is only valid until the holder is next mutated or destroyed.
  */
 struct Track *tracks_holder_get_track_mut(struct TracksHolder *holder, struct TrackKeyFFI key);
 
 /**
  * Look up a track by name and return a pointer to it (const).
+ *
+ * # Safety
+ * - `holder` must be null or a valid pointer to a `TracksHolder`.
+ * - `name` must be null or a valid, null-terminated C string.
+ * - The returned pointer is only valid until the holder is next mutated or destroyed.
  */
 const struct Track *tracks_holder_get_track_by_name(const struct TracksHolder *holder,
                                                     const char *name);
 
 /**
  * Get the `TrackKeyFFI` for a track with the given name, or null-equivalent if not found.
+ *
+ * # Safety
+ * - `holder` must be null or a valid pointer to a `TracksHolder`.
+ * - `name` must be null or a valid, null-terminated C string.
  */
 struct TrackKeyFFI tracks_holder_get_track_key(struct TracksHolder *holder, const char *name);
 
 /**
  * Return number of tracks in the holder.
+ *
+ * # Safety
+ * - `holder` must be null or a valid pointer to a `TracksHolder`.
  */
 uintptr_t tracks_holder_count(const struct TracksHolder *holder);
 

@@ -33,31 +33,6 @@ impl QuaternionPointData {
     }
 }
 
-// impl ModifierLike for QuaternionPointData {
-//     type Value = Quat;
-//     const VALUE_COUNT: usize = 3;
-
-//     fn get_modified_point(&self, context: &BaseProviderContext) -> Quat {
-//         self.base_modifier.get_modified_point(context)
-//     }
-
-//     fn get_raw_point(&self) -> Quat {
-//         self.base_modifier.get_raw_point()
-//     }
-
-//     fn translate(&self, values: &[f32]) -> Quat {
-//         self.base_modifier.translate(values)
-//     }
-
-//     fn get_operation(&self) -> Operation {
-//         self.base_modifier.get_operation()
-//     }
-
-//     fn has_base_provider(&self) -> bool {
-//         self.base_modifier.has_base_provider()
-//     }
-// }
-
 impl PointDataLike<Quat> for QuaternionPointData {
     fn get_easing(&self) -> Functions {
         self.easing

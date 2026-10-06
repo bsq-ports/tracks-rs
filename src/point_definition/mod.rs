@@ -108,10 +108,6 @@ where
             }
         }
 
-        // Validate required fields
-        //let values = values.expect("No points found.");
-        //let operation = operation.expect("No operation found.");
-
         // Create modifier with collected values
         Self::create_modifier(
             values.expect("No values found.").into(),

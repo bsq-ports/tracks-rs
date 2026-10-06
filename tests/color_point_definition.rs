@@ -150,3 +150,34 @@ fn base_provider_updates_with_smoothing_swizzle_and_operator_for_color() {
     assert!((v_final.z - expected_final(new_base).z * 0.5).abs() <= eps);
     assert!((v_final.w - expected_final(new_base).w * 0.5).abs() <= eps);
 }
+
+#[test]
+fn lerp_hsv_flag_interpolates_in_hsv() {
+    let mut ctx = BaseProviderContext::new();
+    type Vector4PointDefinition = BasicPointDefinition<Vec4>;
+
+    // red to blue; the flag on the right-hand point switches that segment to HSV
+    let hsv = Vector4PointDefinition::parse(
+        json!([
+            [1.0, 0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0, 1.0, 1.0, "lerpHSV"]
+        ]),
+        &mut ctx,
+    );
+    let (mid, _) = hsv.interpolate(0.5, &ctx);
+    assert!(
+        mid.abs_diff_eq(Vec4::new(0.0, 1.0, 0.0, 1.0), 1e-5),
+        "{mid}"
+    );
+
+    // without the flag it's a plain RGB lerp
+    let rgb = Vector4PointDefinition::parse(
+        json!([[1.0, 0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 1.0, 1.0, 1.0]]),
+        &mut ctx,
+    );
+    let (mid, _) = rgb.interpolate(0.5, &ctx);
+    assert!(
+        mid.abs_diff_eq(Vec4::new(0.5, 0.0, 0.5, 1.0), 1e-5),
+        "{mid}"
+    );
+}

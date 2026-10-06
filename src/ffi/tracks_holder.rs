@@ -13,6 +13,10 @@ pub extern "C" fn tracks_holder_create() -> *mut TracksHolder {
 }
 
 /// Destroy a `TracksHolder` previously returned by `tracks_holder_create`.
+///
+/// # Safety
+/// - `holder` must be null or a pointer returned by `tracks_holder_create` that has not been destroyed yet.
+/// - `holder` and any track pointers obtained from it must not be used after this call.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_holder_destroy(holder: *mut TracksHolder) {
     if holder.is_null() {
@@ -26,6 +30,10 @@ pub unsafe extern "C" fn tracks_holder_destroy(holder: *mut TracksHolder) {
 
 /// Add a `Track` to the holder. Takes ownership of the `Track` pointer passed in.
 /// Returns a `TrackKeyFFI` identifying the inserted track, or null-equivalent on error.
+///
+/// # Safety
+/// - `holder` must be null or a valid pointer to a `TracksHolder`.
+/// - `track` must be null or a pointer returned by `track_create_named` (or `track_create`); ownership moves to the holder, so it must not be used or freed afterwards.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_holder_add_track(
     holder: *mut TracksHolder,
@@ -47,6 +55,10 @@ pub unsafe extern "C" fn tracks_holder_add_track(
 }
 
 /// Get an immutable pointer to a `Track` by `TrackKeyFFI`.
+///
+/// # Safety
+/// - `holder` must be null or a valid pointer to a `TracksHolder`.
+/// - The returned pointer is only valid until the holder is next mutated or destroyed.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_holder_get_track(
     holder: *const TracksHolder,
@@ -66,6 +78,10 @@ pub unsafe extern "C" fn tracks_holder_get_track(
 }
 
 /// Get a mutable pointer to a `Track` by `TrackKeyFFI`.
+///
+/// # Safety
+/// - `holder` must be null or a valid pointer to a `TracksHolder`.
+/// - The returned pointer is only valid until the holder is next mutated or destroyed.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_holder_get_track_mut(
     holder: *mut TracksHolder,
@@ -85,6 +101,11 @@ pub unsafe extern "C" fn tracks_holder_get_track_mut(
 }
 
 /// Look up a track by name and return a pointer to it (const).
+///
+/// # Safety
+/// - `holder` must be null or a valid pointer to a `TracksHolder`.
+/// - `name` must be null or a valid, null-terminated C string.
+/// - The returned pointer is only valid until the holder is next mutated or destroyed.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_holder_get_track_by_name(
     holder: *const TracksHolder,
@@ -107,6 +128,10 @@ pub unsafe extern "C" fn tracks_holder_get_track_by_name(
 }
 
 /// Get the `TrackKeyFFI` for a track with the given name, or null-equivalent if not found.
+///
+/// # Safety
+/// - `holder` must be null or a valid pointer to a `TracksHolder`.
+/// - `name` must be null or a valid, null-terminated C string.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_holder_get_track_key(
     holder: *mut TracksHolder,
@@ -125,6 +150,9 @@ pub unsafe extern "C" fn tracks_holder_get_track_key(
 }
 
 /// Return number of tracks in the holder.
+///
+/// # Safety
+/// - `holder` must be null or a valid pointer to a `TracksHolder`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_holder_count(holder: *const TracksHolder) -> usize {
     if holder.is_null() {
