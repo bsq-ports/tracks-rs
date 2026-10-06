@@ -1,4 +1,4 @@
-use glam::{Quat, Vec3, Vec4};
+use glam::{Vec3, Vec4};
 
 use crate::{
     base_value::BaseValue,
@@ -30,32 +30,6 @@ pub enum BaseModifier {
     Vector3(BasicModifier<Vec3>),
     Vector4(BasicModifier<Vec4>),
     Quaternion(QuaternionModifier),
-}
-
-impl BaseModifier {
-    pub fn get_float(&self, context: &BaseProviderContext) -> f32 {
-        self.get_modified_point(context)
-            .as_float()
-            .expect("not a float but tried to use as float")
-    }
-
-    pub fn get_vector3(&self, context: &BaseProviderContext) -> Vec3 {
-        self.get_modified_point(context)
-            .as_vec3()
-            .expect("not a vector3 but tried to use as vector3")
-    }
-
-    pub fn get_vector4(&self, context: &BaseProviderContext) -> Vec4 {
-        self.get_modified_point(context)
-            .as_vec4()
-            .expect("not a vector4 but tried to use as vector4")
-    }
-
-    pub fn get_quaternion(&self, context: &BaseProviderContext) -> Quat {
-        self.get_modified_point(context)
-            .as_quat()
-            .expect("not a quaternion but tried to use as quaternion")
-    }
 }
 
 impl ModifierLike<BaseValue> for BaseModifier {

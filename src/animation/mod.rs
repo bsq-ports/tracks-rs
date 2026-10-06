@@ -1,4 +1,6 @@
+pub mod timeline_coroutine_manager;
 pub mod coroutine_manager;
+pub mod event_timing;
 pub mod events;
 pub mod game_object;
 pub mod property;

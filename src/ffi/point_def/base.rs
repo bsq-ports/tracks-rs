@@ -88,7 +88,7 @@ pub unsafe extern "C" fn tracks_interpolate_base_point_definition(
 
 /// Return number of points in the point definition.
 ///
-/// Safety:
+/// # Safety
 /// - `point_definition` must be a valid, non-null pointer to a `BasePointDefinition`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_base_point_definition_count(
@@ -100,7 +100,7 @@ pub unsafe extern "C" fn tracks_base_point_definition_count(
 
 /// Check whether the point definition references a base provider.
 ///
-/// Safety:
+/// # Safety
 /// - `point_definition` must be a valid, non-null pointer to a `BasePointDefinition`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_base_point_definition_has_base_provider(
@@ -111,7 +111,7 @@ pub unsafe extern "C" fn tracks_base_point_definition_has_base_provider(
 }
 
 /// Get the `WrapBaseValueType` of the point definition.
-/// Safety:
+/// # Safety
 /// - `point_definition` must be a valid, non-null pointer to a `BasePointDefinition`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn tracks_base_point_definition_get_type(

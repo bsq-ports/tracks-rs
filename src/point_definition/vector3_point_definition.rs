@@ -32,22 +32,7 @@ impl Vector3PointDefinition {
         time: f32,
         _context: &BaseProviderContext,
     ) -> Vec3 {
-        // Convert to Vec3A for SIMD-friendly spline interpolation, convert back at the end
-        // let point_a_a = glam::Vec3A::from(points[l].get_point(context));
-        // let point_b_a = glam::Vec3A::from(points[r].get_point(context));
-
-        // Catmull-Rom Spline
-        // let p0_a = if l > 0 {
-        //     glam::Vec3A::from(points[l - 1].get_point(context))
-        // } else {
-        //     point_a_a
-        // };
-        // let p3_a = if r + 1 < len {
-        // // let p3_a = if r + 1 < points.len() {
-        //     glam::Vec3A::from(points[r + 1].get_point(context))
-        // } else {
-        //     point_b_a
-        // };
+        // Catmull-Rom spline
 
         let point_a_a = l_0;
         let point_b_a = r_0;

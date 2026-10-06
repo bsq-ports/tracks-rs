@@ -13,6 +13,8 @@ use super::PointDataLike;
 pub struct BasicPointData<T: ValueType> {
     base_modifier: BasicModifier<T>,
     pub smooth: bool,
+    /// Heck's `lerpHSV` flag: interpolate into this point in HSV. Only affects colours.
+    pub hsv_lerp: bool,
     easing: Functions,
     time: f32,
 }
@@ -28,35 +30,18 @@ impl<T: ValueType> BasicPointData<T> {
         Self {
             base_modifier: BasicModifier::new(point, modifiers, Operation::None),
             smooth,
+            hsv_lerp: false,
             easing,
             time,
         }
     }
+
+    /// Sets Heck's `lerpHSV` flag.
+    pub fn with_hsv_lerp(mut self, hsv_lerp: bool) -> Self {
+        self.hsv_lerp = hsv_lerp;
+        self
+    }
 }
-
-// impl<T: ValueType> ModifierLike for BasicPointData<T> {
-//     const VALUE_COUNT: usize = T::VALUE_COUNT;
-
-//     fn get_modified_point(&self, context: &BaseProviderContext) -> T {
-//         self.base_modifier.get_modified_point(context)
-//     }
-
-//     fn get_raw_point(&self) -> T {
-//         self.base_modifier.get_raw_point()
-//     }
-
-//     fn translate(&self, values: &[f32]) -> T {
-//         self.base_modifier.translate(values)
-//     }
-
-//     fn get_operation(&self) -> Operation {
-//         self.base_modifier.get_operation()
-//     }
-
-//     fn has_base_provider(&self) -> bool {
-//         self.base_modifier.has_base_provider()
-//     }
-// }
 
 impl<T: ValueType> PointDataLike<T> for BasicPointData<T> {
     fn get_easing(&self) -> Functions {
