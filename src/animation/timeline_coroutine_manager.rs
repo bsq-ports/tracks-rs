@@ -9,7 +9,10 @@ use crate::{
     base_provider_context::BaseProviderContext,
     base_value::BaseValue,
     easings::functions::Functions,
-    point_definition::{PointDefinitionLike, base_point_definition::BasePointDefinition},
+    point_definition::{
+        PointDefinitionLike, base_point_definition::BasePointDefinition,
+        point_definition_interpolation::interpolate_paths,
+    },
     time_types::SongTime,
 };
 
@@ -35,8 +38,7 @@ pub struct TimelineCoroutineManager {
 }
 
 /// The timelines of one track. Value and path properties behave differently, so they have
-/// separate event types and maps, and lookups can borrow the handle instead of cloning it
-/// (custom property handles own a `String`).
+/// separate event types and maps
 #[derive(Clone, Default)]
 struct TrackTimelines {
     properties: HashMap<ValuePropertyHandle, Timeline<ValueEvent>>,
@@ -104,14 +106,7 @@ pub struct PathSnapshot<'a> {
 impl PathSnapshot<'_> {
     /// Samples the path at `time` (an object's lifetime). Works the same as `PathProperty::interpolate`.
     pub fn interpolate(&self, time: f32, context: &BaseProviderContext) -> Option<BaseValue> {
-        let point = self.point?.interpolate(time, context).0;
-        match self.prev_point {
-            Some(prev) => {
-                let prev = prev.interpolate(time, context).0;
-                Some(prev.lerp_clamped(point, self.interpolate_time))
-            }
-            None => Some(point),
-        }
+        interpolate_paths(self.prev_point, self.point, self.interpolate_time, time, context)
     }
 }
 
