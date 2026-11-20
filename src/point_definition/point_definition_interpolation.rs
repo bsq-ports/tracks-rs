@@ -60,18 +60,13 @@ impl PointDefinitionInterpolation {
     /// Interpolate between the previous and current point definitions at the given time.
     /// Returns None if there are no points to interpolate.
     pub fn interpolate(&self, time: f32, context: &BaseProviderContext) -> Option<BaseValue> {
-        match (&self.prev_point, &self.point) {
-            (Some(prev_point_data), Some(point_data)) => {
-                let a = prev_point_data.interpolate(time, context).0;
-                let b = point_data.interpolate(time, context).0;
-
-                let result = BaseValue::value_lerp(a, b, self.interpolate_time);
-
-                Some(result)
-            }
-            (None, Some(point_data)) => Some(point_data.interpolate(time, context).0),
-            _ => None,
-        }
+        interpolate_paths(
+            self.prev_point.as_ref(),
+            self.point.as_ref(),
+            self.interpolate_time,
+            time,
+            context,
+        )
     }
 
     /// Samples the path at every time in `times` into the matching slot of `out`.
@@ -95,6 +90,25 @@ impl PointDefinitionInterpolation {
             }
         }
         true
+    }
+}
+
+/// Samples the path `point` at `time`, blended from `prev_point` by `interpolate_time` when there is one.
+/// Returns `None` if there is no `point`. Shared by [`PointDefinitionInterpolation`] and the timeline snapshots.
+pub fn interpolate_paths(
+    prev_point: Option<&BasePointDefinition>,
+    point: Option<&BasePointDefinition>,
+    interpolate_time: f32,
+    time: f32,
+    context: &BaseProviderContext,
+) -> Option<BaseValue> {
+    let b = point?.interpolate(time, context).0;
+    match prev_point {
+        Some(prev) => {
+            let a = prev.interpolate(time, context).0;
+            Some(BaseValue::value_lerp(a, b, interpolate_time))
+        }
+        None => Some(b),
     }
 }
 

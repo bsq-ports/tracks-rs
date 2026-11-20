@@ -13,16 +13,6 @@ pub mod r#static;
 use serde_json::Value as JsonValue;
 use smallvec::SmallVec;
 
-// pub enum ValueProviderValues {
-//     /// Represents an array of values, where each value is a float. The length of the array can vary,
-//     ///  but it is typically used to represent a vector of values (e.g., Vec3 would have 3 values).
-//     Vec(SmallVec<[f32; 5]>),
-//     /// [T, time] e.g for a Vec3 it would be [x, y, z, time]
-//     PointData(BaseValue, f32),
-//     /// We know exactly the type of the value, so we can store it directly without the need for dynamic dispatch or type erasure.
-//     BaseValues(BaseValue),
-// }
-
 pub type ValueProviderValues = SmallVec<[f32; 5]>;
 
 /// Abstract value provider

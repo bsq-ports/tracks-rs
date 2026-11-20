@@ -261,3 +261,119 @@ fn main() {
 See `src/animation/coroutine_manager.rs` for the implementation and unit tests.
 
 ---
+
+## TimelineCoroutineManager
+
+`CoroutineManager` only moves forward: when a later event overwrites a property, the earlier state is gone, so you cannot seek backwards. `TimelineCoroutineManager` is the seekable alternative. You register **all** events up front, then ask for the state at **any** song time, in any order.
+
+How it works:
+
+- Events are grouped into one timeline per `(track, property)` and sorted by start time.
+- Starting an event overrides the previous one on the same property, so the state at time `t` only depends on the last event with `start <= t`. A path property also uses the event before it, because that is the path it blends from.
+- Nothing is replayed and no state is kept between calls, so seeking costs the same as playing.
+- Evaluation matches `CoroutineManager`: `AnimateTrack` repeats `repeat + 1` times and then holds the final value, `AssignPathAnimation` blends from the previous path over its duration, and an event with no point data clears the property.
+- If two events on the same property start at the same time, the one added later wins.
+- Events can be added and removed at any time, in any order (see below).
+
+Typical host usage:
+
+- Build the manager once from the map's events: `TimelineCoroutineManager::from_events(bpm, events)` (or `add_event` one at a time).
+- On every frame or seek, call `apply(song_time, &ctx, &mut holder)`. It writes the state at that time into every property that has events. Properties with no active event at that time are reset to `None`.
+- To read a single property without touching the tracks, use `value_at` or `path_at`.
+
+```rust
+use tracks_rs::animation::events::{EventData, EventType};
+use tracks_rs::animation::timeline_coroutine_manager::TimelineCoroutineManager;
+use tracks_rs::animation::track::{Track, ValuePropertyHandle};
+use tracks_rs::animation::tracks_holder::TracksHolder;
+use tracks_rs::base_provider_context::BaseProviderContext;
+use tracks_rs::easings::functions::Functions;
+use tracks_rs::time_types::{BpmTime, SongTime};
+
+fn main() {
+	let ctx = BaseProviderContext::new();
+	let mut holder = TracksHolder::new();
+
+	let mut track = Track::default();
+	track.name = "my_track".to_string();
+	let key = holder.add_track(track);
+
+	let dissolve = ValuePropertyHandle::new("dissolve");
+	let event = |start: f64, point_data| EventData {
+		raw_duration: BpmTime::new(1.0), // beats
+		easing: Functions::EaseLinear,
+		repeat: 0,
+		start_song_time: SongTime::new(start), // seconds
+		property: EventType::AnimateTrack(dissolve.clone()),
+		track_key: key,
+		point_data: Some(point_data),
+	};
+
+	// `ramp_0_to_10` and `ramp_100_to_200` are `BasePointDefinition`s (see "Point Definitions").
+	// The second event starts at 0.5s and overrides the first one.
+	let bpm = 60.0;
+	let timeline = TimelineCoroutineManager::from_events(
+		bpm,
+		[event(0.0, ramp_0_to_10), event(0.5, ramp_100_to_200)],
+	);
+
+	// seek anywhere, in any order
+	timeline.apply(SongTime::new(1.0), &ctx, &mut holder); // second event is active
+	timeline.apply(SongTime::new(0.25), &ctx, &mut holder); // back to the first event
+
+	// read a value without writing to the tracks
+	let value = timeline.value_at(SongTime::new(0.25), key, &dissolve, &ctx);
+	println!("dissolve at 0.25s = {:?}", value);
+}
+```
+
+Adding and removing events:
+
+- `add_event` returns an `EventId`. Pass it to `remove_event(id)` to take that event out again (it returns `false` if the event is already gone). The event that was active before it becomes active again.
+- `remove_events_between(track_key, start, end)` removes every event of a track, on any property, that starts in `start..=end` and returns how many it removed.
+- `clear()` removes everything.
+- Nothing is written to the tracks until the next `apply`. If every event of a property was removed one by one, that `apply` resets the property to `None`. After `clear()` the manager no longer knows those properties, so `apply` leaves them as they are.
+
+Notes:
+
+- `apply` only writes properties that have events. Anything else on the tracks is left alone.
+- The BPM is fixed when events are added, so a map with BPM changes needs the durations converted beforehand.
+- `path_at` returns a `PathSnapshot` (previous path, current path and eased blend time). Sample it at an object's lifetime with `PathSnapshot::interpolate`, the same as `PathProperty::interpolate`.
+
+### From C / C++ (`ffi` feature)
+
+The same API is exported through the generated `shared/bindings.h`:
+
+| Function | Purpose |
+| --- | --- |
+| `create_timeline_coroutine_manager` / `destroy_timeline_coroutine_manager` | Create and free the manager. |
+| `timeline_add_event(manager, bpm, event_data)` | Add an event (from `event_data_to_rust`). Returns its `CEventId` (`{ track_key, id }`; the id is `UINT64_MAX` on a null pointer). The event is cloned, so you keep ownership of `event_data`. |
+| `timeline_remove_event(manager, id)` | Remove an event by its `CEventId`. Returns false if it is already gone. |
+| `timeline_remove_events_between(manager, track_key, start, end)` | Remove every event of a track, on any property, starting in `start..=end`. Returns the count. |
+| `timeline_clear(manager)` | Remove every event. |
+| `timeline_apply(manager, song_time, context, tracks_holder)` | Write the state at `song_time` into the tracks. Any time, any order. |
+| `timeline_value_at(manager, song_time, track_key, property, context)` | Value of an animated property, as a nullable value. |
+| `timeline_path_interpolate(manager, song_time, track_key, property, path_time, context)` | Sample a path property at an object's lifetime `path_time`. |
+| `timeline_path_blend(manager, song_time, track_key, property)` | Blend state of a path property (`exists`, `has_prev_point`, `has_point`, `interpolate_time`). |
+
+`property` is a `CEventType`, the same struct used when building events. Its type must match the query (`AnimateTrack` for `timeline_value_at`, `AssignPathAnimation` for the path queries), otherwise the empty result is returned.
+
+```cpp
+auto* timeline = create_timeline_coroutine_manager();
+
+// add every event of the map up front
+for (const CEventData& e : events) {
+    EventData* event = event_data_to_rust(&e);
+    timeline_add_event(timeline, bpm, event);
+    event_data_dispose(event);
+}
+
+// each frame, or when the user seeks
+timeline_apply(timeline, songTime, context, tracksHolder);
+
+destroy_timeline_coroutine_manager(timeline);
+```
+
+See `src/animation/timeline_coroutine_manager.rs` for the implementation and unit tests. One of them checks that `apply` gives the same results as stepping a `CoroutineManager`.
+
+---

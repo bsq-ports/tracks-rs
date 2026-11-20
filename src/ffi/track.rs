@@ -477,7 +477,7 @@ pub unsafe extern "C" fn track_get_path_property(
 
 /// Return a `CPropertiesMap` with pointers into the track's registered properties.
 ///
-/// Safety:
+/// # Safety
 /// - `track` must be a valid, non-null pointer to a `Track`.
 /// - The returned pointers are valid only while the `Track` is alive and not mutated in a way that moves or removes the properties.
 /// - Do not retain these pointers across calls that might mutate the track.
@@ -510,7 +510,7 @@ pub unsafe extern "C" fn track_get_properties_map(track: *mut Track) -> CPropert
 
 /// Return a `CPathPropertiesMap` with pointers into the track's path properties.
 ///
-/// Safety:
+/// # Safety
 /// - `track` must be a valid, non-null pointer to a `Track`.
 /// - Returned pointers are valid only while the track's path properties remain in-place.
 #[unsafe(no_mangle)]
@@ -537,7 +537,7 @@ pub unsafe extern "C" fn track_get_path_properties_map(track: *mut Track) -> CPa
 }
 
 /// Return a `CPropertiesValues` with the current values of the track's properties.
-/// Safety:
+/// # Safety
 /// - `track` must be a valid, non-null pointer to a `Track
 /// - The returned struct contains copies of the current property values.
 #[unsafe(no_mangle)]
@@ -569,7 +569,7 @@ pub unsafe extern "C" fn track_get_properties_values(track: *mut Track) -> CProp
 }
 
 /// Return a `CPathPropertiesValues` with the interpolated values of the track's path properties at the given time.
-/// Safety:
+/// # Safety
 /// - `track` must be a valid, non-null pointer to a `Track`.
 /// - `ctx` must be a valid, non-null pointer to a `BaseProviderContext`.
 ///
@@ -631,7 +631,7 @@ pub unsafe extern "C" fn track_get_path_properties_values(
 // FFI functions for per-track game object modification callbacks
 /// Register a C callback to be invoked when a game object is added/removed.
 ///
-/// Safety:
+/// # Safety
 /// - `track` must be a valid pointer to a `Track`.
 /// - `callback` and `user_data` must remain valid for as long as the callback may be invoked.
 /// - The returned pointer is an opaque handle to the stored Rust closure; it must be removed with `track_remove_game_object_callback`.
@@ -664,7 +664,7 @@ pub unsafe extern "C" fn track_register_game_object_callback(
 
 /// Remove a previously registered game object callback.
 ///
-/// Safety:
+/// # Safety
 /// - `track` must be a valid pointer to a `Track`.
 /// - `callback` must be a pointer previously returned by `track_register_game_object_callback`.
 /// - After calling this function the `callback` pointer must not be used again.
@@ -710,7 +710,7 @@ mod tests {
     #[test]
     fn test_track_set_get_name_and_destroy() {
         unsafe {
-            let track = track_create();
+            let track = track_create_named(c"initial".as_ptr());
             assert!(!track.is_null());
 
             let name = CString::new("ffi_track").unwrap();
@@ -730,7 +730,7 @@ mod tests {
     #[test]
     fn test_track_register_unregister_game_object_and_callbacks() {
         unsafe {
-            let track = track_create();
+            let track = track_create_named(c"initial".as_ptr());
             assert!(!track.is_null());
 
             // user data for callback

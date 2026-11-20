@@ -100,7 +100,9 @@ impl<T: ValueType> PointDefinitionLike<T> for BasicPointDefinition<T> {
 
         let smooth = flags.iter().any(|f| f == "splineCatmullRom");
 
-        BasicPointData::new(value, time, smooth, modifiers, easing)
+        let hsv_lerp = flags.iter().any(|f| f == "lerpHSV");
+
+        BasicPointData::new(value, time, smooth, modifiers, easing).with_hsv_lerp(hsv_lerp)
     }
 
     fn get_points(&self) -> &[Self::PointData] {
@@ -123,6 +125,11 @@ impl<T: ValueType> PointDefinitionLike<T> for BasicPointDefinition<T> {
         let point_l = PointDataLike::get_point(l, context);
         let point_r = PointDataLike::get_point(r, context);
 
-        T::value_lerp(point_l, point_r, time)
+        // like Heck, the flag on the right-hand point picks the interpolation
+        if r.hsv_lerp {
+            T::value_lerp_hsv(point_l, point_r, time)
+        } else {
+            T::value_lerp(point_l, point_r, time)
+        }
     }
 }

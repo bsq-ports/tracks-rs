@@ -245,3 +245,22 @@ fn update_base_head_rotation_over_time() {
     // after several steps we should have made significant progress toward the target
     assert!(prev_dist < initial_dist * 0.5, "final distance {} not less than half of initial {}", prev_dist, initial_dist);
 }
+
+#[test]
+fn smoothing_swizzled_rotation_is_linear() {
+    let mut ctx = BaseProviderContext::new();
+    let q = Quat::from_unity_euler_degrees(Vec3::new(12.0, 20.0, 56.0));
+    ctx.set_values("baseHeadRotation", BaseValue::from(q));
+
+    // like Heck, the swizzle turns the rotation into plain euler numbers, which are smoothed linearly
+    let provider = ctx.get_value_provider("baseHeadRotation.xy.s1");
+
+    ctx.update_providers(0.5);
+    let half = provider.values(&ctx);
+    assert_eq!(half.len(), 2);
+    assert!((half[0] - 6.0).abs() < 1e-3 && (half[1] - 10.0).abs() < 1e-3, "{half:?}");
+
+    ctx.update_providers(1.0);
+    let full = provider.values(&ctx);
+    assert!((full[0] - 12.0).abs() < 1e-3 && (full[1] - 20.0).abs() < 1e-3, "{full:?}");
+}

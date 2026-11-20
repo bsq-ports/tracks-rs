@@ -20,6 +20,10 @@ pub extern "C" fn base_provider_context_create() -> *mut BaseProviderContext {
 }
 
 /// Destroy a `BaseProviderContext` previously returned by `base_provider_context_create`.
+///
+/// # Safety
+/// - `ctx` must be null or a pointer returned by `base_provider_context_create` that has not been destroyed yet.
+/// - `ctx` must not be used after this call.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn base_provider_context_destroy(ctx: *mut BaseProviderContext) {
     if ctx.is_null() {
@@ -49,6 +53,10 @@ pub unsafe extern "C" fn tracks_make_base_ffi_provider(
 }
 
 /// Set a base provider value by name. `value` is a `WrapBaseValue` (C layout) converted into `BaseValue`.
+///
+/// # Safety
+/// - `ctx` must be null or a valid pointer to a `BaseProviderContext`.
+/// - `base` must be null or a valid, null-terminated C string.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn base_provider_context_set_value(
     ctx: *mut BaseProviderContext,
@@ -69,6 +77,10 @@ pub unsafe extern "C" fn base_provider_context_set_value(
 
 /// Get a base provider value by name as a `WrapBaseValue`.
 /// The returned `WrapBaseValue` points into data owned by `ctx` (via slice pointer), callers must not free it.
+///
+/// # Safety
+/// - `ctx` must be null or a valid pointer to a `BaseProviderContext`.
+/// - `base` must be null or a valid, null-terminated C string.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn base_provider_context_get_value(
     ctx: *const BaseProviderContext,
@@ -91,6 +103,11 @@ pub unsafe extern "C" fn base_provider_context_get_value(
 }
 
 /// Get base provider values as a pointer+length pair. The returned `WrappedValues` borrows data from `ctx`.
+///
+/// # Safety
+/// - `ctx` must be null or a valid pointer to a `BaseProviderContext`.
+/// - `base` must be null or a valid, null-terminated C string.
+/// - The returned pointer is only valid until `ctx` is next mutated or destroyed.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn base_provider_context_get_values_array(
     ctx: *const BaseProviderContext,
@@ -121,6 +138,10 @@ pub unsafe extern "C" fn base_provider_context_get_values_array(
 }
 
 /// Get the type of the base provider value for `base` (Vec3/Quat/Vec4/Float)
+///
+/// # Safety
+/// - `ctx` must be null or a valid pointer to a `BaseProviderContext`.
+/// - `base` must be null or a valid, null-terminated C string.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn base_provider_context_get_type(
     ctx: *const BaseProviderContext,
@@ -145,6 +166,10 @@ pub unsafe extern "C" fn base_provider_context_get_type(
 }
 
 /// Call `update_providers` on the `BaseProviderContext` with a delta time.
+///
+/// # Safety
+/// - `ctx` must be null or a valid pointer to a `BaseProviderContext`.
+/// - No other reference to `ctx` may be in use during the call.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn base_provider_context_update(ctx: *mut BaseProviderContext, delta: f32) {
     if ctx.is_null() {

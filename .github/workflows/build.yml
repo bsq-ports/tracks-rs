@@ -24,11 +24,10 @@ jobs:
                   restore-keys: |
                       ${{ runner.os }}-cargo-
                         
+            # The toolchain is pinned in rust-toolchain.toml. Don't use an override here:
+            # it takes precedence over the file and brings back the unpinned nightly.
             - name: Install Rust
-              uses: actions-rs/toolchain@v1
-              with:
-                  toolchain: nightly
-                  override: true
+              run: rustup show active-toolchain || rustup toolchain install
 
             - name: Cargo build
               run: cargo build --verbose

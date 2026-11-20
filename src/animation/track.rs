@@ -161,7 +161,7 @@ impl<F: Fn(GameObject, bool)> GameObjectCallback for F {}
 
 /// A Track represents a collection of properties and path properties associated with game objects.
 /// It allows registering, retrieving, and managing properties and game objects.
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Track {
     pub properties: PropertiesMap,
     pub path_properties: PathPropertiesMap,
@@ -195,21 +195,6 @@ impl Track {
     pub fn register_game_object_callback(&mut self, callback: Rc<dyn GameObjectCallback>) {
         self.game_object_callbacks.push(callback);
     }
-
-    // pub fn get_property(&self, id: &str) -> Option<&ValueProperty> {
-    //     self.properties.get(id)
-    // }
-    // pub fn get_path_property(&self, id: &str) -> Option<&PathProperty> {
-    //     self.path_properties.get(id)
-    // }
-
-    // pub fn get_property_mut(&mut self, id: &str) -> Option<&mut ValueProperty> {
-    //     self.properties.get_mut(id)
-    // }
-
-    // pub fn get_path_property_mut(&mut self, id: &str) -> Option<&mut PathProperty> {
-    //     self.path_properties.get_mut(id)
-    // }
 
     pub fn get_game_objects(&self) -> &Vec<GameObject> {
         &self.game_objects
@@ -280,18 +265,6 @@ impl Default for PathPropertiesMap {
             dissolve_arrow: PathProperty::empty(WrapBaseValueType::Float),
             cuttable: PathProperty::empty(WrapBaseValueType::Float),
             color: PathProperty::empty(WrapBaseValueType::Vec4),
-        }
-    }
-}
-
-impl Default for Track {
-    fn default() -> Self {
-        Self {
-            properties: Default::default(),
-            path_properties: Default::default(),
-            game_objects: Default::default(),
-            name: "".to_string(),
-            game_object_callbacks: Vec::new(),
         }
     }
 }
@@ -702,8 +675,10 @@ mod tests {
         use std::ffi::c_void;
         use std::rc::Rc;
 
-        let mut track = Track::default();
-        track.name = "g_track".to_string();
+        let mut track = Track {
+            name: "g_track".to_string(),
+            ..Default::default()
+        };
 
         // create a unique pointer for GameObject
         let p = Box::into_raw(Box::new(42)) as *const c_void;

@@ -1,4 +1,4 @@
-use glam::{Quat, Vec3, Vec4};
+use glam::{Vec3, Vec4};
 
 use crate::{
     base_value::BaseValue,
@@ -17,34 +17,6 @@ pub enum BasePointData {
 }
 
 impl BasePointData {
-    pub fn get_float(&self, context: &BaseProviderContext) -> f32 {
-        match self {
-            BasePointData::Float(point_data) => point_data.get_point(context),
-            _ => panic!("PointData is not a FloatPointData"),
-        }
-    }
-
-    pub fn get_vector3(&self, context: &BaseProviderContext) -> Vec3 {
-        match self {
-            BasePointData::Vector3(point_data) => point_data.get_point(context),
-            _ => panic!("PointData is not a Vector3PointData"),
-        }
-    }
-
-    pub fn get_vector4(&self, context: &BaseProviderContext) -> Vec4 {
-        match self {
-            BasePointData::Vector4(point_data) => point_data.get_point(context),
-            _ => panic!("PointData is not a Vector4PointData"),
-        }
-    }
-
-    pub fn get_quaternion(&self, context: &BaseProviderContext) -> Quat {
-        match self {
-            BasePointData::Quaternion(point_data) => point_data.get_point(context),
-            _ => panic!("PointData is not a QuaternionPointData"),
-        }
-    }
-
     pub fn into_float_value(self) -> Option<BasicPointData<f32>> {
         match self {
             BasePointData::Float(point_data) => Some(point_data),

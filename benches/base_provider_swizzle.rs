@@ -3,7 +3,7 @@ use glam::{Quat, Vec3, Vec4};
 use std::hint::black_box;
 use tracks_rs::base_provider_context::BaseProviderContext;
 use tracks_rs::base_value::BaseValue;
-use tracks_rs::providers::{AbstractValueProvider, UpdateableValues};
+use tracks_rs::providers::AbstractValueProvider;
 
 fn seed_context(ctx: &mut BaseProviderContext) {
     ctx.set_values(
@@ -69,7 +69,7 @@ fn bench_provider_swizzle_update(c: &mut Criterion) {
     group.bench_function("vec3_swizzle_read", |b| {
         let mut ctx = BaseProviderContext::new();
         seed_context(&mut ctx);
-        let mut provider = ctx.get_value_provider("baseHeadPosition.zyx");
+        let provider = ctx.get_value_provider("baseHeadPosition.zyx");
 
         b.iter(|| {
             ctx.update_providers(0.016);
@@ -85,7 +85,7 @@ fn bench_provider_swizzle_update(c: &mut Criterion) {
                 let provider = ctx.get_value_provider("baseHeadPosition.zyx.s0_5");
                 (ctx, provider)
             },
-            |(mut ctx, provider)| {
+            |(ctx, provider)| {
                 for _ in 0..60 {
                     ctx.update_providers(0.016);
                     black_box(provider.values(&ctx));
@@ -103,7 +103,7 @@ fn bench_provider_swizzle_update(c: &mut Criterion) {
                 let provider = ctx.get_value_provider("baseHeadRotation.s0_5");
                 (ctx, provider)
             },
-            |(mut ctx, provider)| {
+            |(ctx, provider)| {
                 for _ in 0..60 {
                     ctx.update_providers(0.016);
                     black_box(provider.values(&ctx));
@@ -121,7 +121,7 @@ fn bench_provider_swizzle_update(c: &mut Criterion) {
                 let provider = ctx.get_value_provider("baseSongTime.s0_5.x");
                 (ctx, provider)
             },
-            |(mut ctx, provider)| {
+            |(ctx, provider)| {
                 for _ in 0..120 {
                     ctx.update_providers(1.0 / 120.0);
                     black_box(provider.values(&ctx));

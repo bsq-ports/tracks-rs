@@ -170,10 +170,11 @@ fn parses_quaternion_from_smoothed_base_provider() {
 
     let (value, is_last) = definition.interpolate(0.0, &context);
     let eps = 1e-5_f32;
-    assert!((value.x - target_quat.x).abs() < eps);
-    assert!((value.y - target_quat.y).abs() < eps);
-    assert!((value.z - target_quat.z).abs() < eps);
-    assert!((value.w - target_quat.w).abs() < eps);
+    // q and -q are the same rotation
+    assert!(
+        value.dot(target_quat).abs() > 1.0 - eps,
+        "value: {value:?}, target: {target_quat:?}"
+    );
     assert!(is_last);
 }
 
@@ -193,11 +194,11 @@ fn parses_quaternion_from_smoothed_base_provider_s10() {
 
     let (value, is_last) = definition.interpolate(0.0, &context);
     let eps = 1e-5_f32;
-    println!("value: {:?}, target: {:?}", value, target_quat);
-    assert!((value.x - target_quat.x).abs() < eps);
-    assert!((value.y - target_quat.y).abs() < eps);
-    assert!((value.z - target_quat.z).abs() < eps);
-    assert!((value.w - target_quat.w).abs() < eps);
+    // q and -q are the same rotation
+    assert!(
+        value.dot(target_quat).abs() > 1.0 - eps,
+        "value: {value:?}, target: {target_quat:?}"
+    );
     assert!(is_last);
 }
 

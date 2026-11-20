@@ -403,7 +403,10 @@ impl BaseProviderContext {
             }
         };
 
-        let is_rotation = source.is_rotation(self);
+        // like Heck, only a quaternion base itself is smoothed as a rotation. A swizzled or already
+        // smoothed rotation is plain euler numbers, so it is smoothed linearly
+        let is_rotation =
+            matches!(source, ValueProvider::BaseProvider(base) if base.is_rotation(self));
 
         match is_rotation {
             true => {

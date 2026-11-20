@@ -3,20 +3,6 @@ use slotmap::{SlotMap, new_key_type};
 use crate::animation::track::Track;
 
 new_key_type! { pub struct TrackKey; }
-// #[derive(Copy, Clone, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
-// #[repr(C)]
-// pub struct TrackKey(usize);
-
-// impl Key for TrackKey {
-//     fn from_usize(u: usize) -> Self {
-//         TrackKey
-//     }
-
-//     fn to_usize(&self) -> usize {
-//         0
-//     }
-// }
-
 #[derive(Clone, Default)]
 pub struct TracksHolder {
     // Using SlotMap as it provides stable keys and efficient storage
@@ -61,5 +47,9 @@ impl TracksHolder {
 
     pub fn len(&self) -> usize {
         self.tracks.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.tracks.is_empty()
     }
 }

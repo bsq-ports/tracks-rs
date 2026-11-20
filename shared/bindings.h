@@ -136,6 +136,8 @@ typedef struct BaseFFIProviderValues BaseFFIProviderValues;
  * Point definitions are used to describe what happens over the course of an animation,
  * they are used slightly differently for different properties.
  * They consist of a collection of points over time.
+ * 
+ * Cloning is cheap because the underlying data is reference counted, so you can clone a point definition to use it in multiple places without copying the underlying data.
  */
 typedef struct BasePointDefinition BasePointDefinition;
 
@@ -160,8 +162,8 @@ typedef struct BasicPointDefinition_f32 BasicPointDefinition_f32;
  * A coroutine is a `CoroutineTask`: the state of one event that is still running.
  * It holds the target track and property, the start time, the duration (beats converted to
  * song time using the BPM), the easing, the repeat count and the point definition. Each poll
- * moves it forward and returns [`CoroutineResult::Yield`] (keep running) or
- * [`CoroutineResult::Break`] (finished; remove it). This mirrors the Unity coroutines
+ * runs one step, which returns [`ControlFlow::Continue`] (keep running) or
+ * [`ControlFlow::Break`] (finished; remove it). This mirrors the Unity coroutines
  * used by the original C# implementation, but here the caller drives them with song time.
  *
  * # Starting and overriding events
@@ -170,11 +172,13 @@ typedef struct BasicPointDefinition_f32 BasicPointDefinition_f32;
  * new event takes over a property that is still animating. Events on other tracks, or on
  * other properties of the same track, are unaffected.
  *
- * The new event is then evaluated once at the current song time. It is not queued if:
+ * The new event is not queued if:
  * - it has no point data, so the target property is cleared (`set_null`),
  * - it has zero duration or has already fully elapsed (repeats included), so the final value is applied,
- * - it is a single static point with no base provider, so that value is applied once,
- * - it already finished during that first evaluation.
+ * - it is a single static point with no base provider, so that value is applied once.
+ *
+ * Otherwise its first frame runs straight away, through the same step as every later poll,
+ * and it is queued unless that step already finished it.
  *
  * # Animating properties (`AnimateTrack`)
  * Each poll computes `elapsed / duration`, clamps it to `[0, 1]`, applies the easing,
@@ -203,6 +207,34 @@ typedef struct EventData EventData;
 typedef struct PointDefinitionInterpolation PointDefinitionInterpolation;
 
 typedef struct QuaternionPointDefinition QuaternionPointDefinition;
+
+/**
+ * Evaluates track events at any song time, instead of stepping forward like [`super::coroutine_manager::CoroutineManager`].
+ *
+ * All events are registered up front. They are grouped into one timeline per
+ * `(track, property)` and sorted by start time. Starting an event overrides the previous
+ * one on the same property, so the state at song time `x` depends only on the **last event
+ * with `start <= x`**. A path property also needs the event before it, because that is the
+ * path it blends from. Nothing has to be replayed, so you can seek forwards or backwards.
+ *
+ * - [`Self::value_at`] and [`Self::path_at`] are read-only queries.
+ * - [`Self::apply`] writes the snapshot at `x` into a [`TracksHolder`]. Properties with no
+ *   active event at `x` are reset to `None`.
+ *
+ * The evaluation rules match `CoroutineManager`:
+ * - `AnimateTrack` repeats `repeat + 1` times and then holds the final value.
+ * - `AssignPathAnimation` blends from the previous path to the new one over the duration, then finishes.
+ * - Events with no point data clear the property.
+ *
+ * # Adding and removing events
+ * Events can be added and removed at any time, in any order. [`Self::add_event`] returns an
+ * [`EventId`] that [`Self::remove_event`] takes back. [`Self::remove_events_between`] removes every
+ * event of a track, on any property, that starts in a time range, and [`Self::clear`] removes everything.
+ * Removing an event makes the previous one on that property active again, once [`Self::apply`]
+ * runs again. A property whose events were all removed individually is reset to `None` by that
+ * `apply`, but [`Self::clear`] forgets the properties, so `apply` no longer touches them.
+ */
+typedef struct TimelineCoroutineManager TimelineCoroutineManager;
 
 /**
  * A Track represents a collection of properties and path properties associated with game objects.
@@ -346,6 +378,36 @@ typedef struct CValueProperty {
   struct CTimeUnit last_updated;
 } CValueProperty;
 
+/**
+ * Identifies an event added with `timeline_add_event`.
+ */
+typedef struct CEventId {
+  struct TrackKeyFFI track_key;
+  uint64_t id;
+} CEventId;
+
+/**
+ * The blend state of a path property at a song time. See `timeline_path_blend`.
+ */
+typedef struct CPathBlend {
+  /**
+   * Whether any event ever targets this path property. The other fields are only meaningful if true.
+   */
+  bool exists;
+  /**
+   * Whether a previous path is still being blended from.
+   */
+  bool has_prev_point;
+  /**
+   * Whether there is an active path. False before the first event or after a null event.
+   */
+  bool has_point;
+  /**
+   * Eased blend from the previous path to the active one.
+   */
+  float interpolate_time;
+} CPathBlend;
+
 typedef struct GameObject {
   const void *ptr;
 } GameObject;
@@ -453,6 +515,10 @@ struct BaseProviderContext *base_provider_context_create(void);
 
 /**
  * Destroy a `BaseProviderContext` previously returned by `base_provider_context_create`.
+ *
+ * # Safety
+ * - `ctx` must be null or a pointer returned by `base_provider_context_create` that has not been destroyed yet.
+ * - `ctx` must not be used after this call.
  */
 void base_provider_context_destroy(struct BaseProviderContext *ctx);
 
@@ -468,6 +534,10 @@ struct BaseFFIProviderValues *tracks_make_base_ffi_provider(const BaseFFIProvide
 
 /**
  * Set a base provider value by name. `value` is a `WrapBaseValue` (C layout) converted into `BaseValue`.
+ *
+ * # Safety
+ * - `ctx` must be null or a valid pointer to a `BaseProviderContext`.
+ * - `base` must be null or a valid, null-terminated C string.
  */
 void base_provider_context_set_value(struct BaseProviderContext *ctx,
                                      const char *base,
@@ -476,24 +546,41 @@ void base_provider_context_set_value(struct BaseProviderContext *ctx,
 /**
  * Get a base provider value by name as a `WrapBaseValue`.
  * The returned `WrapBaseValue` points into data owned by `ctx` (via slice pointer), callers must not free it.
+ *
+ * # Safety
+ * - `ctx` must be null or a valid pointer to a `BaseProviderContext`.
+ * - `base` must be null or a valid, null-terminated C string.
  */
 struct WrapBaseValue base_provider_context_get_value(const struct BaseProviderContext *ctx,
                                                      const char *base);
 
 /**
  * Get base provider values as a pointer+length pair. The returned `WrappedValues` borrows data from `ctx`.
+ *
+ * # Safety
+ * - `ctx` must be null or a valid pointer to a `BaseProviderContext`.
+ * - `base` must be null or a valid, null-terminated C string.
+ * - The returned pointer is only valid until `ctx` is next mutated or destroyed.
  */
 struct WrappedValues base_provider_context_get_values_array(const struct BaseProviderContext *ctx,
                                                             const char *base);
 
 /**
  * Get the type of the base provider value for `base` (Vec3/Quat/Vec4/Float)
+ *
+ * # Safety
+ * - `ctx` must be null or a valid pointer to a `BaseProviderContext`.
+ * - `base` must be null or a valid, null-terminated C string.
  */
 WrapBaseValueType base_provider_context_get_type(const struct BaseProviderContext *ctx,
                                                  const char *base);
 
 /**
  * Call `update_providers` on the `BaseProviderContext` with a delta time.
+ *
+ * # Safety
+ * - `ctx` must be null or a valid pointer to a `BaseProviderContext`.
+ * - No other reference to `ctx` may be in use during the call.
  */
 void base_provider_context_update(struct BaseProviderContext *ctx, float delta);
 
@@ -654,7 +741,7 @@ struct WrapBaseValue tracks_interpolate_base_point_definition(const struct BaseP
 /**
  * Return number of points in the point definition.
  *
- * Safety:
+ * # Safety
  * - `point_definition` must be a valid, non-null pointer to a `BasePointDefinition`.
  */
 uintptr_t tracks_base_point_definition_count(const struct BasePointDefinition *point_definition);
@@ -662,14 +749,14 @@ uintptr_t tracks_base_point_definition_count(const struct BasePointDefinition *p
 /**
  * Check whether the point definition references a base provider.
  *
- * Safety:
+ * # Safety
  * - `point_definition` must be a valid, non-null pointer to a `BasePointDefinition`.
  */
 bool tracks_base_point_definition_has_base_provider(const struct BasePointDefinition *point_definition);
 
 /**
  * Get the `WrapBaseValueType` of the point definition.
- * Safety:
+ * # Safety
  * - `point_definition` must be a valid, non-null pointer to a `BasePointDefinition`.
  */
 WrapBaseValueType tracks_base_point_definition_get_type(const struct BasePointDefinition *point_definition);
@@ -868,8 +955,16 @@ void tracks_interpolate_vector4_batch(const Vector4PointDefinition *point_defini
 
 PathProperty *path_property_create(void);
 
+/**
+ * # Safety
+ * - `ptr` must be null or a valid pointer to a `PathProperty`.
+ */
 void path_property_finish(PathProperty *ptr);
 
+/**
+ * # Safety
+ * - `ptr` must be null or a valid, null-terminated C string.
+ */
 PropertyNames string_to_property_name(const char *ptr);
 
 /**
@@ -951,6 +1046,124 @@ struct CValueProperty property_get_value(const struct ValueProperty *ptr);
 struct CTimeUnit property_get_last_updated(const struct ValueProperty *ptr);
 
 struct CTimeUnit get_time(void);
+
+/**
+ * Creates a new, empty `TimelineCoroutineManager` and returns a raw pointer to it.
+ * The caller is responsible for freeing the memory using `destroy_timeline_coroutine_manager`.
+ */
+struct TimelineCoroutineManager *create_timeline_coroutine_manager(void);
+
+/**
+ * Destroys a `TimelineCoroutineManager` instance, freeing its memory.
+ *
+ * # Safety
+ * - `manager` must be a pointer previously returned by `create_timeline_coroutine_manager` and not already freed.
+ * - Passing a null pointer is a no-op.
+ */
+void destroy_timeline_coroutine_manager(struct TimelineCoroutineManager *manager);
+
+/**
+ * Adds an event to the timeline and returns its id, to remove it with `timeline_remove_event`.
+ * Events can be added in any order, at any time.
+ * When two events on the same property start at the same time, the one added later wins.
+ * Returns an invalid id (null track key, `id == UINT64_MAX`) if a pointer is null.
+ *
+ * # Safety
+ * - `manager` must be a valid pointer to a `TimelineCoroutineManager`.
+ * - `event_data` must be a pointer returned by `event_data_to_rust`. The data is cloned, so the caller retains ownership.
+ */
+struct CEventId timeline_add_event(struct TimelineCoroutineManager *manager,
+                                   float bpm,
+                                   const struct EventData *event_data);
+
+/**
+ * Removes the event with `id`, as returned by `timeline_add_event`.
+ * Returns false if it was already removed or never existed.
+ *
+ * # Safety
+ * - `manager` must be a valid pointer to a `TimelineCoroutineManager`.
+ */
+bool timeline_remove_event(struct TimelineCoroutineManager *manager, struct CEventId id);
+
+/**
+ * Removes every event on every property of `track_key` that starts in `start_song_time..=end_song_time`.
+ * Returns how many events were removed.
+ *
+ * # Safety
+ * - `manager` must be a valid pointer to a `TimelineCoroutineManager`.
+ */
+uint32_t timeline_remove_events_between(struct TimelineCoroutineManager *manager,
+                                        struct TrackKeyFFI track_key,
+                                        float start_song_time,
+                                        float end_song_time);
+
+/**
+ * Removes every event. Properties stay as they are until something else writes them.
+ *
+ * # Safety
+ * - `manager` must be a valid pointer to a `TimelineCoroutineManager`.
+ */
+void timeline_clear(struct TimelineCoroutineManager *manager);
+
+/**
+ * Writes the state at `song_time` into every property that has events.
+ * Can be called with any time, in any order, so it can be used to seek backwards.
+ *
+ * # Safety
+ * - `manager` must be a valid pointer to a `TimelineCoroutineManager`.
+ * - `context` must be a valid pointer to a `BaseProviderContext`.
+ * - `tracks_holder` must be a valid pointer to a `TracksHolder` containing every track used by the events.
+ */
+void timeline_apply(const struct TimelineCoroutineManager *manager,
+                    float song_time,
+                    const struct BaseProviderContext *context,
+                    struct TracksHolder *tracks_holder);
+
+/**
+ * Value of an animated property at `song_time`, without writing to any track.
+ * Returns a value with `has_value == false` if no event is active, the active event has no
+ * point data, `property` is not an `AnimateTrack` event type, or a pointer is null.
+ *
+ * # Safety
+ * - `manager` must be a valid pointer to a `TimelineCoroutineManager`.
+ * - `property` must be a valid pointer to a `CEventType` with a valid property id (see `c_event_type_to_rust`).
+ * - `context` must be a valid pointer to a `BaseProviderContext`.
+ */
+struct CValueNullable timeline_value_at(const struct TimelineCoroutineManager *manager,
+                                        float song_time,
+                                        struct TrackKeyFFI track_key,
+                                        const struct CEventType *property,
+                                        const struct BaseProviderContext *context);
+
+/**
+ * Samples a path property at `song_time` (the state of the blend) at the object's lifetime `path_time`.
+ * Works the same as `path_property_interpolate`. Returns a value with `has_value == false` if there is
+ * no active path, `property` is not an `AssignPathAnimation` event type, or a pointer is null.
+ *
+ * # Safety
+ * - `manager` must be a valid pointer to a `TimelineCoroutineManager`.
+ * - `property` must be a valid pointer to a `CEventType` with a valid property id (see `c_event_type_to_rust`).
+ * - `context` must be a valid pointer to a `BaseProviderContext`.
+ */
+struct CValueNullable timeline_path_interpolate(const struct TimelineCoroutineManager *manager,
+                                                float song_time,
+                                                struct TrackKeyFFI track_key,
+                                                const struct CEventType *property,
+                                                float path_time,
+                                                const struct BaseProviderContext *context);
+
+/**
+ * Blend state of a path property at `song_time`. `exists` is false if no event ever targets
+ * the property, `property` is not an `AssignPathAnimation` event type, or a pointer is null.
+ *
+ * # Safety
+ * - `manager` must be a valid pointer to a `TimelineCoroutineManager`.
+ * - `property` must be a valid pointer to a `CEventType` with a valid property id (see `c_event_type_to_rust`).
+ */
+struct CPathBlend timeline_path_blend(const struct TimelineCoroutineManager *manager,
+                                      float song_time,
+                                      struct TrackKeyFFI track_key,
+                                      const struct CEventType *property);
 
 /**
  * Create a new `Track` and return a raw pointer to it.
@@ -1102,7 +1315,7 @@ PathProperty *track_get_path_property(struct Track *track, const char *id);
 /**
  * Return a `CPropertiesMap` with pointers into the track's registered properties.
  *
- * Safety:
+ * # Safety
  * - `track` must be a valid, non-null pointer to a `Track`.
  * - The returned pointers are valid only while the `Track` is alive and not mutated in a way that moves or removes the properties.
  * - Do not retain these pointers across calls that might mutate the track.
@@ -1112,7 +1325,7 @@ struct CPropertiesMap track_get_properties_map(struct Track *track);
 /**
  * Return a `CPathPropertiesMap` with pointers into the track's path properties.
  *
- * Safety:
+ * # Safety
  * - `track` must be a valid, non-null pointer to a `Track`.
  * - Returned pointers are valid only while the track's path properties remain in-place.
  */
@@ -1120,7 +1333,7 @@ struct CPathPropertiesMap track_get_path_properties_map(struct Track *track);
 
 /**
  * Return a `CPropertiesValues` with the current values of the track's properties.
- * Safety:
+ * # Safety
  * - `track` must be a valid, non-null pointer to a `Track
  * - The returned struct contains copies of the current property values.
  */
@@ -1128,7 +1341,7 @@ struct CPropertiesValues track_get_properties_values(struct Track *track);
 
 /**
  * Return a `CPathPropertiesValues` with the interpolated values of the track's path properties at the given time.
- * Safety:
+ * # Safety
  * - `track` must be a valid, non-null pointer to a `Track`.
  * - `ctx` must be a valid, non-null pointer to a `BaseProviderContext`.
  *
@@ -1142,7 +1355,7 @@ struct CPathPropertiesValues track_get_path_properties_values(struct Track *trac
 /**
  * Register a C callback to be invoked when a game object is added/removed.
  *
- * Safety:
+ * # Safety
  * - `track` must be a valid pointer to a `Track`.
  * - `callback` and `user_data` must remain valid for as long as the callback may be invoked.
  * - The returned pointer is an opaque handle to the stored Rust closure; it must be removed with `track_remove_game_object_callback`.
@@ -1157,7 +1370,7 @@ void (**track_register_game_object_callback(struct Track *track,
 /**
  * Remove a previously registered game object callback.
  *
- * Safety:
+ * # Safety
  * - `track` must be a valid pointer to a `Track`.
  * - `callback` must be a pointer previously returned by `track_register_game_object_callback`.
  * - After calling this function the `callback` pointer must not be used again.
@@ -1172,39 +1385,68 @@ struct TracksHolder *tracks_holder_create(void);
 
 /**
  * Destroy a `TracksHolder` previously returned by `tracks_holder_create`.
+ *
+ * # Safety
+ * - `holder` must be null or a pointer returned by `tracks_holder_create` that has not been destroyed yet.
+ * - `holder` and any track pointers obtained from it must not be used after this call.
  */
 void tracks_holder_destroy(struct TracksHolder *holder);
 
 /**
  * Add a `Track` to the holder. Takes ownership of the `Track` pointer passed in.
  * Returns a `TrackKeyFFI` identifying the inserted track, or null-equivalent on error.
+ *
+ * # Safety
+ * - `holder` must be null or a valid pointer to a `TracksHolder`.
+ * - `track` must be null or a pointer returned by `track_create_named` (or `track_create`); ownership moves to the holder, so it must not be used or freed afterwards.
  */
-struct TrackKeyFFI tracks_holder_add_track(struct TracksHolder *holder, struct Track *track);
+struct TrackKeyFFI tracks_holder_add_track(struct TracksHolder *holder,
+                                           struct Track *track);
 
 /**
  * Get an immutable pointer to a `Track` by `TrackKeyFFI`.
+ *
+ * # Safety
+ * - `holder` must be null or a valid pointer to a `TracksHolder`.
+ * - The returned pointer is only valid until the holder is next mutated or destroyed.
  */
 const struct Track *tracks_holder_get_track(const struct TracksHolder *holder,
                                             struct TrackKeyFFI key);
 
 /**
  * Get a mutable pointer to a `Track` by `TrackKeyFFI`.
+ *
+ * # Safety
+ * - `holder` must be null or a valid pointer to a `TracksHolder`.
+ * - The returned pointer is only valid until the holder is next mutated or destroyed.
  */
 struct Track *tracks_holder_get_track_mut(struct TracksHolder *holder, struct TrackKeyFFI key);
 
 /**
  * Look up a track by name and return a pointer to it (const).
+ *
+ * # Safety
+ * - `holder` must be null or a valid pointer to a `TracksHolder`.
+ * - `name` must be null or a valid, null-terminated C string.
+ * - The returned pointer is only valid until the holder is next mutated or destroyed.
  */
 const struct Track *tracks_holder_get_track_by_name(const struct TracksHolder *holder,
                                                     const char *name);
 
 /**
  * Get the `TrackKeyFFI` for a track with the given name, or null-equivalent if not found.
+ *
+ * # Safety
+ * - `holder` must be null or a valid pointer to a `TracksHolder`.
+ * - `name` must be null or a valid, null-terminated C string.
  */
 struct TrackKeyFFI tracks_holder_get_track_key(struct TracksHolder *holder, const char *name);
 
 /**
  * Return number of tracks in the holder.
+ *
+ * # Safety
+ * - `holder` must be null or a valid pointer to a `TracksHolder`.
  */
 uintptr_t tracks_holder_count(const struct TracksHolder *holder);
 
