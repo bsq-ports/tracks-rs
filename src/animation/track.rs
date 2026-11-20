@@ -505,6 +505,128 @@ impl Display for PropertyNames {
     }
 }
 
+#[cfg(feature = "json")]
+mod serde {
+    use std::str::FromStr;
+
+    use ::serde::de::Error as DeError;
+    use serde_json::Value as JsonValue;
+
+    use crate::{
+        animation::{
+            property::PathProperty,
+            track::{PathPropertiesMap, PropertyNames},
+        },
+        base_provider_context::BaseProviderContext,
+        base_value::WrapBaseValueType,
+        point_definition::{
+            PointDefinitionLike, base_point_definition::BasePointDefinition,
+            basic_point_definition::BasicPointDefinition,
+            quaternion_point_definition::QuaternionPointDefinition,
+            vector3_point_definition::Vector3PointDefinition,
+        },
+    };
+
+    impl PathPropertiesMap {
+        /// Deserialize path definitions while using the caller's provider context.
+        pub fn deserialize(
+            properties: JsonValue,
+            context: &mut BaseProviderContext,
+        ) -> Result<Self, serde_json::Error> {
+
+            let object = properties
+                .as_object()
+                .ok_or_else(|| serde_json::Error::custom("path properties must be a JSON object"))?;
+
+            let mut result = PathPropertiesMap::default();
+            for (name, value) in object {
+                if !value.is_array() {
+                    return Err(serde_json::Error::custom(format!(
+                        "path property {name:?} must be a JSON array"
+                    )));
+                }
+
+                let ty = property_type(name, value).map_err(serde_json::Error::custom)?;
+                let definition =
+                    parse_definition(value.clone(), ty, context).map_err(serde_json::Error::custom)?;
+                let property = PathProperty::new(Some(definition), ty);
+                result.insert(name.clone(), property);
+            }
+
+            Ok(result)
+        }
+    }
+
+    fn property_type(name: &str, value: &JsonValue) -> Result<WrapBaseValueType, String> {
+        let known_type = match PropertyNames::from_str(name) {
+            Ok(
+                PropertyNames::Position
+                | PropertyNames::OffsetPosition
+                | PropertyNames::Scale
+                | PropertyNames::LocalPosition
+                | PropertyNames::DefinitePosition,
+            ) => Some(WrapBaseValueType::Vec3),
+            Ok(
+                PropertyNames::Rotation
+                | PropertyNames::OffsetRotation
+                | PropertyNames::LocalRotation,
+            ) => Some(WrapBaseValueType::Quat),
+            Ok(
+                PropertyNames::Dissolve | PropertyNames::DissolveArrow | PropertyNames::Cuttable,
+            ) => Some(WrapBaseValueType::Float),
+            Ok(PropertyNames::Color) => Some(WrapBaseValueType::Vec4),
+            _ => None,
+        };
+        known_type.map_or_else(|| infer_type(value), Ok)
+    }
+
+    fn infer_type(value: &JsonValue) -> Result<WrapBaseValueType, String> {
+        let points = value
+            .as_array()
+            .ok_or_else(|| "path property must be an array".to_owned())?;
+        let first = points
+            .first()
+            .ok_or_else(|| "path property cannot be an empty array".to_owned())?;
+        let components = first
+            .as_array()
+            .map(Vec::as_slice)
+            .unwrap_or(std::slice::from_ref(first));
+        let numeric_count = components.iter().filter(|v| v.is_number()).count();
+
+        match numeric_count {
+            1 | 2 => Ok(WrapBaseValueType::Float),
+            4 => Ok(WrapBaseValueType::Vec3),
+            5 => Ok(WrapBaseValueType::Vec4),
+            count => Err(format!(
+                "cannot infer the value type for a custom path property with {count} numeric components"
+            )),
+        }
+    }
+
+    fn parse_definition(
+        value: JsonValue,
+        ty: WrapBaseValueType,
+        context: &mut BaseProviderContext,
+    ) -> Result<BasePointDefinition, String> {
+        if value.as_array().is_none_or(Vec::is_empty) {
+            return Err("path property cannot be an empty array".to_owned());
+        }
+
+        let definition = match ty {
+            WrapBaseValueType::Float => BasicPointDefinition::<f32>::parse(value, context).into(),
+            WrapBaseValueType::Vec3 => Vector3PointDefinition::parse(value, context).into(),
+            WrapBaseValueType::Vec4 => {
+                BasicPointDefinition::<glam::Vec4>::parse(value, context).into()
+            }
+            WrapBaseValueType::Quat => QuaternionPointDefinition::parse(value, context).into(),
+            WrapBaseValueType::Unknown => {
+                return Err("path property value type cannot be unknown".to_owned());
+            }
+        };
+        Ok(definition)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::{thread::sleep, time::Duration};

@@ -63,13 +63,14 @@ ahash = "0.8" # for hashmaps
 log = "0.4"
 slotmap = "1"
 smallvec = "1.16"
+serde = { version = "1", optional = true }
 
 
 [build-dependencies]
 cbindgen = { version = "0.29", optional = true, default-features = false}
 
 [features]
-json = ["dep:serde_json"]
+json = ["dep:serde_json", "dep:serde"]
 ffi = ["dep:cbindgen"]
 compare_old = []
 default = ["json", "ffi"]

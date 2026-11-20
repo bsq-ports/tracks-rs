@@ -1,5 +1,7 @@
+use serde::de::IntoDeserializer;
 use serde_json::json;
 use tracks_rs::{
+    animation::track::PathPropertiesMap,
     base_provider_context::BaseProviderContext,
     base_value::BaseValue,
     point_definition::{
@@ -9,6 +11,60 @@ use tracks_rs::{
     },
     quaternion_utils::QuaternionUtilsExt,
 };
+
+#[test]
+fn deserializes_path_properties_map() {
+    let json = json!({
+        "offsetPosition": [
+            [0, 40, 0, 0],
+            [0, 0, 0, 0.2]
+        ]
+    });
+
+    let mut context = BaseProviderContext::new();
+    let map = PathPropertiesMap::deserialize(json, &mut context).unwrap();
+    let value = map.offset_position.interpolate(0.1, &context).unwrap();
+    assert_eq!(value.as_vec3().unwrap(), glam::Vec3::new(0.0, 20.0, 0.0));
+}
+
+#[test]
+fn deserializes_path_properties_with_base_providers_and_modifiers() {
+    let json = json!({
+        "offsetPosition": [
+            ["baseHeadPosition.s1", 0.2, ["baseHeadPosition", "opMul"]]
+        ]
+    });
+
+    let mut context = BaseProviderContext::new();
+    context.set_values(
+        "baseHeadPosition",
+        BaseValue::from(glam::Vec3::new(1.0, 2.0, 3.0)),
+    );
+    let map = PathPropertiesMap::deserialize(json, &mut context).unwrap();
+    assert!(
+        map.offset_position
+            .point
+            .as_ref()
+            .unwrap()
+            .has_base_provider()
+    );
+
+    context.update_providers(1.0);
+    let value = map
+        .offset_position
+        .interpolate(0.2, &context)
+        .unwrap()
+        .as_vec3()
+        .unwrap();
+    assert_eq!(value, glam::Vec3::new(1.0, 4.0, 9.0));
+}
+
+#[test]
+fn rejects_non_object_path_properties_map() {
+    let mut context = BaseProviderContext::new();
+    let result = PathPropertiesMap::deserialize(json!([]), &mut context);
+    assert!(result.is_err());
+}
 
 // NOTE: The `is_last`/`last` boolean returned by `interpolate(time)` follows the
 // Heck C# semantics used in the reference implementation:

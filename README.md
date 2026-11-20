@@ -93,6 +93,32 @@ fn main() {
 
 Properties on `Track` are strongly typed (e.g. `position` is a Vec3 property). Use the provided `ValueProperty` and `PathProperty` API to set and query values when driving animations.
 
+### Deserialize path properties
+
+With the `json` feature enabled, deserialize a path property map by passing a JSON deserializer and the `BaseProviderContext` it should use. Reuse this context when updating providers and sampling the resulting paths.
+
+```rust
+use serde::de::IntoDeserializer;
+use serde_json::json;
+use tracks_rs::animation::track::PathPropertiesMap;
+use tracks_rs::base_provider_context::BaseProviderContext;
+
+fn main() {
+    let mut ctx = BaseProviderContext::new();
+    let path_json = json!({
+        "offsetPosition": [
+            [0.0, 40.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.2]
+        ]
+    });
+
+    let paths =
+        PathPropertiesMap::deserialize(path_json.into_deserializer(), &mut ctx).unwrap();
+    let position = paths.offset_position.interpolate(0.1, &ctx).unwrap();
+    println!("offset position = {:?}", position.as_vec3());
+}
+```
+
 ---
 
 ## Point Definitions
