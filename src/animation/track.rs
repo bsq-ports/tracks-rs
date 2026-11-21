@@ -521,11 +521,12 @@ pub(crate) mod serde {
     impl PathPropertiesMap {
         /// Deserialize path definitions while using the caller's provider context.
         ///
-        /// `type_of` returns the registered value type for a property name (`None` if it
-        /// isn't registered), so custom properties must be registered beforehand.
+        /// Built-in properties (`offsetPosition`, `dissolve`, ...) get their type from the
+        /// defaults. `type_of` only needs to list the other (custom) properties and their value
+        /// types; a custom property missing from it is an error.
         pub fn deserialize(
             properties: JsonValue,
-            type_of: impl Fn(&str) -> Option<WrapBaseValueType>,
+            type_of: &HashMap<String, WrapBaseValueType>,
             context: &mut BaseProviderContext,
             named_point_defs: &HashMap<String, JsonValue>,
         ) -> Result<Self, serde_json::Error> {
@@ -535,6 +536,7 @@ pub(crate) mod serde {
                 ));
             };
 
+            let builtin = PathPropertiesMap::default();
             let mut result = PathPropertiesMap::default();
             for (name, value) in object {
                 match &value {
@@ -544,7 +546,10 @@ pub(crate) mod serde {
                     _ => {}
                 }
 
-                let ty = type_of(&name)
+                let ty = builtin
+                    .get(&name)
+                    .map(|p| p.get_type())
+                    .or_else(|| type_of.get(&name).copied())
                     .filter(|ty| *ty != WrapBaseValueType::Unknown)
                     .ok_or_else(|| {
                         serde_json::Error::custom(format!(
@@ -585,13 +590,7 @@ mod tests {
             named: HashMap<String, serde_json::Value>,
         ) -> Result<PathPropertiesMap, serde_json::Error> {
             let mut ctx = BaseProviderContext::new();
-            let registered = PathPropertiesMap::default();
-            PathPropertiesMap::deserialize(
-                value,
-                |name| registered.get(name).map(|p| p.get_type()),
-                &mut ctx,
-                &named,
-            )
+            PathPropertiesMap::deserialize(value, &HashMap::default(), &mut ctx, &named)
         }
 
         fn count(def: &Option<BasePointDefinition>) -> usize {
@@ -648,15 +647,12 @@ mod tests {
 
         #[test]
         fn registered_custom_property_is_parsed() {
-            let mut registered = PathPropertiesMap::default();
-            registered.insert(
-                "customVec3".to_owned(),
-                PathProperty::new(None, WrapBaseValueType::Vec3),
-            );
+            let mut registered = HashMap::default();
+            registered.insert("customVec3".to_owned(), WrapBaseValueType::Vec3);
             let mut ctx = BaseProviderContext::new();
             let map = PathPropertiesMap::deserialize(
                 json!({ "customVec3": [[0, 1, 2, 0], [1, 2, 3, 1]] }),
-                |name| registered.get(name).map(|p| p.get_type()),
+                &registered,
                 &mut ctx,
                 &HashMap::default(),
             )

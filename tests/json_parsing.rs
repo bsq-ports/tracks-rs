@@ -23,10 +23,10 @@ fn deserializes_path_properties_map() {
     });
 
     let mut context = BaseProviderContext::new();
-    let defaults = PathPropertiesMap::default();
+    let types = HashMap::default();
     let map = PathPropertiesMap::deserialize(
         json,
-        |name| defaults.get(name).map(|p| p.get_type()),
+        &types,
         &mut context,
         &HashMap::default(),
     )
@@ -48,10 +48,10 @@ fn deserializes_path_properties_with_base_providers_and_modifiers() {
         "baseHeadPosition",
         BaseValue::from(glam::Vec3::new(1.0, 2.0, 3.0)),
     );
-    let defaults = PathPropertiesMap::default();
+    let types = HashMap::default();
     let map = PathPropertiesMap::deserialize(
         json,
-        |name| defaults.get(name).map(|p| p.get_type()),
+        &types,
         &mut context,
         &HashMap::default(),
     )
@@ -77,10 +77,10 @@ fn deserializes_path_properties_with_base_providers_and_modifiers() {
 #[test]
 fn rejects_non_object_path_properties_map() {
     let mut context = BaseProviderContext::new();
-    let defaults = PathPropertiesMap::default();
+    let types = HashMap::default();
     let result = PathPropertiesMap::deserialize(
         json!([]),
-        |name| defaults.get(name).map(|p| p.get_type()),
+        &types,
         &mut context,
         &HashMap::default(),
     );
