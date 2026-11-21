@@ -134,7 +134,7 @@ mod json {
             bpm: f32,
             tracks_holder: &mut TracksHolder,
             context: &mut BaseProviderContext,
-            named_point_defs: &HashMap<String, BasePointDefinition>,
+            named_point_defs: &HashMap<String, JsonValue>,
         ) -> Result<Vec<EventData>, serde_json::Error> {
             let RawEvent {
                 b: bpm_time,
@@ -225,10 +225,7 @@ mod json_tests {
         animation::{track::Track, tracks_holder::TracksHolder},
         base_provider_context::BaseProviderContext,
         base_value::WrapBaseValueType,
-        point_definition::{
-            PointDefinitionLike, base_point_definition::BasePointDefinition,
-            vector3_point_definition::Vector3PointDefinition,
-        },
+        point_definition::PointDefinitionLike,
     };
 
     fn holder(names: &[&str]) -> TracksHolder {
@@ -244,7 +241,7 @@ mod json_tests {
     fn deserialize(
         event: serde_json::Value,
         holder: &mut TracksHolder,
-        named: &HashMap<String, BasePointDefinition>,
+        named: &HashMap<String, serde_json::Value>,
     ) -> Result<Vec<EventData>, serde_json::Error> {
         let mut ctx = BaseProviderContext::new();
         EventData::deserialize(&event, 60.0, holder, &mut ctx, named)
@@ -377,11 +374,10 @@ mod json_tests {
     #[test]
     fn named_definition_resolves() {
         let mut holder = holder(&["T"]);
-        let mut ctx = BaseProviderContext::new();
         let mut named = HashMap::default();
         named.insert(
             "ZigZagPosition".to_owned(),
-            Vector3PointDefinition::parse(json!([[0, 0, 0, 0], [1, 0, 0, 1]]), &mut ctx).into(),
+            json!([[0, 0, 0, 0], [1, 0, 0, 1]]),
         );
         let events = deserialize(
             json!({"b": 0, "t": "AnimateTrack", "d": {"track": "T", "offsetPosition": "ZigZagPosition"}}),

@@ -249,25 +249,35 @@ mod json {
         /// Deserialize a point definition as written in a map.
         ///
         /// * `null` erases the value and yields `None`.
-        /// * A string names a definition in `named_point_defs`.
+        /// * A string names a raw JSON definition in `named_point_defs`, parsed on demand as `ty` (or inferred).
         /// * An array is parsed inline as `ty`; if `ty` is `None` it is inferred from the first point.
         pub fn deserialize(
             value: JsonValue,
             ty: Option<WrapBaseValueType>,
             context: &mut BaseProviderContext,
-            named_point_defs: &HashMap<String, BasePointDefinition>,
+            named_point_defs: &HashMap<String, JsonValue>,
         ) -> Result<Option<Self>, serde_json::Error> {
             match value {
                 JsonValue::Null => Ok(None),
-                JsonValue::String(name) => named_point_defs
-                    .get(&name)
-                    .cloned()
-                    .map(Some)
-                    .ok_or_else(|| {
+                JsonValue::String(name) => {
+                    let raw = named_point_defs.get(&name).ok_or_else(|| {
                         serde_json::Error::custom(format!(
                             "named point definition '{name}' not found"
                         ))
-                    }),
+                    })?;
+                    let JsonValue::Array(points) = raw else {
+                        return Err(serde_json::Error::custom(format!(
+                            "named point definition '{name}' must be an array"
+                        )));
+                    };
+                    let ty = match ty {
+                        Some(ty) => ty,
+                        None => Self::infer_type(points).map_err(serde_json::Error::custom)?,
+                    };
+                    Self::parse_as(raw.clone(), ty, context)
+                        .map(Some)
+                        .map_err(serde_json::Error::custom)
+                }
                 JsonValue::Array(points) => {
                     let ty = match ty {
                         Some(ty) => ty,

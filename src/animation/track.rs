@@ -528,7 +528,7 @@ pub(crate) mod serde {
         pub fn deserialize(
             properties: JsonValue,
             context: &mut BaseProviderContext,
-            named_point_defs: &HashMap<String, BasePointDefinition>,
+            named_point_defs: &HashMap<String, JsonValue>,
         ) -> Result<Self, serde_json::Error> {
             let JsonValue::Object(object) = properties else {
                 return Err(serde_json::Error::custom(
@@ -548,7 +548,10 @@ pub(crate) mod serde {
                 let Some(definition) =
                     BasePointDefinition::deserialize(value, known_type(&name), context, named_point_defs)?
                 else {
-                    continue;
+                    return Err(serde_json::Error::custom(format!(
+                        "failed to deserialize point definition for property '{}'",
+                        name
+                    )));
                 };
                 let ty = definition.value_type();
                 result.insert(name, PathProperty::new(Some(definition), ty));
@@ -598,7 +601,6 @@ mod tests {
             base_value::WrapBaseValueType,
             point_definition::{
                 PointDefinitionLike, base_point_definition::BasePointDefinition,
-                vector3_point_definition::Vector3PointDefinition,
             },
         };
         use ahash::HashMap;
@@ -606,7 +608,7 @@ mod tests {
 
         fn parse(
             value: serde_json::Value,
-            named: HashMap<String, BasePointDefinition>,
+            named: HashMap<String, serde_json::Value>,
         ) -> Result<PathPropertiesMap, serde_json::Error> {
             let mut ctx = BaseProviderContext::new();
             PathPropertiesMap::deserialize(value, &mut ctx, &named)
@@ -690,12 +692,7 @@ mod tests {
 
         #[test]
         fn named_point_definition_is_resolved() {
-            let mut ctx = BaseProviderContext::new();
-            let def: BasePointDefinition = Vector3PointDefinition::parse(
-                json!([[0, 40, 0, 0], [0, 0, 0, 0.2]]),
-                &mut ctx,
-            )
-            .into();
+            let def = json!([[0, 40, 0, 0], [0, 0, 0, 0.2]]);
             let mut named = HashMap::default();
             named.insert("ZigZagPosition".to_owned(), def);
 
