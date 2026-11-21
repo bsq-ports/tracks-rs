@@ -533,7 +533,7 @@ mod serde {
         pub fn deserialize(
             properties: JsonValue,
             context: &mut BaseProviderContext,
-            named_point_defs: HashMap<String, BasePointDefinition>,
+            named_point_defs: &HashMap<String, BasePointDefinition>,
         ) -> Result<Self, serde_json::Error> {
             let JsonValue::Object(object) = properties else {
                 return Err(serde_json::Error::custom(
@@ -675,7 +675,7 @@ mod tests {
             named: HashMap<String, BasePointDefinition>,
         ) -> Result<PathPropertiesMap, serde_json::Error> {
             let mut ctx = BaseProviderContext::new();
-            PathPropertiesMap::deserialize(value, &mut ctx, named)
+            PathPropertiesMap::deserialize(value, &mut ctx, &named)
         }
 
         fn count(def: &Option<BasePointDefinition>) -> usize {
