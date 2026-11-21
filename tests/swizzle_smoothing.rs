@@ -238,12 +238,22 @@ fn update_base_head_rotation_over_time() {
         let s = vals.as_ref();
         let cur = Vec3::new(s[0], s[1], s[2]);
         let dist = (cur - target_euler).length();
-        assert!(dist <= prev_dist + 1e-4, "smoothing should approach target (dist {} prev {})", dist, prev_dist);
+        assert!(
+            dist <= prev_dist + 1e-4,
+            "smoothing should approach target (dist {} prev {})",
+            dist,
+            prev_dist
+        );
         prev_dist = dist;
     }
 
     // after several steps we should have made significant progress toward the target
-    assert!(prev_dist < initial_dist * 0.5, "final distance {} not less than half of initial {}", prev_dist, initial_dist);
+    assert!(
+        prev_dist < initial_dist * 0.5,
+        "final distance {} not less than half of initial {}",
+        prev_dist,
+        initial_dist
+    );
 }
 
 #[test]
@@ -258,9 +268,15 @@ fn smoothing_swizzled_rotation_is_linear() {
     ctx.update_providers(0.5);
     let half = provider.values(&ctx);
     assert_eq!(half.len(), 2);
-    assert!((half[0] - 6.0).abs() < 1e-3 && (half[1] - 10.0).abs() < 1e-3, "{half:?}");
+    assert!(
+        (half[0] - 6.0).abs() < 1e-3 && (half[1] - 10.0).abs() < 1e-3,
+        "{half:?}"
+    );
 
     ctx.update_providers(1.0);
     let full = provider.values(&ctx);
-    assert!((full[0] - 12.0).abs() < 1e-3 && (full[1] - 20.0).abs() < 1e-3, "{full:?}");
+    assert!(
+        (full[0] - 12.0).abs() < 1e-3 && (full[1] - 20.0).abs() < 1e-3,
+        "{full:?}"
+    );
 }

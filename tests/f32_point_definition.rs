@@ -114,11 +114,19 @@ fn overshooting_point_easing_is_not_clamped() {
     let mut ctx = BaseProviderContext::new();
     type FloatPointDefinition = BasicPointDefinition<f32>;
 
-    let back = FloatPointDefinition::parse(json!([[0.0, 0.0], [1.0, 1.0, "easeOutBack"]]), &mut ctx);
+    let back =
+        FloatPointDefinition::parse(json!([[0.0, 0.0], [1.0, 1.0, "easeOutBack"]]), &mut ctx);
     let (v, _) = back.interpolate(0.5, &ctx);
-    assert!(v > 1.0, "easeOutBack should overshoot the end value, got {v}");
+    assert!(
+        v > 1.0,
+        "easeOutBack should overshoot the end value, got {v}"
+    );
 
-    let in_back = FloatPointDefinition::parse(json!([[0.0, 0.0], [1.0, 1.0, "easeInBack"]]), &mut ctx);
+    let in_back =
+        FloatPointDefinition::parse(json!([[0.0, 0.0], [1.0, 1.0, "easeInBack"]]), &mut ctx);
     let (v, _) = in_back.interpolate(0.2, &ctx);
-    assert!(v < 0.0, "easeInBack should undershoot the start value, got {v}");
+    assert!(
+        v < 0.0,
+        "easeInBack should undershoot the start value, got {v}"
+    );
 }

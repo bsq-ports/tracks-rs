@@ -220,7 +220,11 @@ where
     /// # Panics
     /// If `times` and `out` have different lengths.
     fn interpolate_batch(&self, times: &[f32], out: &mut [T], context: &BaseProviderContext) {
-        assert_eq!(times.len(), out.len(), "times and out must be the same length");
+        assert_eq!(
+            times.len(),
+            out.len(),
+            "times and out must be the same length"
+        );
         for (slot, &time) in out.iter_mut().zip(times) {
             *slot = self.interpolate(time, context).0;
         }

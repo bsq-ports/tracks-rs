@@ -1,6 +1,7 @@
 use crate::{
     base_provider_context::BaseProviderContext,
-    base_value::{BaseValue, WrapBaseValueType}, value_types::ValueType,
+    base_value::{BaseValue, WrapBaseValueType},
+    value_types::ValueType,
 };
 
 use super::{PointDefinitionLike, base_point_definition::BasePointDefinition};
@@ -80,7 +81,11 @@ impl PointDefinitionInterpolation {
         out: &mut [BaseValue],
         context: &BaseProviderContext,
     ) -> bool {
-        assert_eq!(times.len(), out.len(), "times and out must be the same length");
+        assert_eq!(
+            times.len(),
+            out.len(),
+            "times and out must be the same length"
+        );
         if self.point.is_none() {
             return false;
         }

@@ -3,21 +3,43 @@ use std::f32::consts::{FRAC_PI_2, PI};
 use tracks_rs::easings::functions::Functions;
 
 const ALL: [&str; 32] = [
-    "easeLinear", "easeStep",
-    "easeInQuad", "easeOutQuad", "easeInOutQuad",
-    "easeInCubic", "easeOutCubic", "easeInOutCubic",
-    "easeInQuart", "easeOutQuart", "easeInOutQuart",
-    "easeInQuint", "easeOutQuint", "easeInOutQuint",
-    "easeInSine", "easeOutSine", "easeInOutSine",
-    "easeInCirc", "easeOutCirc", "easeInOutCirc",
-    "easeInExpo", "easeOutExpo", "easeInOutExpo",
-    "easeInElastic", "easeOutElastic", "easeInOutElastic",
-    "easeInBack", "easeOutBack", "easeInOutBack",
-    "easeInBounce", "easeOutBounce", "easeInOutBounce",
+    "easeLinear",
+    "easeStep",
+    "easeInQuad",
+    "easeOutQuad",
+    "easeInOutQuad",
+    "easeInCubic",
+    "easeOutCubic",
+    "easeInOutCubic",
+    "easeInQuart",
+    "easeOutQuart",
+    "easeInOutQuart",
+    "easeInQuint",
+    "easeOutQuint",
+    "easeInOutQuint",
+    "easeInSine",
+    "easeOutSine",
+    "easeInOutSine",
+    "easeInCirc",
+    "easeOutCirc",
+    "easeInOutCirc",
+    "easeInExpo",
+    "easeOutExpo",
+    "easeInOutExpo",
+    "easeInElastic",
+    "easeOutElastic",
+    "easeInOutElastic",
+    "easeInBack",
+    "easeOutBack",
+    "easeInOutBack",
+    "easeInBounce",
+    "easeOutBounce",
+    "easeInOutBounce",
 ];
 
 fn easing(name: &str) -> Functions {
-    name.parse().unwrap_or_else(|_| panic!("unknown easing {name}"))
+    name.parse()
+        .unwrap_or_else(|_| panic!("unknown easing {name}"))
 }
 
 /// The curves before https://github.com/Aeroluna/Heck/pull/183, for the easings that were only
@@ -82,9 +104,19 @@ fn circ_easings_survive_rounding_past_the_end() {
 #[test]
 fn simplified_easings_match_the_old_curves() {
     let same = [
-        "easeOutQuad", "easeInOutQuad", "easeOutCubic", "easeInOutCubic", "easeOutQuart",
-        "easeInOutQuart", "easeOutQuint", "easeInOutQuint", "easeInSine", "easeInOutSine",
-        "easeInCirc", "easeOutCirc", "easeInOutCirc",
+        "easeOutQuad",
+        "easeInOutQuad",
+        "easeOutCubic",
+        "easeInOutCubic",
+        "easeOutQuart",
+        "easeInOutQuart",
+        "easeOutQuint",
+        "easeInOutQuint",
+        "easeInSine",
+        "easeInOutSine",
+        "easeInCirc",
+        "easeOutCirc",
+        "easeInOutCirc",
     ];
     for name in same {
         let f = easing(name);
@@ -94,7 +126,10 @@ fn simplified_easings_match_the_old_curves() {
             if old.is_nan() {
                 continue;
             }
-            assert!((new - old).abs() < 2e-3, "{name}({p}): new {new}, old {old}");
+            assert!(
+                (new - old).abs() < 2e-3,
+                "{name}({p}): new {new}, old {old}"
+            );
         }
     }
 }
@@ -115,7 +150,11 @@ fn bounce_is_continuous() {
     let mut prev = f.interpolate(0.0);
     for i in 1..=10_000 {
         let v = f.interpolate(i as f32 / 10_000.0);
-        assert!((v - prev).abs() < 0.01, "jump at {}: {prev} -> {v}", i as f32 / 10_000.0);
+        assert!(
+            (v - prev).abs() < 0.01,
+            "jump at {}: {prev} -> {v}",
+            i as f32 / 10_000.0
+        );
         prev = v;
     }
 }

@@ -9,12 +9,22 @@ fn check_is_rotation(expr: &str, expected: bool) {
 
     // set some base values used by providers
     ctx.set_values("baseHeadRotation", BaseValue::from(Quat::IDENTITY));
-    ctx.set_values("baseHeadPosition", BaseValue::from(Vec3::new(1.0, 2.0, 3.0)));
-    ctx.set_values("baseNote0Color", BaseValue::from(Vec4::new(0.1, 0.2, 0.3, 1.0)));
+    ctx.set_values(
+        "baseHeadPosition",
+        BaseValue::from(Vec3::new(1.0, 2.0, 3.0)),
+    );
+    ctx.set_values(
+        "baseNote0Color",
+        BaseValue::from(Vec4::new(0.1, 0.2, 0.3, 1.0)),
+    );
 
     let provider = ctx.get_value_provider(expr);
     let is_rot = provider.is_rotation(&ctx);
-    assert_eq!(is_rot, expected, "provider '{}' is_rotation expected {} got {}", expr, expected, is_rot);
+    assert_eq!(
+        is_rot, expected,
+        "provider '{}' is_rotation expected {} got {}",
+        expr, expected, is_rot
+    );
 }
 
 #[test]

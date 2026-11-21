@@ -507,17 +507,12 @@ impl Display for PropertyNames {
 
 #[cfg(feature = "json")]
 pub(crate) mod serde {
-    use std::str::FromStr;
-
     use ::serde::de::Error as DeError;
     use ahash::HashMap;
     use serde_json::Value as JsonValue;
 
     use crate::{
-        animation::{
-            property::PathProperty,
-            track::{PathPropertiesMap, PropertyNames},
-        },
+        animation::{property::PathProperty, track::PathPropertiesMap},
         base_provider_context::BaseProviderContext,
         base_value::WrapBaseValueType,
         point_definition::base_point_definition::BasePointDefinition,
@@ -525,8 +520,12 @@ pub(crate) mod serde {
 
     impl PathPropertiesMap {
         /// Deserialize path definitions while using the caller's provider context.
+        ///
+        /// `type_of` returns the registered value type for a property name (`None` if it
+        /// isn't registered), so custom properties must be registered beforehand.
         pub fn deserialize(
             properties: JsonValue,
+            type_of: impl Fn(&str) -> Option<WrapBaseValueType>,
             context: &mut BaseProviderContext,
             named_point_defs: &HashMap<String, JsonValue>,
         ) -> Result<Self, serde_json::Error> {
@@ -545,42 +544,19 @@ pub(crate) mod serde {
                     _ => {}
                 }
 
-                let Some(definition) =
-                    BasePointDefinition::deserialize(value, known_type(&name), context, named_point_defs)?
-                else {
-                    return Err(serde_json::Error::custom(format!(
-                        "failed to deserialize point definition for property '{}'",
-                        name
-                    )));
-                };
-                let ty = definition.value_type();
+                let ty = type_of(&name)
+                    .filter(|ty| *ty != WrapBaseValueType::Unknown)
+                    .ok_or_else(|| {
+                        serde_json::Error::custom(format!(
+                            "property '{name}' is not registered; register it before use"
+                        ))
+                    })?;
+                let definition =
+                    BasePointDefinition::deserialize(value, ty, context, named_point_defs)?;
                 result.insert(name, PathProperty::new(Some(definition), ty));
             }
 
             Ok(result)
-        }
-    }
-
-    /// The value type dictated by a well-known property name, if any.
-    pub(crate) fn known_type(name: &str) -> Option<WrapBaseValueType> {
-        match PropertyNames::from_str(name) {
-            Ok(
-                PropertyNames::Position
-                | PropertyNames::OffsetPosition
-                | PropertyNames::Scale
-                | PropertyNames::LocalPosition
-                | PropertyNames::DefinitePosition,
-            ) => Some(WrapBaseValueType::Vec3),
-            Ok(
-                PropertyNames::Rotation
-                | PropertyNames::OffsetRotation
-                | PropertyNames::LocalRotation,
-            ) => Some(WrapBaseValueType::Quat),
-            Ok(
-                PropertyNames::Dissolve | PropertyNames::DissolveArrow | PropertyNames::Cuttable,
-            ) => Some(WrapBaseValueType::Float),
-            Ok(PropertyNames::Color) => Some(WrapBaseValueType::Vec4),
-            _ => None,
         }
     }
 }
@@ -599,9 +575,7 @@ mod tests {
         use crate::{
             base_provider_context::BaseProviderContext,
             base_value::WrapBaseValueType,
-            point_definition::{
-                PointDefinitionLike, base_point_definition::BasePointDefinition,
-            },
+            point_definition::{PointDefinitionLike, base_point_definition::BasePointDefinition},
         };
         use ahash::HashMap;
         use serde_json::json;
@@ -611,7 +585,13 @@ mod tests {
             named: HashMap<String, serde_json::Value>,
         ) -> Result<PathPropertiesMap, serde_json::Error> {
             let mut ctx = BaseProviderContext::new();
-            PathPropertiesMap::deserialize(value, &mut ctx, &named)
+            let registered = PathPropertiesMap::default();
+            PathPropertiesMap::deserialize(
+                value,
+                |name| registered.get(name).map(|p| p.get_type()),
+                &mut ctx,
+                &named,
+            )
         }
 
         fn count(def: &Option<BasePointDefinition>) -> usize {
@@ -658,23 +638,32 @@ mod tests {
         }
 
         #[test]
-        fn custom_property_type_is_inferred() {
-            let map = parse(
-                json!({
-                    "customVec3": [[0, 1, 2, 0], [1, 2, 3, 1]],
-                    "customFloat": [[0, 0], [1, 1]],
-                }),
+        fn unregistered_custom_property_errors() {
+            let res = parse(
+                json!({ "customVec3": [[0, 1, 2, 0], [1, 2, 3, 1]] }),
                 HashMap::default(),
+            );
+            assert!(res.is_err());
+        }
+
+        #[test]
+        fn registered_custom_property_is_parsed() {
+            let mut registered = PathPropertiesMap::default();
+            registered.insert(
+                "customVec3".to_owned(),
+                PathProperty::new(None, WrapBaseValueType::Vec3),
+            );
+            let mut ctx = BaseProviderContext::new();
+            let map = PathPropertiesMap::deserialize(
+                json!({ "customVec3": [[0, 1, 2, 0], [1, 2, 3, 1]] }),
+                |name| registered.get(name).map(|p| p.get_type()),
+                &mut ctx,
+                &HashMap::default(),
             )
             .unwrap();
-
             let v = map.get("customVec3").unwrap();
             assert_eq!(v.get_type(), WrapBaseValueType::Vec3);
             assert_eq!(count(&v.point), 2);
-            assert_eq!(
-                map.get("customFloat").unwrap().get_type(),
-                WrapBaseValueType::Float
-            );
         }
 
         #[test]

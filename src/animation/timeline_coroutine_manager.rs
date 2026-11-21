@@ -124,7 +124,13 @@ pub struct PathSnapshot<'a> {
 impl PathSnapshot<'_> {
     /// Samples the path at `time` (an object's lifetime). Works the same as `PathProperty::interpolate`.
     pub fn interpolate(&self, time: f32, context: &BaseProviderContext) -> Option<BaseValue> {
-        interpolate_paths(self.prev_point, self.point, self.interpolate_time, time, context)
+        interpolate_paths(
+            self.prev_point,
+            self.point,
+            self.interpolate_time,
+            time,
+            context,
+        )
     }
 }
 
@@ -175,7 +181,14 @@ impl Timeline<ValueEvent> {
     fn value_at(&self, song_time: SongTime, context: &BaseProviderContext) -> Option<BaseValue> {
         let event = &self.events[self.active_index(song_time)?];
         let points = event.point_data.as_ref()?;
-        Some(points.interpolate(event.timing.repeated_progress(event.repeat, song_time), context).0)
+        Some(
+            points
+                .interpolate(
+                    event.timing.repeated_progress(event.repeat, song_time),
+                    context,
+                )
+                .0,
+        )
     }
 }
 
@@ -296,12 +309,16 @@ impl TimelineCoroutineManager {
         let track = self.tracks.entry(event.track_key).or_default();
         match event.property {
             EventType::AnimateTrack(handle) => {
-                track.properties.entry(handle).or_default().insert(ValueEvent {
-                    id,
-                    timing,
-                    repeat: event.repeat,
-                    point_data: event.point_data,
-                })
+                track
+                    .properties
+                    .entry(handle)
+                    .or_default()
+                    .insert(ValueEvent {
+                        id,
+                        timing,
+                        repeat: event.repeat,
+                        point_data: event.point_data,
+                    })
             }
             EventType::AssignPathAnimation(handle) => track
                 .path_properties
@@ -397,8 +414,8 @@ mod tests {
 
     use super::*;
     use crate::animation::coroutine_manager::CoroutineManager;
-    use crate::easings::functions::Functions;
     use crate::animation::track::{PathPropertyHandle, Track, ValuePropertyHandle};
+    use crate::easings::functions::Functions;
     use crate::modifiers::ModifierValues;
     use crate::point_data::basic_point_data::BasicPointData;
     use crate::point_definition::basic_point_definition::BasicPointDefinition;
@@ -758,8 +775,14 @@ mod tests {
         let (_, a, _) = holder_with_tracks();
         let handle = ValuePropertyHandle::new("dissolve");
         let mut replay = TimelineCoroutineManager::new();
-        let first = replay.add_event(60.0, event(a, dissolve(), 0.0, 0.0, 0, Some(float_points(0.0, 1.0))));
-        let second = replay.add_event(60.0, event(a, dissolve(), 1.0, 0.0, 0, Some(float_points(0.0, 2.0))));
+        let first = replay.add_event(
+            60.0,
+            event(a, dissolve(), 0.0, 0.0, 0, Some(float_points(0.0, 1.0))),
+        );
+        let second = replay.add_event(
+            60.0,
+            event(a, dissolve(), 1.0, 0.0, 0, Some(float_points(0.0, 2.0))),
+        );
         let at = |replay: &TimelineCoroutineManager, t| {
             float_of(replay.value_at(SongTime::new(t), a, &handle, &ctx))
         };
@@ -779,12 +802,21 @@ mod tests {
         let (_, a, _) = holder_with_tracks();
         let handle = ValuePropertyHandle::new("dissolve");
         let mut replay = TimelineCoroutineManager::new();
-        let first = replay.add_event(60.0, event(a, dissolve(), 1.0, 0.0, 0, Some(float_points(0.0, 1.0))));
-        let second = replay.add_event(60.0, event(a, dissolve(), 1.0, 0.0, 0, Some(float_points(0.0, 2.0))));
+        let first = replay.add_event(
+            60.0,
+            event(a, dissolve(), 1.0, 0.0, 0, Some(float_points(0.0, 1.0))),
+        );
+        let second = replay.add_event(
+            60.0,
+            event(a, dissolve(), 1.0, 0.0, 0, Some(float_points(0.0, 2.0))),
+        );
 
         // the earlier one is removed, the later one stays active
         assert!(replay.remove_event(first));
-        assert_eq!(float_of(replay.value_at(SongTime::new(1.0), a, &handle, &ctx)), Some(2.0));
+        assert_eq!(
+            float_of(replay.value_at(SongTime::new(1.0), a, &handle, &ctx)),
+            Some(2.0)
+        );
         assert!(replay.remove_event(second));
     }
 
@@ -794,26 +826,60 @@ mod tests {
         let (mut holder, a, b) = holder_with_tracks();
         let mut replay = TimelineCoroutineManager::new();
         let ids: Vec<_> = [0.0, 1.0, 2.0, 3.0]
-            .map(|t| replay.add_event(60.0, event(a, dissolve(), t, 0.0, 0, Some(float_points(0.0, t)))))
+            .map(|t| {
+                replay.add_event(
+                    60.0,
+                    event(a, dissolve(), t, 0.0, 0, Some(float_points(0.0, t))),
+                )
+            })
             .into();
-        replay.add_event(60.0, event(b, dissolve(), 1.0, 0.0, 0, Some(float_points(0.0, 9.0))));
+        replay.add_event(
+            60.0,
+            event(b, dissolve(), 1.0, 0.0, 0, Some(float_points(0.0, 9.0))),
+        );
 
         // a color event inside the range goes too, and track b is untouched
-        replay.add_event(60.0, event(a, color(), 1.5, 0.0, 0, Some(color_points(0.0, 1.0))));
+        replay.add_event(
+            60.0,
+            event(a, color(), 1.5, 0.0, 0, Some(color_points(0.0, 1.0))),
+        );
         // inclusive range, every property of one track
-        assert_eq!(replay.remove_events_between(a, SongTime::new(1.0), SongTime::new(2.0)), 3);
+        assert_eq!(
+            replay.remove_events_between(a, SongTime::new(1.0), SongTime::new(2.0)),
+            3
+        );
         assert!(!replay.remove_event(ids[1]));
         assert!(!replay.remove_event(ids[2]));
-        assert_eq!(replay.remove_events_between(a, SongTime::new(1.0), SongTime::new(2.0)), 0);
+        assert_eq!(
+            replay.remove_events_between(a, SongTime::new(1.0), SongTime::new(2.0)),
+            0
+        );
 
         replay.apply(SongTime::new(2.5), &ctx, &mut holder);
-        let value = |key| float_of(holder.get_track(key).unwrap().properties.dissolve.get_value());
+        let value = |key| {
+            float_of(
+                holder
+                    .get_track(key)
+                    .unwrap()
+                    .properties
+                    .dissolve
+                    .get_value(),
+            )
+        };
         assert_eq!(value(a), Some(0.0));
         assert_eq!(value(b), Some(9.0));
 
         replay.clear();
         assert!(!replay.remove_event(ids[0]));
-        assert_eq!(replay.value_at(SongTime::new(2.5), b, &ValuePropertyHandle::new("dissolve"), &ctx), None);
+        assert_eq!(
+            replay.value_at(
+                SongTime::new(2.5),
+                b,
+                &ValuePropertyHandle::new("dissolve"),
+                &ctx
+            ),
+            None
+        );
     }
 
     #[test]
@@ -821,13 +887,32 @@ mod tests {
         let ctx = BaseProviderContext::new();
         let (mut holder, a, _) = holder_with_tracks();
         let mut replay = TimelineCoroutineManager::new();
-        let id = replay.add_event(60.0, event(a, dissolve(), 0.0, 0.0, 0, Some(float_points(0.0, 4.0))));
+        let id = replay.add_event(
+            60.0,
+            event(a, dissolve(), 0.0, 0.0, 0, Some(float_points(0.0, 4.0))),
+        );
 
         replay.apply(SongTime::new(1.0), &ctx, &mut holder);
-        assert!(holder.get_track(a).unwrap().properties.dissolve.get_value().is_some());
+        assert!(
+            holder
+                .get_track(a)
+                .unwrap()
+                .properties
+                .dissolve
+                .get_value()
+                .is_some()
+        );
 
         replay.remove_event(id);
         replay.apply(SongTime::new(1.0), &ctx, &mut holder);
-        assert!(holder.get_track(a).unwrap().properties.dissolve.get_value().is_none());
+        assert!(
+            holder
+                .get_track(a)
+                .unwrap()
+                .properties
+                .dissolve
+                .get_value()
+                .is_none()
+        );
     }
 }

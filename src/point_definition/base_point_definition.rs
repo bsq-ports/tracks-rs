@@ -21,7 +21,7 @@ use super::PointDefinitionLike;
 /// Point definitions are used to describe what happens over the course of an animation,
 /// they are used slightly differently for different properties.
 /// They consist of a collection of points over time.
-/// 
+///
 /// Cloning is cheap because the underlying data is reference counted, so you can clone a point definition to use it in multiple places without copying the underlying data.
 #[derive(Debug, Clone)]
 pub enum BasePointDefinition {
@@ -246,49 +246,61 @@ mod json {
     };
 
     impl BasePointDefinition {
-        /// Deserialize a point definition as written in a map.
+        /// Deserialize a non-null point definition as written in a map, as value type `ty`.
         ///
-        /// * `null` erases the value and yields `None`.
-        /// * A string names a raw JSON definition in `named_point_defs`, parsed on demand as `ty` (or inferred).
-        /// * An array is parsed inline as `ty`; if `ty` is `None` it is inferred from the first point.
+        /// * A string names a raw JSON definition in `named_point_defs`, parsed on demand as `ty`.
+        /// * An array is parsed inline as `ty`.
+        /// * `null` is an error; callers handle erasing a value themselves.
+        ///
+        /// # Examples
+        ///
+        /// Inline array, parsed as a `Vec3` (`[x, y, z, time]` per point):
+        ///
+        /// ```json
+        /// [[0, 40, 0, 0], [0, 0, 0, 0.2]]
+        /// ```
+        ///
+        /// Named definition: the value is the name, and `named_point_defs` holds the raw
+        /// array under that key:
+        ///
+        /// ```json
+        /// "ZigZagPosition"
+        /// ```
+        ///
+        /// ```json
+        /// { "ZigZagPosition": [[0, 0, 0, 0], [5, 0, 0, 0.25], [-5, 0, 0, 0.75]] }
+        /// ```
+        ///
+        /// Rust:
+        ///
+        /// ```ignore
+        /// let def = BasePointDefinition::deserialize(
+        ///     json!([[0, 40, 0, 0], [0, 0, 0, 0.2]]),
+        ///     WrapBaseValueType::Vec3,
+        ///     &mut context,
+        ///     &HashMap::default(),
+        /// )?;
+        /// ```
         pub fn deserialize(
             value: JsonValue,
-            ty: Option<WrapBaseValueType>,
+            ty: WrapBaseValueType,
             context: &mut BaseProviderContext,
             named_point_defs: &HashMap<String, JsonValue>,
-        ) -> Result<Option<Self>, serde_json::Error> {
+        ) -> Result<Self, serde_json::Error> {
             match value {
-                JsonValue::Null => Ok(None),
                 JsonValue::String(name) => {
                     let raw = named_point_defs.get(&name).ok_or_else(|| {
                         serde_json::Error::custom(format!(
                             "named point definition '{name}' not found"
                         ))
                     })?;
-                    let JsonValue::Array(points) = raw else {
-                        return Err(serde_json::Error::custom(format!(
-                            "named point definition '{name}' must be an array"
-                        )));
-                    };
-                    let ty = match ty {
-                        Some(ty) => ty,
-                        None => Self::infer_type(points).map_err(serde_json::Error::custom)?,
-                    };
-                    Self::parse_as(raw.clone(), ty, context)
-                        .map(Some)
-                        .map_err(serde_json::Error::custom)
+                    Self::parse_as(raw.clone(), ty, context).map_err(serde_json::Error::custom)
                 }
-                JsonValue::Array(points) => {
-                    let ty = match ty {
-                        Some(ty) => ty,
-                        None => Self::infer_type(&points).map_err(serde_json::Error::custom)?,
-                    };
-                    Self::parse_as(JsonValue::Array(points), ty, context)
-                        .map(Some)
-                        .map_err(serde_json::Error::custom)
+                array @ JsonValue::Array(_) => {
+                    Self::parse_as(array, ty, context).map_err(serde_json::Error::custom)
                 }
                 _ => Err(serde_json::Error::custom(
-                    "point definition must be an array, a named point definition or null",
+                    "point definition must be an array or a named point definition",
                 )),
             }
         }
@@ -316,27 +328,6 @@ mod json {
                     return Err("point definition value type cannot be unknown".to_owned());
                 }
             })
-        }
-
-        /// Infer the value type from the number of numeric components in the first point.
-        pub fn infer_type(points: &[JsonValue]) -> Result<WrapBaseValueType, String> {
-            let first = points
-                .first()
-                .ok_or_else(|| "point definition cannot be an empty array".to_owned())?;
-            let components = first
-                .as_array()
-                .map(Vec::as_slice)
-                .unwrap_or(std::slice::from_ref(first));
-            let numeric_count = components.iter().filter(|v| v.is_number()).count();
-
-            match numeric_count {
-                1 | 2 => Ok(WrapBaseValueType::Float),
-                4 => Ok(WrapBaseValueType::Vec3),
-                5 => Ok(WrapBaseValueType::Vec4),
-                count => Err(format!(
-                    "cannot infer the value type of a point definition with {count} numeric components"
-                )),
-            }
         }
     }
 }

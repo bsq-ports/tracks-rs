@@ -61,7 +61,7 @@ mod json {
     use super::{ANIMATE_TRACK, ASSIGN_PATH_ANIMATION, EventData, EventType};
     use crate::{
         animation::{
-            track::{PathPropertyHandle, ValuePropertyHandle, serde::known_type},
+            track::{PathPropertyHandle, ValuePropertyHandle},
             tracks_holder::TracksHolder,
         },
         base_provider_context::BaseProviderContext,
@@ -184,13 +184,24 @@ mod json {
                     }
                     .filter(|ty| *ty != WrapBaseValueType::Unknown);
 
-                    // `null` erases the value, a string names a point definition.
-                    let point_data = BasePointDefinition::deserialize(
-                        value.clone(),
-                        existing_type.or_else(|| known_type(name)),
-                        context,
-                        named_point_defs,
-                    )?;
+                    // `null` erases the value; anything else needs the property's registered type.
+                    let point_data = match value {
+                        JsonValue::Null => None,
+                        value @ _ => {
+                            let ty = existing_type.ok_or_else(|| {
+                                err(format!(
+                                    "property '{name}' is not registered on track '{track_name}'"
+                                ))
+                            })?;
+                            let point_definition = BasePointDefinition::deserialize(
+                                value.clone(),
+                                ty,
+                                context,
+                                named_point_defs,
+                            )?;
+                            Some(point_definition)
+                        }
+                    };
 
                     let property = if is_path {
                         EventType::AssignPathAnimation(PathPropertyHandle::new(name))
@@ -369,6 +380,28 @@ mod json_tests {
         )
         .unwrap();
         assert!(events[0].point_data.is_none());
+    }
+
+    #[test]
+    fn custom_property_requires_registration() {
+        use crate::animation::property::ValueProperty;
+
+        let mut holder = holder(&["T"]);
+        let event = json!({"b": 0, "t": "AnimateTrack", "d": {"track": "T", "custom": [[0, 1, 2, 0], [1, 2, 3, 1]]}});
+        let named = HashMap::default();
+
+        assert!(deserialize(event.clone(), &mut holder, &named).is_err());
+
+        let key = holder.get_track_key("T").unwrap();
+        holder.get_track_mut(key).unwrap().register_property(
+            "custom".to_owned(),
+            ValueProperty::new(None, WrapBaseValueType::Vec3),
+        );
+        let events = deserialize(event, &mut holder, &named).unwrap();
+        assert_eq!(
+            events[0].point_data.as_ref().unwrap().get_type(),
+            WrapBaseValueType::Vec3
+        );
     }
 
     #[test]
