@@ -217,3 +217,14 @@ impl From<BasicPointDefinition<f32>> for BasePointDefinition {
         BasePointDefinition::Float(point_definition)
     }
 }
+
+impl BasePointDefinition {
+    pub fn value_type(&self) -> WrapBaseValueType {
+        match self {
+            BasePointDefinition::Float(_) => WrapBaseValueType::Float,
+            BasePointDefinition::Vector3(_) => WrapBaseValueType::Vec3,
+            BasePointDefinition::Vector4(_) => WrapBaseValueType::Vec4,
+            BasePointDefinition::Quaternion(_) => WrapBaseValueType::Quat,
+        }
+    }
+}

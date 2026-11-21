@@ -510,6 +510,7 @@ mod serde {
     use std::str::FromStr;
 
     use ::serde::de::Error as DeError;
+    use ahash::HashMap;
     use serde_json::Value as JsonValue;
 
     use crate::{
@@ -532,32 +533,55 @@ mod serde {
         pub fn deserialize(
             properties: JsonValue,
             context: &mut BaseProviderContext,
+            named_point_defs: HashMap<String, BasePointDefinition>,
         ) -> Result<Self, serde_json::Error> {
-
-            let object = properties
-                .as_object()
-                .ok_or_else(|| serde_json::Error::custom("path properties must be a JSON object"))?;
+            let JsonValue::Object(object) = properties else {
+                return Err(serde_json::Error::custom(
+                    "path properties must be a JSON object",
+                ));
+            };
 
             let mut result = PathPropertiesMap::default();
             for (name, value) in object {
-                if !value.is_array() {
-                    return Err(serde_json::Error::custom(format!(
-                        "path property {name:?} must be a JSON array"
-                    )));
-                }
+                let property = match value {
+                    JsonValue::Null => {
+                        // skip null values
+                        continue;
+                    }
+                    JsonValue::Array(arr) if arr.is_empty() => {
+                        // skip empty arrays
+                        continue;
+                    }
+                    JsonValue::String(s) if let Some(definition) = named_point_defs.get(&s) => {
+                        let ty = definition.value_type();
+                        PathProperty::new(Some(definition.clone()), ty)
+                    }
+                    JsonValue::String(s) => {
+                        return Err(serde_json::Error::custom(format!(
+                            "named point definition '{s}' not found"
+                        )));
+                    }
+                    JsonValue::Array(array) => {
+                        let ty = property_type(&name, &array).map_err(serde_json::Error::custom)?;
+                        let definition = parse_definition(JsonValue::Array(array), ty, context)
+                            .map_err(serde_json::Error::custom)?;
+                        PathProperty::new(Some(definition), ty)
+                    }
+                    _ => {
+                        return Err(serde_json::Error::custom(format!(
+                            "path property '{name}' must be an array or a named point definition"
+                        )));
+                    }
+                };
 
-                let ty = property_type(name, value).map_err(serde_json::Error::custom)?;
-                let definition =
-                    parse_definition(value.clone(), ty, context).map_err(serde_json::Error::custom)?;
-                let property = PathProperty::new(Some(definition), ty);
-                result.insert(name.clone(), property);
+                result.insert(name, property);
             }
 
             Ok(result)
         }
     }
 
-    fn property_type(name: &str, value: &JsonValue) -> Result<WrapBaseValueType, String> {
+    fn property_type(name: &str, points: &[JsonValue]) -> Result<WrapBaseValueType, String> {
         let known_type = match PropertyNames::from_str(name) {
             Ok(
                 PropertyNames::Position
@@ -577,13 +601,10 @@ mod serde {
             Ok(PropertyNames::Color) => Some(WrapBaseValueType::Vec4),
             _ => None,
         };
-        known_type.map_or_else(|| infer_type(value), Ok)
+        known_type.map_or_else(|| infer_type(points), Ok)
     }
 
-    fn infer_type(value: &JsonValue) -> Result<WrapBaseValueType, String> {
-        let points = value
-            .as_array()
-            .ok_or_else(|| "path property must be an array".to_owned())?;
+    fn infer_type(points: &[JsonValue]) -> Result<WrapBaseValueType, String> {
         let first = points
             .first()
             .ok_or_else(|| "path property cannot be an empty array".to_owned())?;
@@ -634,6 +655,138 @@ mod tests {
     use super::*;
     use crate::base_value::BaseValue;
     use glam::{Quat, Vec3, Vec4};
+
+    #[cfg(feature = "json")]
+    mod path_properties_json {
+        use super::super::*;
+        use crate::{
+            base_provider_context::BaseProviderContext,
+            base_value::WrapBaseValueType,
+            point_definition::{
+                PointDefinitionLike, base_point_definition::BasePointDefinition,
+                vector3_point_definition::Vector3PointDefinition,
+            },
+        };
+        use ahash::HashMap;
+        use serde_json::json;
+
+        fn parse(
+            value: serde_json::Value,
+            named: HashMap<String, BasePointDefinition>,
+        ) -> Result<PathPropertiesMap, serde_json::Error> {
+            let mut ctx = BaseProviderContext::new();
+            PathPropertiesMap::deserialize(value, &mut ctx, named)
+        }
+
+        fn count(def: &Option<BasePointDefinition>) -> usize {
+            match def.as_ref().expect("definition should be set") {
+                BasePointDefinition::Float(d) => d.get_count(),
+                BasePointDefinition::Vector3(d) => d.get_count(),
+                BasePointDefinition::Vector4(d) => d.get_count(),
+                BasePointDefinition::Quaternion(d) => d.get_count(),
+            }
+        }
+
+        /// Heck docs: `"offsetPosition": [[0, 40, 0, 0], [0, 0, 0, 0.2]]`
+        #[test]
+        fn heck_offset_position_example() {
+            let map = parse(
+                json!({ "offsetPosition": [[0, 40, 0, 0], [0, 0, 0, 0.2]] }),
+                HashMap::default(),
+            )
+            .unwrap();
+
+            let prop = map.get("offsetPosition").unwrap();
+            assert_eq!(prop.get_type(), WrapBaseValueType::Vec3);
+            assert_eq!(count(&prop.point), 2);
+            assert!(std::ptr::eq(prop, &map.offset_position));
+        }
+
+        #[test]
+        fn known_property_types() {
+            let map = parse(
+                json!({
+                    "rotation": [[0, 0, 0, 0], [10, 20, 30, 1]],
+                    "dissolve": [[0, 0], [1, 1]],
+                    "color": [[1, 0, 0, 1, 0], [0, 1, 0, 1, 1]],
+                    "scale": [[1, 1, 1, 0]],
+                }),
+                HashMap::default(),
+            )
+            .unwrap();
+
+            assert_eq!(map.rotation.get_type(), WrapBaseValueType::Quat);
+            assert_eq!(map.dissolve.get_type(), WrapBaseValueType::Float);
+            assert_eq!(map.color.get_type(), WrapBaseValueType::Vec4);
+            assert_eq!(map.scale.get_type(), WrapBaseValueType::Vec3);
+        }
+
+        #[test]
+        fn custom_property_type_is_inferred() {
+            let map = parse(
+                json!({
+                    "customVec3": [[0, 1, 2, 0], [1, 2, 3, 1]],
+                    "customFloat": [[0, 0], [1, 1]],
+                }),
+                HashMap::default(),
+            )
+            .unwrap();
+
+            let v = map.get("customVec3").unwrap();
+            assert_eq!(v.get_type(), WrapBaseValueType::Vec3);
+            assert_eq!(count(&v.point), 2);
+            assert_eq!(
+                map.get("customFloat").unwrap().get_type(),
+                WrapBaseValueType::Float
+            );
+        }
+
+        #[test]
+        fn null_and_empty_arrays_are_skipped() {
+            let map = parse(
+                json!({ "offsetPosition": null, "position": [], "customThing": null }),
+                HashMap::default(),
+            )
+            .unwrap();
+
+            assert!(map.offset_position.point.is_none());
+            assert!(map.position.point.is_none());
+            assert!(map.get("customThing").is_none());
+        }
+
+        #[test]
+        fn named_point_definition_is_resolved() {
+            let mut ctx = BaseProviderContext::new();
+            let def: BasePointDefinition = Vector3PointDefinition::parse(
+                json!([[0, 40, 0, 0], [0, 0, 0, 0.2]]),
+                &mut ctx,
+            )
+            .into();
+            let mut named = HashMap::default();
+            named.insert("ZigZagPosition".to_owned(), def);
+
+            let map = parse(json!({ "offsetPosition": "ZigZagPosition" }), named).unwrap();
+
+            assert_eq!(map.offset_position.get_type(), WrapBaseValueType::Vec3);
+            assert_eq!(count(&map.offset_position.point), 2);
+        }
+
+        #[test]
+        fn unknown_named_point_definition_errors() {
+            let res = parse(json!({ "offsetPosition": "Missing" }), HashMap::default());
+            assert!(res.is_err());
+        }
+
+        #[test]
+        fn invalid_inputs_error() {
+            // not an object
+            assert!(parse(json!([1, 2]), HashMap::default()).is_err());
+            // property neither array nor string
+            assert!(parse(json!({ "offsetPosition": 5 }), HashMap::default()).is_err());
+            // custom property whose type can't be inferred
+            assert!(parse(json!({ "custom": [[1, 2, 3]] }), HashMap::default()).is_err());
+        }
+    }
 
     #[test]
     fn test_null_values_return_none() {
