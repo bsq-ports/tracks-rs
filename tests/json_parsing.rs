@@ -1,3 +1,4 @@
+use ahash::HashMap;
 use serde::de::IntoDeserializer;
 use serde_json::json;
 use tracks_rs::{
@@ -22,7 +23,7 @@ fn deserializes_path_properties_map() {
     });
 
     let mut context = BaseProviderContext::new();
-    let map = PathPropertiesMap::deserialize(json, &mut context, &HashMap::new()).unwrap();
+    let map = PathPropertiesMap::deserialize(json, &mut context, &HashMap::default()).unwrap();
     let value = map.offset_position.interpolate(0.1, &context).unwrap();
     assert_eq!(value.as_vec3().unwrap(), glam::Vec3::new(0.0, 20.0, 0.0));
 }
@@ -40,7 +41,7 @@ fn deserializes_path_properties_with_base_providers_and_modifiers() {
         "baseHeadPosition",
         BaseValue::from(glam::Vec3::new(1.0, 2.0, 3.0)),
     );
-    let map = PathPropertiesMap::deserialize(json, &mut context, &HashMap::new()).unwrap();
+    let map = PathPropertiesMap::deserialize(json, &mut context, &HashMap::default()).unwrap();
     assert!(
         map.offset_position
             .point
@@ -62,7 +63,7 @@ fn deserializes_path_properties_with_base_providers_and_modifiers() {
 #[test]
 fn rejects_non_object_path_properties_map() {
     let mut context = BaseProviderContext::new();
-    let result = PathPropertiesMap::deserialize(json!([]), &mut context, &HashMap::new());
+    let result = PathPropertiesMap::deserialize(json!([]), &mut context, &HashMap::default());
     assert!(result.is_err());
 }
 

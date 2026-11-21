@@ -228,3 +228,105 @@ impl BasePointDefinition {
         }
     }
 }
+#[cfg(feature = "json")]
+mod json {
+    use ::serde::de::Error as DeError;
+    use ahash::HashMap;
+    use serde_json::Value as JsonValue;
+
+    use super::BasePointDefinition;
+    use crate::{
+        base_provider_context::BaseProviderContext,
+        base_value::WrapBaseValueType,
+        point_definition::{
+            PointDefinitionLike, basic_point_definition::BasicPointDefinition,
+            quaternion_point_definition::QuaternionPointDefinition,
+            vector3_point_definition::Vector3PointDefinition,
+        },
+    };
+
+    impl BasePointDefinition {
+        /// Deserialize a point definition as written in a map.
+        ///
+        /// * `null` erases the value and yields `None`.
+        /// * A string names a definition in `named_point_defs`.
+        /// * An array is parsed inline as `ty`; if `ty` is `None` it is inferred from the first point.
+        pub fn deserialize(
+            value: JsonValue,
+            ty: Option<WrapBaseValueType>,
+            context: &mut BaseProviderContext,
+            named_point_defs: &HashMap<String, BasePointDefinition>,
+        ) -> Result<Option<Self>, serde_json::Error> {
+            match value {
+                JsonValue::Null => Ok(None),
+                JsonValue::String(name) => named_point_defs
+                    .get(&name)
+                    .cloned()
+                    .map(Some)
+                    .ok_or_else(|| {
+                        serde_json::Error::custom(format!(
+                            "named point definition '{name}' not found"
+                        ))
+                    }),
+                JsonValue::Array(points) => {
+                    let ty = match ty {
+                        Some(ty) => ty,
+                        None => Self::infer_type(&points).map_err(serde_json::Error::custom)?,
+                    };
+                    Self::parse_as(JsonValue::Array(points), ty, context)
+                        .map(Some)
+                        .map_err(serde_json::Error::custom)
+                }
+                _ => Err(serde_json::Error::custom(
+                    "point definition must be an array, a named point definition or null",
+                )),
+            }
+        }
+
+        /// Parse an inline array of points as the given value type.
+        pub fn parse_as(
+            value: JsonValue,
+            ty: WrapBaseValueType,
+            context: &mut BaseProviderContext,
+        ) -> Result<Self, String> {
+            if value.as_array().is_none_or(Vec::is_empty) {
+                return Err("point definition cannot be an empty array".to_owned());
+            }
+
+            Ok(match ty {
+                WrapBaseValueType::Float => {
+                    BasicPointDefinition::<f32>::parse(value, context).into()
+                }
+                WrapBaseValueType::Vec3 => Vector3PointDefinition::parse(value, context).into(),
+                WrapBaseValueType::Vec4 => {
+                    BasicPointDefinition::<glam::Vec4>::parse(value, context).into()
+                }
+                WrapBaseValueType::Quat => QuaternionPointDefinition::parse(value, context).into(),
+                WrapBaseValueType::Unknown => {
+                    return Err("point definition value type cannot be unknown".to_owned());
+                }
+            })
+        }
+
+        /// Infer the value type from the number of numeric components in the first point.
+        pub fn infer_type(points: &[JsonValue]) -> Result<WrapBaseValueType, String> {
+            let first = points
+                .first()
+                .ok_or_else(|| "point definition cannot be an empty array".to_owned())?;
+            let components = first
+                .as_array()
+                .map(Vec::as_slice)
+                .unwrap_or(std::slice::from_ref(first));
+            let numeric_count = components.iter().filter(|v| v.is_number()).count();
+
+            match numeric_count {
+                1 | 2 => Ok(WrapBaseValueType::Float),
+                4 => Ok(WrapBaseValueType::Vec3),
+                5 => Ok(WrapBaseValueType::Vec4),
+                count => Err(format!(
+                    "cannot infer the value type of a point definition with {count} numeric components"
+                )),
+            }
+        }
+    }
+}

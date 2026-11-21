@@ -506,7 +506,7 @@ impl Display for PropertyNames {
 }
 
 #[cfg(feature = "json")]
-mod serde {
+pub(crate) mod serde {
     use std::str::FromStr;
 
     use ::serde::de::Error as DeError;
@@ -520,12 +520,7 @@ mod serde {
         },
         base_provider_context::BaseProviderContext,
         base_value::WrapBaseValueType,
-        point_definition::{
-            PointDefinitionLike, base_point_definition::BasePointDefinition,
-            basic_point_definition::BasicPointDefinition,
-            quaternion_point_definition::QuaternionPointDefinition,
-            vector3_point_definition::Vector3PointDefinition,
-        },
+        point_definition::base_point_definition::BasePointDefinition,
     };
 
     impl PathPropertiesMap {
@@ -543,46 +538,29 @@ mod serde {
 
             let mut result = PathPropertiesMap::default();
             for (name, value) in object {
-                let property = match value {
-                    JsonValue::Null => {
-                        // skip null values
-                        continue;
-                    }
-                    JsonValue::Array(arr) if arr.is_empty() => {
-                        // skip empty arrays
-                        continue;
-                    }
-                    JsonValue::String(s) if let Some(definition) = named_point_defs.get(&s) => {
-                        let ty = definition.value_type();
-                        PathProperty::new(Some(definition.clone()), ty)
-                    }
-                    JsonValue::String(s) => {
-                        return Err(serde_json::Error::custom(format!(
-                            "named point definition '{s}' not found"
-                        )));
-                    }
-                    JsonValue::Array(array) => {
-                        let ty = property_type(&name, &array).map_err(serde_json::Error::custom)?;
-                        let definition = parse_definition(JsonValue::Array(array), ty, context)
-                            .map_err(serde_json::Error::custom)?;
-                        PathProperty::new(Some(definition), ty)
-                    }
-                    _ => {
-                        return Err(serde_json::Error::custom(format!(
-                            "path property '{name}' must be an array or a named point definition"
-                        )));
-                    }
-                };
+                match &value {
+                    // skip null values and empty arrays
+                    JsonValue::Null => continue,
+                    JsonValue::Array(arr) if arr.is_empty() => continue,
+                    _ => {}
+                }
 
-                result.insert(name, property);
+                let Some(definition) =
+                    BasePointDefinition::deserialize(value, known_type(&name), context, named_point_defs)?
+                else {
+                    continue;
+                };
+                let ty = definition.value_type();
+                result.insert(name, PathProperty::new(Some(definition), ty));
             }
 
             Ok(result)
         }
     }
 
-    fn property_type(name: &str, points: &[JsonValue]) -> Result<WrapBaseValueType, String> {
-        let known_type = match PropertyNames::from_str(name) {
+    /// The value type dictated by a well-known property name, if any.
+    pub(crate) fn known_type(name: &str) -> Option<WrapBaseValueType> {
+        match PropertyNames::from_str(name) {
             Ok(
                 PropertyNames::Position
                 | PropertyNames::OffsetPosition
@@ -600,51 +578,7 @@ mod serde {
             ) => Some(WrapBaseValueType::Float),
             Ok(PropertyNames::Color) => Some(WrapBaseValueType::Vec4),
             _ => None,
-        };
-        known_type.map_or_else(|| infer_type(points), Ok)
-    }
-
-    fn infer_type(points: &[JsonValue]) -> Result<WrapBaseValueType, String> {
-        let first = points
-            .first()
-            .ok_or_else(|| "path property cannot be an empty array".to_owned())?;
-        let components = first
-            .as_array()
-            .map(Vec::as_slice)
-            .unwrap_or(std::slice::from_ref(first));
-        let numeric_count = components.iter().filter(|v| v.is_number()).count();
-
-        match numeric_count {
-            1 | 2 => Ok(WrapBaseValueType::Float),
-            4 => Ok(WrapBaseValueType::Vec3),
-            5 => Ok(WrapBaseValueType::Vec4),
-            count => Err(format!(
-                "cannot infer the value type for a custom path property with {count} numeric components"
-            )),
         }
-    }
-
-    fn parse_definition(
-        value: JsonValue,
-        ty: WrapBaseValueType,
-        context: &mut BaseProviderContext,
-    ) -> Result<BasePointDefinition, String> {
-        if value.as_array().is_none_or(Vec::is_empty) {
-            return Err("path property cannot be an empty array".to_owned());
-        }
-
-        let definition = match ty {
-            WrapBaseValueType::Float => BasicPointDefinition::<f32>::parse(value, context).into(),
-            WrapBaseValueType::Vec3 => Vector3PointDefinition::parse(value, context).into(),
-            WrapBaseValueType::Vec4 => {
-                BasicPointDefinition::<glam::Vec4>::parse(value, context).into()
-            }
-            WrapBaseValueType::Quat => QuaternionPointDefinition::parse(value, context).into(),
-            WrapBaseValueType::Unknown => {
-                return Err("path property value type cannot be unknown".to_owned());
-            }
-        };
-        Ok(definition)
     }
 }
 

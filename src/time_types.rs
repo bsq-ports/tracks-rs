@@ -21,6 +21,7 @@ use std::ops::{Add, AddAssign, Deref, Div, Mul, Sub, SubAssign};
 /// Convert it to seconds with [`BpmTime::to_song_time`].
 #[repr(transparent)]
 #[derive(Debug, Clone, Copy, Default, PartialEq, PartialOrd)]
+#[cfg_attr(feature = "json", derive(::serde::Deserialize), serde(transparent))]
 pub struct BpmTime(pub f64);
 
 /// A time or duration measured in seconds on the song clock.
@@ -28,6 +29,7 @@ pub struct BpmTime(pub f64);
 /// Convert it to beats with [`SongTime::to_bpm_time`].
 #[repr(transparent)]
 #[derive(Debug, Clone, Copy, Default, PartialEq, PartialOrd)]
+#[cfg_attr(feature = "json", derive(::serde::Deserialize), serde(transparent))]
 pub struct SongTime(pub f64);
 
 impl BpmTime {
